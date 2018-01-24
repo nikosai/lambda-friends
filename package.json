@@ -1,0 +1,28 @@
+{
+  "name": "lambda-friends",
+  "version": "1.0.0",
+  "description": "Typed Lambda Calculus",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nikosai/lambda-friends.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nikosai/lambda-friends/issues"
+  },
+  "homepage": "https://github.com/nikosai/lambda-friends#readme",
+  "devDependencies": {
+    "typescript": "^2.6.2"
+  },
+  "dependencies": {
+    "@types/node": "^9.3.0"
+  }
+}
