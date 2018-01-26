@@ -325,7 +325,7 @@ export class Variable extends Symbol{
   }
 
   static getNew(used:Variable[]){
-    var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
+    var alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     for (var a of alphabet){
       var z = new Variable(a);
       if (!Variable.contains(used,z)){
