@@ -13,7 +13,7 @@
     "url": "git+https://github.com/nikosai/lambda-friends.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "nikosai",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/nikosai/lambda-friends/issues"
@@ -23,6 +23,7 @@
     "typescript": "^2.6.2"
   },
   "dependencies": {
-    "@types/node": "^9.3.0"
+    "@types/node": "^9.3.0",
+    "readline-sync": "^1.4.7"
   }
 }
