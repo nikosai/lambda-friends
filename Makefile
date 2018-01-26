@@ -3,13 +3,16 @@ ALLSRC := $(wildcard src/*.ts)
 TARGET = js/lambda-friends.js
 
 default:
-	make $(TARGET)
+	@make $(TARGET)
 
 run: $(TARGET)
-	node $(TARGET)
+	@node $(TARGET)
+
+test: $(TARGET)
+	@node $(TARGET) < in.txt
 
 js/lambda-friends.js: $(ALLSRC) tsconfig.json Makefile
-	tsc
+	@tsc
 
 clean:
-	-rm -rf js/*
+	@rm -rf js/*
