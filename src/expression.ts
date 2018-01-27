@@ -1,4 +1,5 @@
 import { Type, TypeFunc, typeInt, TypeInt, typeBool, TypeBool } from "./type";
+import { LambdaParseError, SubstitutionError, ReductionError } from "./error";
 
 export function parseConst(str: string):Symbol{
   switch (str){
@@ -22,6 +23,70 @@ export function parseConst(str: string):Symbol{
     return new ConstOp(str); // fail -> null
   }
 }
+
+// export function makeUntypedAST(str: string):Expression{
+//   var strs:string[] = str.split(/\s*/).join("").split("");
+//   var tokens:Symbol[] = [];
+//   while (strs.length>0){
+//     var c = strs.shift();
+//     switch (c){
+//       case "<":
+//         var content = "";
+//         while (true){
+//           if (strs.length==0) throw new LambdaParseError("Too many LANGLE '<'");
+//           c = strs.shift();
+//           if (c===">") break;
+//           else content += c;
+//         }
+//         tokens.push(new Macro(content));
+//         break;
+//       default:
+//         tokens.push(new Symbol(c));
+//     }
+//   }
+//   // console.log(tokens);
+//   return makeUntypedASTfromSymbols(tokens);
+// }
+
+// export function makeUntypedASTfromSymbols(tokens: Symbol[]):Expression{
+//   var left:Expression = null;
+//   while (tokens.length>0){
+//     // 最初のSymbol
+//     var first:Symbol = tokens.shift();
+//     switch(first.name){
+//       case "\\":
+//       case "\u00a5":
+//       case "λ":
+//         // abst
+//         if (left===null) return LambdaAbstraction.parse(tokens);
+//         else return new Application(left, LambdaAbstraction.parse(tokens));
+//       case "(":
+//         // application
+//         var content:Symbol[] = [];
+//         var i=1;
+//         while (true){
+//           if (tokens.length==0) throw new LambdaParseError("Too many LPAREN '('");
+//           var t = tokens.shift();
+//           if (t.name==="(") i++;
+//           else if (t.name===")") i--;
+//           if (i==0) break;
+//           content.push(t);
+//         }
+//         var contentExpr:Expression = makeUntypedASTfromSymbols(content);
+//         if (left===null) left = contentExpr;
+//         else left = new Application(left, contentExpr);
+//         break;
+//       default:
+//         if (first.name.match(/^[A-Za-z]$/)===null)
+//           throw new LambdaParseError("Unexpected token: '"+first+"'");
+//         // variable
+//         if (left===null) left = new Variable(first.name);
+//         else left = new Application(left, new Variable(first.name));
+//     }
+//   }
+//   if (left===null) throw new LambdaParseError("No contents in Expression");
+//   return left;
+// }
 
 export function makeAST(str: string):Expression{
   var strs:string[] = str.split(/\s*/).join("").split("");
@@ -242,6 +307,18 @@ export abstract class Expression{
     }
     return cur;
   }
+
+  // public continualUntypedReduction(n:number, etaAllowed:boolean):Expression{
+  //   var cur:Expression = this;
+  //   console.log(cur.toString());
+  //   for (var i=0; i<n; i++){
+  //     var next = cur.reductionUntyped(etaAllowed);
+  //     if (cur.equals(next)) break;
+  //     cur = next;
+  //     console.log(" ==> "+next.toString());
+  //   }
+  //   return cur;
+  // }
 
   public abstract toString():string;
   public abstract getFV():Variable[];
@@ -819,38 +896,3 @@ export class Case extends Expression{
     return (expr instanceof Case) && (expr.state.equalsAlpha(this.state)) && (expr.ifNil.equalsAlpha(this.ifNil)) && (expr.head.equalsAlpha(this.head)) && (expr.tail.equalsAlpha(this.tail)) && (expr.ifElse.equalsAlpha(this.ifElse));
   }
 }
-
-// 例外の抽象クラス
-export abstract class LambdaFriendsError implements Error{
-  stack:any;
-  constructor(public name:string, public message:string){
-    Error.captureStackTrace(this,this.constructor);
-  }
-  public toString():string{
-    // return this.stack;
-    return this.name + ": " + this.message;
-  }
-}
-
-// Parse中の例外
-export class LambdaParseError extends LambdaFriendsError{
-  constructor(message: string){
-    super("LambdaParseError",message);
-  }
-}
-
-// Substitutionの例外
-export class SubstitutionError extends LambdaFriendsError{
-  constructor(message: string){
-    super("SubstitutionError",message);
-  }
-}
-
-// Reductionの例外
-export class ReductionError extends LambdaFriendsError{
-  constructor(message: string){
-    super("ReductionError",message);
-  }
-}
-
-// todo : equals, equalsAlpha, ParseErrorの場所
