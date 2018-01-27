@@ -8,6 +8,7 @@ npmとNode.jsさえ入っていれば、きっと動きます。
 ## 今できること
 * 型付きλ計算（FL）の抽象構文木がつくれる
 * FLの推論規則に基づいた簡約ができる
+* GitHub Pages上で動作する → [すぐに試してみる](https://nikosai.github.io/lambda-friends/)
 
 ## これからやるべきこと
 * マクロ定義ができるようにする
@@ -41,7 +42,7 @@ npmとNode.jsさえ入っていれば、きっと動きます。
   + `[let] x=M [in] M`
   + `[case] M [of] [nil] -> M | x::x -> M`
 
-## 試し方
+## CUIモードの動かし方
 ```
 $ git clone https://github.com/nikosai/lambda-friends.git
 $ npm install
