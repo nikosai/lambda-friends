@@ -2,7 +2,9 @@
 export abstract class LambdaFriendsError implements Error{
   stack:any;
   constructor(public name:string, public message:string){
-    Error.captureStackTrace(this,this.constructor);
+    if (typeof Error.captureStackTrace === "function"){
+      Error.captureStackTrace(this,this.constructor);
+    }
   }
   public toString():string{
     // return this.stack;

@@ -76,6 +76,7 @@ document.getElementById("submit").onclick = submitInput;
 document.getElementById("input").onkeydown = function(e){
   if (e.keyCode===13){
     submitInput();
+    e.preventDefault();
   }
 }
 

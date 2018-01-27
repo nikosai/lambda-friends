@@ -6,7 +6,9 @@ class LambdaFriendsError {
     constructor(name, message) {
         this.name = name;
         this.message = message;
-        Error.captureStackTrace(this, this.constructor);
+        if (typeof Error.captureStackTrace === "function") {
+            Error.captureStackTrace(this, this.constructor);
+        }
     }
     toString() {
         // return this.stack;
