@@ -5,6 +5,7 @@ export class LambdaFriends{
   mainFunc: Function;
   stdin: any;
   prompt: string;
+  steps: number;
 
   constructor(){
     this.stdin = require("readline").createInterface({
@@ -13,18 +14,33 @@ export class LambdaFriends{
     });
     this.prompt = "input> ";
     this.stdin.setPrompt(this.prompt);
+    this.steps = 100;
 
     this.mainFunc = (line:string)=>{
-      if (line.match(/^\s*$/)!==null){}
-      else if (line.startsWith(".")){
-        var cmds = line.replace(".","").split(/\s+/g);
+      line = line.trim();
+      if (line===""){}
+      else if (line.startsWith(":")){
+        var cmds = line.replace(":","").trim().split(/\s+/g);
         switch (cmds[0]){
-          case "quit":
-          case "exit":
+          case "q":
             process.exit(0);
             return;
-          case "input":
+          case "?":
+            LambdaFriends.fileMes("mes/help.txt");
+            break;
+          case "s":
+            var new_s = parseInt(cmds[1]);
+            if (!isNaN(new_s)){
+              this.steps = new_s;
+            }
+            console.log("Continuation steps: "+this.steps);
+            break;
+          case "l":
             var file = cmds[1];
+            if (file === undefined){
+              console.log("Command Usage = :q <filename>");
+              break;
+            }
             if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
             try{
               fs.statSync(file);
@@ -45,7 +61,7 @@ export class LambdaFriends{
       } else {
         try{
           var expr = makeAST(line);
-          expr = expr.continualReduction(100);
+          expr = expr.continualReduction(this.steps);
         }catch(e){
           console.log(e.toString());
         }
@@ -56,16 +72,20 @@ export class LambdaFriends{
   }
 
   start(){
-    console.log('============================================');
-    console.log("  Welcome to Lambda-Friends!");
-    console.log('  Type ".quit" or ".exit" to close.');
-    console.log('  Type ".input <filename>" to open file.');
-    console.log('============================================');
-    console.log();
-
-    process.stdout.write(this.prompt);
-
+    LambdaFriends.fileMes("mes/title.txt");
+    process.stdout.write("\n"+this.prompt);
     this.stdin.on("line", this.mainFunc);
+  }
+
+  static fileMes(file:string){
+    if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
+    try{
+      fs.statSync(file);
+      var lines = fs.readFileSync(file,"utf8");
+      console.log(lines);
+    }catch(e){
+      console.log("File Not Found: "+file);
+    }
   }
 }
 
