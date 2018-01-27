@@ -1,0 +1,30 @@
+body {
+  background-color: antiquewhite;
+}
+
+/*
+.navbar-brand {
+  background: url("logo.png") no-repeat left center;
+  background-size: contain;
+  height: 50px;
+  width: 250px;
+  margin-left: 10px;
+}
+*/
+
+.logo {
+  display: inline-block;
+  background: url("logo.png") no-repeat left center;
+  background-size: contain;
+  height: 70px;
+  width: 170px;
+  margin-top: 5px;
+  margin-left: 10px;
+  margin-bottom: 5px;
+}
+
+#output {
+  resize: none;
+  height: 700px;
+  margin-top: 10px;
+}
