@@ -286,6 +286,10 @@ export function makeASTfromSymbols(tokens: Symbol[]):Expression{
   return left;
 }
 
+class ReductionResult{
+  constructor(public expr: Expression, public str: string){}
+}
+
 // ラムダ項（抽象クラス）
 export abstract class Expression{
   className: string;
@@ -296,17 +300,18 @@ export abstract class Expression{
     this.className = className;
   }
 
-  public continualReduction(n:number):Expression{
+  public continualReduction(n:number):ReductionResult{
     var cur:Expression = this;
-    console.log(cur.toString());
+    var str = cur.toString() + "\n";
     for (var i=0; i<n; i++){
       var next = cur.reduction();
       if (cur.equals(next)) break;
       cur = next;
-      console.log(" ==> "+next.toString());
+      str += " ==> " + next.toString() + "\n";
     }
-    return cur;
+    return new ReductionResult(cur,str);
   }
+
 
   // public continualUntypedReduction(n:number, etaAllowed:boolean):Expression{
   //   var cur:Expression = this;
