@@ -1,4 +1,4 @@
-![らむだフレンズ](docs/logo.png "らむだフレンズ")
+<a href="https://nikosai.github.io/lambda-friends/"><div style="background: url('docs/logo.png') no-repeat; background-size: contain; width:348px; height: 140px; margin: 0 auto"></div></a>
 
 このプロジェクトでは、型付きλ計算のインタプリタ実装を目指します。
 
