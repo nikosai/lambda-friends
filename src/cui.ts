@@ -1,7 +1,7 @@
 import { makeAST } from "./expression";
 import * as fs from "fs";
 
-export class LambdaFriends{
+export class CUI{
   mainFunc: Function;
   stdin: any;
   prompt: string;
@@ -26,7 +26,7 @@ export class LambdaFriends{
             process.exit(0);
             return;
           case "?":
-            LambdaFriends.fileMes("mes/help.txt");
+            CUI.fileMes("mes/help.txt");
             break;
           case "s":
             var new_s = parseInt(cmds[1]);
@@ -61,7 +61,7 @@ export class LambdaFriends{
       } else {
         try{
           var expr = makeAST(line);
-          expr = expr.continualReduction(this.steps);
+          expr = expr.continualReduction(this.steps).expr;
         }catch(e){
           console.log(e.toString());
         }
@@ -72,7 +72,7 @@ export class LambdaFriends{
   }
 
   start(){
-    LambdaFriends.fileMes("mes/title.txt");
+    CUI.fileMes("mes/title.txt");
     process.stdout.write("\n"+this.prompt);
     this.stdin.on("line", this.mainFunc);
   }
@@ -89,4 +89,4 @@ export class LambdaFriends{
   }
 }
 
-new LambdaFriends().start();
+new CUI().start();
