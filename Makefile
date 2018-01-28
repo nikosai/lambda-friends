@@ -1,17 +1,23 @@
-.PHONY: default run clean
+.PHONY: web run clean
 ALLSRC := $(wildcard src/*.ts)
-MAIN = js/lambda-friends.js
-WEBUI = js/app.js
-CUI = js/cui.js
 
-js: $(ALLSRC) tsconfig.json Makefile
+all: js/cui.js docs/app.js
+
+js/cui.js: $(ALLSRC) tsconfig.json Makefile
 	@tsc
 
-run: js
-	@node $(CUI)
+js/webui.js: js/cui.js
 
-web: js
+js/server.js: js/cui.js
+
+run: js/cui.js
+	@node js/cui.js
+
+docs/app.js: js/webui.js
 	@browserify js/webui.js -o docs/app.js
 
+web: docs/app.js js/server.js
+	@node js/server.js
+
 clean:
-	@rm -rf js/*
+	-rm -rf js/*
