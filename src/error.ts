@@ -32,3 +32,10 @@ export class ReductionError extends LambdaFriendsError{
     super("ReductionError",message);
   }
 }
+
+// Macroの例外
+export class MacroError extends LambdaFriendsError{
+  constructor(message: string){
+    super("MacroError",message);
+  }
+}

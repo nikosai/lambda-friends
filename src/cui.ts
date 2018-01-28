@@ -1,4 +1,4 @@
-import { makeAST } from "./expression";
+import { makeAST, ReductionResult, Macro } from "./expression";
 import * as fs from "fs";
 
 export class CUI{
@@ -6,6 +6,7 @@ export class CUI{
   stdin: any;
   prompt: string;
   steps: number;
+  result: ReductionResult;
 
   constructor(){
     this.stdin = require("readline").createInterface({
@@ -15,9 +16,23 @@ export class CUI{
     this.prompt = "input> ";
     this.stdin.setPrompt(this.prompt);
     this.steps = 100;
+    this.result = undefined;
 
     this.mainFunc = (line:string)=>{
       line = line.trim();
+      if (this.result !== undefined && line!=="n"){
+        try{
+          this.result = this.result.expr.continualReduction(this.steps);
+          process.stdout.write(this.result.str);
+          if (!this.result.hasNext) this.result = undefined;
+          else {
+            process.stdout.write("\n"+this.steps+" Steps Done. Continue? (Y/n)> ");
+            return;
+          }
+        }catch(e){
+          console.log(e.toString());
+        }
+      }
       if (line===""){}
       else if (line.startsWith(":")){
         var cmds = line.replace(":","").trim().split(/\s+/g);
@@ -27,6 +42,18 @@ export class CUI{
             return;
           case "?":
             CUI.fileMes("mes/help.txt");
+            break;
+          case "m":
+            cmds.shift();
+            var cmds = cmds.join("").split("=");
+            var name = cmds.shift();
+            var str = cmds.join("=");
+            try{
+              Macro.add(name,str);
+              console.log("<"+name+"> is defined as "+Macro.get(name).expr);
+            }catch(e){
+              console.log(e.toString());
+            }
             break;
           case "s":
             var new_s = parseInt(cmds[1]);
@@ -61,13 +88,23 @@ export class CUI{
       } else {
         try{
           var expr = makeAST(line);
-          expr = expr.continualReduction(this.steps).expr;
+          if (expr instanceof Macro){
+            console.log("<"+expr.name+"> is defined as "+expr.expr);
+            process.stdout.write("\n"+this.prompt);
+            return;
+          }
+          this.result = expr.continualReduction(this.steps);
+          process.stdout.write(this.result.str);
+          if (!this.result.hasNext) this.result = undefined;
+          else {
+            process.stdout.write("\n"+this.steps+" Steps Done. Continue? (Y/n)> ");
+            return;
+          }
         }catch(e){
           console.log(e.toString());
         }
       }
-      console.log();
-      process.stdout.write(this.prompt);
+      process.stdout.write("\n"+this.prompt);
     };
   }
 

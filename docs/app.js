@@ -37,6 +37,13 @@ class ReductionError extends LambdaFriendsError {
     }
 }
 exports.ReductionError = ReductionError;
+// Macroの例外
+class MacroError extends LambdaFriendsError {
+    constructor(message) {
+        super("MacroError", message);
+    }
+}
+exports.MacroError = MacroError;
 
 },{}],2:[function(require,module,exports){
 "use strict";
@@ -67,74 +74,103 @@ function parseConst(str) {
     }
 }
 exports.parseConst = parseConst;
-// export function makeUntypedAST(str: string):Expression{
-//   var strs:string[] = str.split(/\s*/).join("").split("");
-//   var tokens:Symbol[] = [];
-//   while (strs.length>0){
-//     var c = strs.shift();
-//     switch (c){
-//       case "<":
-//         var content = "";
-//         while (true){
-//           if (strs.length==0) throw new LambdaParseError("Too many LANGLE '<'");
-//           c = strs.shift();
-//           if (c===">") break;
-//           else content += c;
-//         }
-//         tokens.push(new Macro(content));
-//         break;
-//       default:
-//         tokens.push(new Symbol(c));
-//     }
-//   }
-//   // console.log(tokens);
-//   return makeUntypedASTfromSymbols(tokens);
-// }
-// export function makeUntypedASTfromSymbols(tokens: Symbol[]):Expression{
-//   var left:Expression = null;
-//   while (tokens.length>0){
-//     // 最初のSymbol
-//     var first:Symbol = tokens.shift();
-//     switch(first.name){
-//       case "\\":
-//       case "\u00a5":
-//       case "λ":
-//         // abst
-//         if (left===null) return LambdaAbstraction.parse(tokens);
-//         else return new Application(left, LambdaAbstraction.parse(tokens));
-//       case "(":
-//         // application
-//         var content:Symbol[] = [];
-//         var i=1;
-//         while (true){
-//           if (tokens.length==0) throw new LambdaParseError("Too many LPAREN '('");
-//           var t = tokens.shift();
-//           if (t.name==="(") i++;
-//           else if (t.name===")") i--;
-//           if (i==0) break;
-//           content.push(t);
-//         }
-//         var contentExpr:Expression = makeUntypedASTfromSymbols(content);
-//         if (left===null) left = contentExpr;
-//         else left = new Application(left, contentExpr);
-//         break;
-//       default:
-//         if (first.name.match(/^[A-Za-z]$/)===null)
-//           throw new LambdaParseError("Unexpected token: '"+first+"'");
-//         // variable
-//         if (left===null) left = new Variable(first.name);
-//         else left = new Application(left, new Variable(first.name));
-//     }
-//   }
-//   if (left===null) throw new LambdaParseError("No contents in Expression");
-//   return left;
-// }
+function makeUntypedAST(str) {
+    var strs = str.split(/\s*/).join("").split("");
+    var tokens = [];
+    while (strs.length > 0) {
+        var c = strs.shift();
+        switch (c) {
+            case "<":
+                var content = "";
+                while (true) {
+                    if (strs.length == 0)
+                        throw new error_1.LambdaParseError("Too many LANGLE '<'");
+                    c = strs.shift();
+                    if (c === ">")
+                        break;
+                    else
+                        content += c;
+                }
+                tokens.push(Macro.get(content));
+                break;
+            default:
+                tokens.push(new Symbol(c));
+        }
+    }
+    // console.log(tokens);
+    return makeUntypedASTfromSymbols(tokens);
+}
+exports.makeUntypedAST = makeUntypedAST;
+function makeUntypedASTfromSymbols(tokens) {
+    var left = null;
+    while (tokens.length > 0) {
+        // 最初のSymbol
+        var first = tokens.shift();
+        switch (first.name) {
+            case "\\":
+            case "\u00a5":
+            case "λ":
+                // abst
+                if (left === null)
+                    return LambdaAbstraction.parse(tokens);
+                else
+                    return new Application(left, LambdaAbstraction.parse(tokens));
+            case "(":
+                // application
+                var content = [];
+                var i = 1;
+                while (true) {
+                    if (tokens.length == 0)
+                        throw new error_1.LambdaParseError("Too many LPAREN '('");
+                    var t = tokens.shift();
+                    if (t.name === "(")
+                        i++;
+                    else if (t.name === ")")
+                        i--;
+                    if (i == 0)
+                        break;
+                    content.push(t);
+                }
+                var contentExpr = makeUntypedASTfromSymbols(content);
+                if (left === null)
+                    left = contentExpr;
+                else
+                    left = new Application(left, contentExpr);
+                break;
+            default:
+                if (first.name.match(/^[A-Za-z]$/) === null)
+                    throw new error_1.LambdaParseError("Unexpected token: '" + first + "'");
+                // variable
+                if (left === null)
+                    left = new Variable(first.name);
+                else
+                    left = new Application(left, new Variable(first.name));
+        }
+    }
+    if (left === null)
+        throw new error_1.LambdaParseError("No contents in Expression");
+    return left;
+}
+exports.makeUntypedASTfromSymbols = makeUntypedASTfromSymbols;
 function makeAST(str) {
     var strs = str.split(/\s*/).join("").split("");
     var tokens = [];
     while (strs.length > 0) {
         var c = strs.shift();
         switch (c) {
+            case "<":
+                var content = "";
+                while (true) {
+                    if (strs.length == 0)
+                        throw new error_1.LambdaParseError("Too many LANGLE '<'");
+                    c = strs.shift();
+                    if (c === ">")
+                        break;
+                    else
+                        content += c;
+                }
+                tokens.push(Macro.get(content));
+                break;
             case "[":
                 var content = "";
                 while (true) {
@@ -151,6 +187,12 @@ function makeAST(str) {
                     throw new error_1.LambdaParseError("Unknown Const: [" + content + "]");
                 tokens.push(result);
                 break;
+            case "=":
+                // Macro definition
+                var cmds = str.split("=");
+                var name = cmds.shift().trim();
+                var s = cmds.join("=");
+                return Macro.add(name, s);
             default:
                 tokens.push(new Symbol(c));
         }
@@ -164,7 +206,7 @@ function makeASTfromSymbols(tokens) {
     while (tokens.length > 0) {
         // 最初のSymbol
         var first = tokens.shift();
-        if (first instanceof Const || first instanceof Nil) {
+        if (first instanceof Const || first instanceof Nil || first instanceof Macro) {
             if (left === null)
                 left = first;
             else
@@ -359,11 +401,13 @@ function makeASTfromSymbols(tokens) {
 }
 exports.makeASTfromSymbols = makeASTfromSymbols;
 class ReductionResult {
-    constructor(expr, str) {
+    constructor(expr, str, hasNext) {
         this.expr = expr;
         this.str = str;
+        this.hasNext = hasNext;
     }
 }
+exports.ReductionResult = ReductionResult;
 // ラムダ項（抽象クラス）
 class Expression {
     constructor(className) {
@@ -379,7 +423,7 @@ class Expression {
             cur = next;
             str += " ==> " + next.toString() + "\n";
         }
-        return new ReductionResult(cur, str);
+        return new ReductionResult(cur, str, !cur.equals(cur.reduction()));
     }
 }
 exports.Expression = Expression;
@@ -604,6 +648,51 @@ class Nil extends Symbol {
 }
 exports.Nil = Nil;
 exports.nil = Nil.getInstance();
+class Macro extends Symbol {
+    constructor(name, expr) {
+        super(name, "Macro");
+        this.freevals = [];
+        this.expr = expr;
+    }
+    static add(name, str) {
+        var ret = makeAST(str);
+        if (ret.getFV().length !== 0) {
+            throw new error_1.MacroError("<" + name + "> contains free variables: " + ret.getFV());
+        }
+        else if (ret instanceof Macro) {
+            throw new error_1.MacroError("<" + name + "> contains Macro definition");
+        }
+        Macro.map[name] = new Macro(name, ret);
+        return Macro.map[name];
+    }
+    static get(name) {
+        var ret = Macro.map[name];
+        if (ret === undefined) {
+            return new Macro(name, undefined);
+        }
+        else {
+            return new Macro(name, ret.expr);
+        }
+    }
+    substitute(x, expr) {
+        return this;
+    }
+    toString() {
+        return "<" + this.name + ">";
+    }
+    reduction() {
+        if (this.expr === undefined)
+            return this;
+        else
+            return this.expr;
+    }
+    equalsAlpha(expr) {
+        // 再検討の余地あり
+        return this.expr.equalsAlpha(expr);
+    }
+}
+Macro.map = {};
+exports.Macro = Macro;
 // ラムダ抽象 \x.M
 class LambdaAbstraction extends Expression {
     constructor(boundval, expr) {
