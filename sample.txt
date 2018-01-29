@@ -1,5 +1,0 @@
-(\xy.[if] [==] x y [then] a [else] b)([+] [1] [2])[3]
-(\xy.[if] [==] x y [then] a [else] b)([+] [1] [2])[2]
-[let] x = [5] [in] [+] x [1]
-[case] x::y [of] [nil] -> [nil] | h::t -> h
-[case] [nil] [of] [nil] -> [nil] | h::t -> h

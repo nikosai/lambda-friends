@@ -2,7 +2,9 @@
 export abstract class LambdaFriendsError implements Error{
   stack:any;
   constructor(public name:string, public message:string){
-    Error.captureStackTrace(this,this.constructor);
+    // if (typeof Error.captureStackTrace === "function"){
+    //   Error.captureStackTrace(this,this.constructor);
+    // }
   }
   public toString():string{
     // return this.stack;
@@ -28,5 +30,19 @@ export class SubstitutionError extends LambdaFriendsError{
 export class ReductionError extends LambdaFriendsError{
   constructor(message: string){
     super("ReductionError",message);
+  }
+}
+
+// Macroの例外
+export class MacroError extends LambdaFriendsError{
+  constructor(message: string){
+    super("MacroError",message);
+  }
+}
+
+// Typeの例外
+export class TypeError extends LambdaFriendsError{
+  constructor(message: string){
+    super("TypeError",message);
   }
 }
