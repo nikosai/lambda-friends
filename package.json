@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@types/node": "^9.3.0",
+    "cytoscape": "^3.2.8",
     "readline-sync": "^1.4.7"
   }
 }
