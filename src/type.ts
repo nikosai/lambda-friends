@@ -1,3 +1,5 @@
+import { TypeError } from "./error";
+
 export abstract class Type{
   className: string;
 
@@ -7,10 +9,85 @@ export abstract class Type{
 
   public abstract toString():string;
   public abstract equals(t:Type):boolean;
+  public abstract contains(t:TypeVariable):boolean;
+  public abstract replace(from:TypeVariable, to:Type);
+  public abstract getVariables():TypeVariable[];
+}
+
+export class TypeEquation{
+  left:Type;
+  right:Type;
+  constructor(left:Type, right:Type){
+    this.left = left;
+    this.right = right;
+  }
+  public transform(eqs:TypeEquation[],next:TypeEquation[]):TypeEquation[]{
+    if (this.left instanceof TypeConstructor && this.right instanceof TypeConstructor){
+      // (a),(b)
+      return this.left.match(this.right);
+    }
+    if (this.left.equals(this.right)) {
+      // (c)
+      return [];
+    }
+    if (!(this.left instanceof TypeVariable)){
+      // (d)
+      return [new TypeEquation(this.right, this.left)];
+    }
+    if (this.right.contains(this.left)){
+      // (e)
+      throw new TypeError("Illegal type ("+this.right+" contains "+this.left+". Self-application?)");
+    }
+    // (f)
+    for (var e of eqs){
+      e.replace(this.left,this.right);
+    }
+    for (var e of next){
+      e.replace(this.left,this.right);
+    }
+    return [this];
+  }
+  public static isEqual(a:TypeEquation[],b:TypeEquation[]):boolean{
+    if (a.length!==b.length) return false;
+    for (var ai of a){
+      if (!TypeEquation.contains(ai,b)) return false;
+    }
+    return true;
+  }
+  public static contains(a:TypeEquation, b:TypeEquation[]):boolean{
+    for (var bi of b){
+      if (a.equals(bi)) return true;
+    }
+    return false;
+  }
+  public equals(e:TypeEquation):boolean{
+    return e.left.equals(this.left) && e.right.equals(this.right);
+  }
+  public static get(t:TypeVariable,eqs:TypeEquation[]):Type{
+    for (var eq of eqs){
+      if (eq.left.equals(t)) return eq.right;
+    }
+    throw new TypeError("Undefined TypeVariable: "+t);
+  }
+  public toString():string{
+    return this.left+" = "+this.right;
+  }
+  public replace(from:TypeVariable, to:Type){
+    if (this.left.equals(from)){
+      this.left = to;
+    } else {
+      this.left.replace(from,to);
+    }
+    if (this.right.equals(from)){
+      this.right = to;
+    } else {
+      this.right.replace(from,to);
+    }
+  }
 }
 
 export abstract class TypeConstructor extends Type{
-
+  public abstract match(t:Type):TypeEquation[];
 }
 
 export class TypeInt extends TypeConstructor{
@@ -30,6 +107,20 @@ export class TypeInt extends TypeConstructor{
   public equals(t:Type):boolean{
     if (t instanceof TypeInt) return true;
     else return false;
+  }
+  public match(t:Type):TypeEquation[]{
+    if (t instanceof TypeInt){
+      return [];
+    } else {
+      throw new TypeError(this+" and "+t+" are not compatible.")
+    }
+  }
+  public contains(t:TypeVariable):boolean{
+    return false;
+  }
+  public replace(from:TypeVariable, to:Type){}
+  public getVariables():TypeVariable[]{
+    return [];
   }
 }
 export var typeInt:TypeInt = TypeInt.getInstance();
@@ -52,6 +143,20 @@ export class TypeBool extends TypeConstructor{
     if (t instanceof TypeBool) return true;
     else return false;
   }
+  public match(t:Type):TypeEquation[]{
+    if (t instanceof TypeBool){
+      return [];
+    } else {
+      throw new TypeError(this+" and "+t+" are not compatible.")
+    }
+  }
+  public contains(t:TypeVariable):boolean{
+    return false;
+  }
+  public replace(from:TypeVariable, to:Type){}
+  public getVariables():TypeVariable[]{
+    return [];
+  }
 }
 export var typeBool:TypeBool = TypeBool.getInstance();
 
@@ -67,6 +172,26 @@ export class TypeList extends TypeConstructor{
   public equals(t:Type):boolean{
     if (t instanceof TypeList) return this.content.equals(t.content);
     else return false;
+  }
+  public match(t:Type):TypeEquation[]{
+    if (t instanceof TypeList){
+      return [new TypeEquation(this.content,t.content)];
+    } else {
+      throw new TypeError(this+" and "+t+" are not compatible.")
+    }
+  }
+  public contains(t:TypeVariable):boolean{
+    return this.content.contains(t);
+  }
+  public replace(from:TypeVariable, to:Type){
+    if (this.content.equals(from)){
+      this.content = to;
+    } else {
+      this.content.replace(from,to);
+    }
+  }
+  public getVariables():TypeVariable[]{
+    return this.content.getVariables();
   }
 }
 
@@ -88,19 +213,75 @@ export class TypeFunc extends TypeConstructor{
     if (t instanceof TypeFunc) return t.left.equals(this.left) && t.right.equals(this.right);
     else return false;
   }
+  public match(t:Type):TypeEquation[]{
+    if (t instanceof TypeFunc){
+      return [new TypeEquation(this.left,t.left),new TypeEquation(this.right,t.right)];
+    } else {
+      throw new TypeError(this+" and "+t+" are not compatible.")
+    }
+  }
+  public contains(t:TypeVariable):boolean{
+    return this.left.contains(t) || this.right.contains(t);
+  }
+  public replace(from:TypeVariable, to:Type){
+    if (this.left.equals(from)){
+      this.left = to;
+    } else {
+      this.left.replace(from,to);
+    }
+    if (this.right.equals(from)){
+      this.right = to;
+    } else {
+      this.right.replace(from,to);
+    }
+  }
+  public getVariables():TypeVariable[]{
+    return this.left.getVariables().concat(this.right.getVariables());
+  }
 }
 
 export class TypeVariable extends Type{
   id: number;
-  constructor(id:number){
+  static maxId: number;
+  static alphabet: string[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  
+  private constructor(id:number){
     super("TypeVariable");
     this.id = id;
   }
   public toString():string{
+    if (this.id < 0) return "'" + TypeVariable.alphabet[-this.id-1];
     return "'t"+this.id;
   }
   public equals(t:Type):boolean{
     if (t instanceof TypeVariable) return this.id === t.id;
     else return false; 
+  }
+  public static getNew():TypeVariable{
+    if (TypeVariable.maxId===undefined){
+      TypeVariable.maxId = 0;
+      return new TypeVariable(0);
+    } else {
+      TypeVariable.maxId++;
+      return new TypeVariable(TypeVariable.maxId);
+    }
+  }
+  public contains(t:TypeVariable):boolean{
+    return this.equals(t);
+  }
+  public replace(from:TypeVariable, to:Type){}
+  public getVariables():TypeVariable[]{
+    return [this];
+  }
+  public static getAlphabet(i:number){
+    return new TypeVariable(-i-1);
+  }
+  static contains(a:TypeVariable[],b:TypeVariable){
+    for (var ta of a){
+      if (ta.equals(b)){
+        return true;
+      }
+    }
+    return false;
   }
 }

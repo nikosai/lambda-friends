@@ -1,6 +1,10 @@
 =============== Command Help ===============
   :?            - show this command help
-  :l <filename> - load lambda expressions from textfile
-  :q            - close this interpreter
+  :l <filename> - load macros from textfile
   :s            - show current continuation steps
-  :s <n>        - set continuation steps
+  :s <number>   - set continuation steps
+  :t            - show current Typed/Untyped 
+  :t <y/n>      - set Typed/Untyped
+  :e            - show whether eta-reduction is allowed
+  :e <y/n>      - enable/disable eta-reduction
+  :q            - close this interpreter

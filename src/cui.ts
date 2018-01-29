@@ -1,12 +1,14 @@
-import { makeAST, ReductionResult, Macro } from "./expression";
 import * as fs from "fs";
+import { LambdaFriends } from "./lambda-friends";
 
 export class CUI{
   mainFunc: Function;
   stdin: any;
   prompt: string;
   steps: number;
-  result: ReductionResult;
+  typed: boolean;
+  etaAllowed: boolean;
+  lf: LambdaFriends;
 
   constructor(){
     this.stdin = require("readline").createInterface({
@@ -16,15 +18,18 @@ export class CUI{
     this.prompt = "input> ";
     this.stdin.setPrompt(this.prompt);
     this.steps = 100;
-    this.result = undefined;
-
+    this.typed = false;
+    this.etaAllowed = false;
+    LambdaFriends.output = function (line:string){
+      process.stdout.write(line);
+    }
     this.mainFunc = (line:string)=>{
+      line = line.split("#")[0];
       line = line.trim();
-      if (this.result !== undefined && line!=="n"){
+      if (this.lf !== undefined && line!=="n"){
         try{
-          this.result = this.result.expr.continualReduction(this.steps);
-          process.stdout.write(this.result.str);
-          if (!this.result.hasNext) this.result = undefined;
+          process.stdout.write(this.lf.continualReduction(this.steps));
+          if (!this.lf.hasNext(this.etaAllowed)) this.lf = undefined;
           else {
             process.stdout.write("\n"+this.steps+" Steps Done. Continue? (Y/n)> ");
             return;
@@ -43,17 +48,15 @@ export class CUI{
           case "?":
             CUI.fileMes("mes/help.txt");
             break;
-          case "m":
-            cmds.shift();
-            var cmds = cmds.join("").split("=");
-            var name = cmds.shift();
-            var str = cmds.join("=");
-            try{
-              Macro.add(name,str);
-              console.log("<"+name+"> is defined as "+Macro.get(name).expr);
-            }catch(e){
-              console.log(e.toString());
-            }
+          case "t":
+            if (cmds[1]==="y") this.typed = true;
+            else if (cmds[1]==="n") this.typed = false;
+            console.log("Current setting: "+(this.typed?"Typed":"Untyped"));
+            break;
+          case "e":
+            if (cmds[1]==="y") this.etaAllowed = true;
+            else if (cmds[1]==="n") this.etaAllowed = false;
+            console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
             break;
           case "s":
             var new_s = parseInt(cmds[1]);
@@ -65,38 +68,30 @@ export class CUI{
           case "l":
             var file = cmds[1];
             if (file === undefined){
-              console.log("Command Usage = :q <filename>");
+              console.log("Command Usage = :l <filename>");
               break;
             }
             if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
             try{
               fs.statSync(file);
-              var lines = fs.readFileSync(file,"utf8").split("\n");
-              process.stdout.write(this.prompt);
-              for (var l of lines){
-                console.log(l);
-                this.mainFunc(l);
-              }
-              return;
             }catch(e){
               console.log("File Not Found: "+file);
+              break;
             }
+            LambdaFriends.fileInput(fs.readFileSync(file,"utf8"),this.typed);
             break;
           default:
             console.log("Undefined command: "+line);
         }
       } else {
         try{
-          var expr = makeAST(line);
-          if (expr instanceof Macro){
-            console.log("<"+expr.name+"> is defined as "+expr.expr);
+          var lf = new LambdaFriends(line,this.typed);
+          if (lf.isMacro()){
             process.stdout.write("\n"+this.prompt);
             return;
           }
-          this.result = expr.continualReduction(this.steps);
-          process.stdout.write(this.result.str);
-          if (!this.result.hasNext) this.result = undefined;
-          else {
+          process.stdout.write(lf.continualReduction(this.steps));
+          if (lf.hasNext(this.etaAllowed)){
             process.stdout.write("\n"+this.steps+" Steps Done. Continue? (Y/n)> ");
             return;
           }

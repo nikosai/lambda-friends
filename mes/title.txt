@@ -1,5 +1,5 @@
 ============================================
   Welcome to Lambda-Friends!
+  Type ":?" to show command help.
   Type ":q" to close.
-  Type ":l <filename>" to load file.
 ============================================

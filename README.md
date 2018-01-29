@@ -1,21 +1,19 @@
 ![らむだフレンズ](docs/logo.png "らむだフレンズ")
 
-このプロジェクトでは、型付きλ計算のインタプリタ実装を目指します。
+~~このプロジェクトでは、型付きλ計算のインタプリタ実装を目指します。~~  
+型付きλ計算（FL）のインタプリタができました。
 
 言語は、Typescript + Node.jsを用いています。
-npmとNode.jsさえ入っていれば、きっと動きます。
+git cloneすれば手元でも動かせますが、[GitHub Pages上にも置いてあります](https://nikosai.github.io/lambda-friends/)。
 
 ## 今できること
-* 型付きλ計算（FL）の抽象構文木がつくれる
-* FLの推論規則に基づいた簡約ができる
-* GitHub Pages上で動作する → [すぐに試してみる](https://nikosai.github.io/lambda-friends/)
-
-## これからやるべきこと
-* マクロ定義ができるようにする
-* 型推論ができるようにする
-  + できればLaTeX(buffproofs)形式で出力したい
-* 設定により型付きと型なし両方の形式で簡約ができるようにしたい
-  + FLの制約上、互換性はない（λ抽象の本体と引数が簡約できない）
+* 純粋型なしλ計算と、型付きλ計算（FL）を扱える（設定により変更可）
+* それぞれの推論規則に基づいた簡約ができる
+  + 型なしの場合、η簡約の可否を設定できる
+  + 現在、型なしの場合は最左戦略のみが可能
+* マクロ定義ができる
+* マクロ定義を書き並べたファイルを読み込める
+  + [Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)との後方互換性あり。*.lm.txtを読み込める。
 
 ## 基本的な入力形式
 * 「\」「¥」「λ」はすべて「λ」として解釈される
@@ -23,11 +21,21 @@ npmとNode.jsさえ入っていれば、きっと動きます。
 * λ抽象は最長一致で解釈される
 * 以上2つをもって曖昧性が排除される場合、括弧は省略して良い
 * 空白は無視される
-* 変数に使用できるのは英字のみ。大文字と小文字は区別する。
-* 構文解析失敗時は、 `LambdaParseError` が `throw` される
+* 変数に使用できるのは大小英文字（計52文字）のみ。
 
-## 型付きラムダ計算で新たに導入された構文
-角括弧 `[ ]` で囲まれたキーワードは、FLのキーワードとして解釈する。
+## マクロ定義
+[Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)と同様の形式でマクロ定義ができる。
+
+マクロは、 `false = \xy.y`のように定義し、 `<false>`のように使う。
+
+型なしの場合、未定義のマクロは式中で使用できるが、自由変数と同様に扱われる（簡約基とみなされない）。
+
+型付きの場合、未定義のマクロは式中で使用できない。
+
+また、型付きで定義したものは型付きでしか使用できない（逆も然り）。
+
+## FLで新たに導入された構文
+角括弧 `[ ]` で囲まれたキーワードは、型付きλ計算（FL）のキーワードとして解釈する。
 * 基本型
   + 整数(int)型　ex. `[-1]` `[2531]`
   + 論理(bool)型　ex. `[true]` `[false]`
@@ -42,6 +50,26 @@ npmとNode.jsさえ入っていれば、きっと動きます。
   + `[let] x=M [in] M`
   + `[case] M [of] [nil] -> M | x::x -> M`
 
+## これからやるべきこと
+### WebUI周り
+* β基の表示・選択《型なし》
+  + 一応準備はできているが、UIをどうするか……
+* マクロ一覧の表示
+* β簡約グラフ《型なし》
+  + cytoscape.jsを使いたい
+* LaTeX形式での出力
+  + buffproofs形式の証明木と、簡約の途中経過
+* 入力履歴補完
+  + シェルみたいに上キーで履歴が出せるようにしたい
+* ステップ上限到達時の選択《型なし、型付きは無制限で良い》
+  + 現状、ステップ上限に達した場合、それ以上進めない
+
+### 全体
+* リファクタリング（TypeVariable.maxIdの管理方法を見直すなど）
+* 不動点演算子の追加《型付き》
+* チャーチ数・true/falseの判定《型なし》
+* 簡約部・適用した規則の明示《主に型付き》
+
 ## CUIモードの動かし方
 ```
 $ git clone https://github.com/nikosai/lambda-friends.git
@@ -54,56 +82,37 @@ $ make run
 ```
 ============================================
   Welcome to Lambda-Friends!
-  Type ".quit" or ".exit" to close.
-  Type ".input <filename>" to open file.
+  Type ":?" to show command help.
+  Type ":q" to close.
 ============================================
 
-input> (\x.xa)y
-((\x.(xa))y)
- ==> (ya)
+input> :?
+=============== Command Help ===============
+  :?            - show this command help
+  :l <filename> - load macros from textfile
+  :s            - show current continuation steps
+  :s <number>   - set continuation steps
+  :t            - show current Typed/Untyped
+  :t <y/n>      - set Typed/Untyped
+  :e            - show whether eta-reduction is allowed
+  :e <y/n>      - enable/disable eta-reduction
+  :q            - close this interpreter
 
 input> (\x.(\y.xy))(yx)
-((\xy.(xy))(yx))
+((\xy.(xy))(yx)) : Untyped
  ==> (\a.((yx)a))
 
-input> (\x.(\z.(\x.yx)xz))(zx)
-((\xz.(((\x.(yx))x)z))(zx))
- ==> (\a.(((\x.(yx))(zx))a))
+input> :t y
+Current setting: Typed
 
-input> .input sample.txt
-input> (\xy.[if] [==] x y [then] a [else] b)([+] [1] [2])[3]
-(((\xy.(if ((==x)y) then a else b))((+1)2))3)
- ==> ((\y.(if ((==((+1)2))y) then a else b))3)
- ==> (if ((==((+1)2))3) then a else b)
- ==> (if ((==3)3) then a else b)
- ==> (if true then a else b)
- ==> a
+input> \ab.(\xy.[if] [==] x y [then] [12] [else] [34])([+] [1] [2])[3]
+(\ab.(((\xy.(if ((==x)y) then 12 else 34))((+1)2))3)) : 'a -> 'b -> int
 
-input> (\xy.[if] [==] x y [then] a [else] b)([+] [1] [2])[2]
-(((\xy.(if ((==x)y) then a else b))((+1)2))2)
- ==> ((\y.(if ((==((+1)2))y) then a else b))2)
- ==> (if ((==((+1)2))2) then a else b)
- ==> (if ((==3)2) then a else b)
- ==> (if false then a else b)
- ==> b
-
-input> [let] x = [5] [in] [+] x [1]
-(let x = 5 in ((+x)1))
- ==> ((+5)1)
- ==> 6
-
-input> [case] x::y [of] [nil] -> [nil] | h::t -> h
-(case x::y of nil->nil | h::t->h)
- ==> x
-
-input> [case] [nil] [of] [nil] -> [nil] | h::t -> h
-(case nil of nil->nil | h::t->h)
- ==> nil
-
-input> .quit
+input> :q
 ```
 
 ## その他
 * このプロジェクトは、[Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)に影響を受けて始動しました。
 * 上記のロゴは、[けものフレンズ ロゴジェネレータ](https://aratama.github.io/kemonogen/)で作成しました。
-* 動作報告を歓迎します → [Twitter:@nikosai2531](https://twitter.com/nikosai2531)
+* 動作報告を歓迎します → Twitter: [@nikosai2531](https://twitter.com/nikosai2531)
+* バグ報告はIssueを投げてください。
