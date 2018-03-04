@@ -38,6 +38,7 @@ var etaDisableButton = <HTMLButtonElement>document.getElementById("etaDisable");
 var fileInput = <HTMLInputElement>document.getElementById("fileInput");
 var fileReader = new FileReader();
 var stepInput = <HTMLInputElement>document.getElementById("stepInput");
+// var macroListButton = document.getElementById("macroList");
 var graphDiv = document.getElementById("graph")
 
 fileInput.addEventListener("change",function (ev){
@@ -86,6 +87,10 @@ etaDisableButton.onclick = function(){
   webUI.etaAllowed = false;
 }
 
+// macroListButton.onclick = function(){
+//   output(LambdaFriends.getMacroList(webUI.typed));
+// }
+
 stepInput.addEventListener("change",function(){
   var new_s = parseInt(stepInput.value);
   if (!isNaN(new_s)){
@@ -121,7 +126,7 @@ function outputClear(){
   oel.innerText = "";
 }
 
-var cytoscape = require("cytoscape")
-var cy = cytoscape({
-  container: graphDiv
-});
+// var cytoscape = require("cytoscape")
+// var cy = cytoscape({
+//   container: graphDiv
+// });

@@ -1,5 +1,39 @@
+/*!
+ * "SourceHanCodeJP" is lisenced under the SIL Open Font License 1.1
+ * by Masataka Hattori
+ */
+@font-face {
+  font-family: 'SourceHanCodeJP';
+  src: 
+    url('./fonts/sourcehancodejp-normal-webfont.woff2') format('woff2'),
+    url('./fonts/sourcehancodejp-normal-webfont.woff') format('woff'),
+    url('./fonts/SourceHanCodeJP-Normal.otf') format('opentype'),
+    url('./fonts/sourcehancodejp-normal-webfont.ttf') format('truetype');
+}
+
+html,body {
+  margin: 0;
+  height: 100%;
+}
+
+#wrapper {
+  background-color: rgba(255, 226, 173, 0.685);
+  min-height: 100%;
+}
+
 body {
-  background-color: #eee;
+  background: url("back.jpg") no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: 'mgenplus-p-w', 'Noto Sans CJK JP', '源ノ角ゴシック', 'Source Han Sans', '源真ゴシック', 'GenShinGothic', 'M+ 2c', 'Mgen+ 2c', 'Hiragino Sans', 'ヒラギノ角ゴシック', 'ヒラギノ角ゴ Pro W3' ,'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ ProN W3', 'Hiragino Kaku Gothic ProN', 'GenShinGothic-w', sans-serif;
+}
+
+.container-fluid {
+  margin: 0 3%;
+}
+
+.code {
+  font-family: 'SourceHanCodeJP', 'Courier New', Courier, monospace;
 }
 
 header{
@@ -27,14 +61,66 @@ header{
   margin: 7px;
 }
 
-#output {
+#output-group {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#output-group .tab-pane {
+  padding: 15px;
+  border: 1.5px solid #DDD;
+  box-shadow: none;
+  border-top: 0;
+  background-color: #ffffffcf;
+  border-radius:0px 0px 5px 5px;
   resize: none;
   height: 400px;
-  margin-top: 10px;
-  font-size: 1.2em;
   overflow-y: scroll;
 }
 
-#input {
-  font-size: 1.2em;
+#output {
+  resize: none;
+  box-shadow: none;
+  background: transparent;
+  border:0;
+  padding:0;
+  margin:0;
+  height:100%;
+}
+
+#output-group li>a {
+  background-color: inherit;
+}
+#output-group li>a:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+#output-group li.active>a {
+  background-color: #ffffffcf;
+  border: 1.5px solid #DDD;
+  border-bottom: 0;
+  outline: none;
+}
+#output-group .nav-tabs{
+  border-bottom: 1.5px solid #DDD;
+}
+#output-group .nav-tabs>li{
+  margin-bottom: -1.5px;
+}
+
+#tabB table {
+  table-layout: fixed;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+@media screen and (max-width: 768px) {
+  #output-group {
+    flex-wrap: wrap;
+  }
+  #sidebar {
+    width:100%;
+    margin-top:10px;
+    margin-bottom:20px;
+    margin-left: 0;
+  }
 }
