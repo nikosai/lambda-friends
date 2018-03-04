@@ -56,12 +56,28 @@ export class LambdaFriends{
       try{
         var lf = new LambdaFriends(l,typed);
       }catch(e){
-        LambdaFriends.output(e.toString());
+        LambdaFriends.output(e.toString()+"\n");
       }
     }
   }
 
   public isMacro():boolean{
     return this.expr instanceof Macro;
+  }
+
+  public static getMacroList(typed:boolean):string{
+    var str = "";
+    if (typed){
+      for (var key in Macro.map){
+        var e = Macro.map[key];
+        str += "<"+e.name+"> is defined as "+e.expr+" : "+e.getType()+"\n";
+      }
+    } else {
+      for (var key in Macro.mapUntyped){
+        var e = Macro.mapUntyped[key];
+        str += "<"+e.name+"> is defined as "+e.expr+" : Untyped\n";
+      }
+    }
+    return str;
   }
 }

@@ -80,6 +80,9 @@ export class CUI{
             }
             LambdaFriends.fileInput(fs.readFileSync(file,"utf8"),this.typed);
             break;
+          case "m":
+            process.stdout.write(LambdaFriends.getMacroList(this.typed));
+            break;
           default:
             console.log("Undefined command: "+line);
         }

@@ -12,6 +12,7 @@ export abstract class Type{
   public abstract contains(t:TypeVariable):boolean;
   public abstract replace(from:TypeVariable, to:Type);
   public abstract getVariables():TypeVariable[];
+  public abstract toTexString():string;
 }
 
 export class TypeEquation{
@@ -84,6 +85,20 @@ export class TypeEquation{
       this.right.replace(from,to);
     }
   }
+  public static solve(eqs:TypeEquation[]):TypeEquation[]{
+    while (true){
+      var prev:TypeEquation[] = [].concat(eqs);
+      var next:TypeEquation[] = [];
+      while (eqs.length>0){
+        var e = eqs.shift();
+        var ans = e.transform(eqs,next);
+        next = next.concat(ans);
+      }
+      eqs = [].concat(next);
+      if (TypeEquation.isEqual(prev,next)) break;
+    }
+    return eqs;
+  }
 }
 
 export abstract class TypeConstructor extends Type{
@@ -103,6 +118,9 @@ export class TypeInt extends TypeConstructor{
   }
   public toString():string{
     return "int";
+  }
+  public toTexString():string{
+    return "{\\rm int}";
   }
   public equals(t:Type):boolean{
     if (t instanceof TypeInt) return true;
@@ -139,6 +157,9 @@ export class TypeBool extends TypeConstructor{
   public toString():string{
     return "bool";
   }
+  public toTexString():string{
+    return "{\\rm bool}";
+  }
   public equals(t:Type):boolean{
     if (t instanceof TypeBool) return true;
     else return false;
@@ -168,6 +189,9 @@ export class TypeList extends TypeConstructor{
   }
   public toString():string{
     return "list("+this.content+")";
+  }
+  public toTexString():string{
+    return "{\\rm list}("+this.content.toTexString()+")";
   }
   public equals(t:Type):boolean{
     if (t instanceof TypeList) return this.content.equals(t.content);
@@ -209,6 +233,12 @@ export class TypeFunc extends TypeConstructor{
     else ret = this.left.toString();
     return ret+" -> "+this.right;
   }
+  public toTexString():string{
+    var ret:string;
+    if (this.left instanceof TypeFunc) ret = "("+this.left.toTexString()+")";
+    else ret = this.left.toTexString();
+    return ret+" \\rightarrow "+this.right.toTexString();
+  }
   public equals(t:Type):boolean{
     if (t instanceof TypeFunc) return t.left.equals(this.left) && t.right.equals(this.right);
     else return false;
@@ -244,7 +274,10 @@ export class TypeVariable extends Type{
   id: number;
   static maxId: number;
   static alphabet: string[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-  
+  static texAlphabet: string[] = [
+    "\\alpha", "\\beta", "\\gamma", "\\delta", "\\varepsilon", "\\zeta", "\\eta", "\\theta", "\\iota", "\\kappa", "\\mu", "\\nu", "\\xi", "\\pi", "\\rho", "\\sigma", "\\upsilon", "\\phi", "\\chi", "\\psi", "\\omega", "\\Gamma", "\\Delta", "\\Theta", "\\Xi", "\\Pi", "\\Sigma", "\\Phi", "\\Psi", "\\Omega"
+  ].concat(TypeVariable.alphabet);
+
   private constructor(id:number){
     super("TypeVariable");
     this.id = id;
@@ -252,6 +285,10 @@ export class TypeVariable extends Type{
   public toString():string{
     if (this.id < 0) return "'" + TypeVariable.alphabet[-this.id-1];
     return "'t"+this.id;
+  }
+  public toTexString():string{
+    if (this.id < 0) return TypeVariable.texAlphabet[-this.id-1];
+    return "\\tau_{"+this.id+"}";
   }
   public equals(t:Type):boolean{
     if (t instanceof TypeVariable) return this.id === t.id;

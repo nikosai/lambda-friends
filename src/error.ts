@@ -46,3 +46,10 @@ export class TypeError extends LambdaFriendsError{
     super("TypeError",message);
   }
 }
+
+// TexにParseする際の例外
+export class TexError extends LambdaFriendsError{
+  constructor(message: string){
+    super("TexError",message);
+  }
+}
