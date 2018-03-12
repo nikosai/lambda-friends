@@ -2,7 +2,7 @@
 
 純粋型なしλ計算と、型付きλ計算（FL）のインタプリタです。
 
-言語は、Typescript ~~ + Node.js ~~ を用いています。
+言語は、Typescriptを用いています。
 git cloneすれば手元でも動かせますが、[GitHub Pages上にも置いてあります](https://nikosai.github.io/lambda-friends/)。
 
 ## 今できること
