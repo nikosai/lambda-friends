@@ -49,7 +49,16 @@ export class LambdaFriends{
     this.expr.setRoot();
     this.curStep++;
     this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
-    return this.curStep+": ("+redex.rule+") --> " + this.expr.toString();
+    let ret = this.curStep+": ("+redex.rule+") --> " + this.expr.toString();
+    if (!this.hasNext()){
+      ret += "    (normal form)\n";
+      let n = this.parseChurchNum();
+      if (n!==null) ret += "  = "+n+" (as nat)\n";
+      let b = this.parseChurchBool();
+      if (b!==null) ret += "  = "+b+" (as bool)\n";
+      ret.slice(0,ret.length-1);
+    }
+    return ret;
   }
 
   // 連続nステップ最左簡約
@@ -170,14 +179,27 @@ export class LambdaFriends{
   }
   
   public toString():string{
-    return this.expr+" : "+this.type;
+    let ret = this.expr+" : "+this.type;
+    if (!this.hasNext()){
+      ret += "    (normal form)\n";
+      let n = this.parseChurchNum();
+      if (n!==null) ret += "  = "+n+" (as nat)\n";
+      let b = this.parseChurchBool();
+      if (b!==null) ret += "  = "+b+" (as bool)\n";
+      ret = ret.slice(0,ret.length-1);
+    }
+    return ret;
   }
 
   public getOriginalString():string{
     return this.original+" : "+this.type;
   }
 
-  public parse(){
+  public parseChurchNum():number{
+    return this.expr.parseChurchNum();
+  }
 
+  public parseChurchBool():boolean{
+    return this.expr.parseChurchBool();
   }
 }

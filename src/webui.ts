@@ -216,23 +216,23 @@ document.getElementById("input").onkeydown = function(e){
 let outputBuffer = "";
 function output(str:string){
   outputBuffer = str;
-  oel.innerText = outputBuffer;
+  oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputLine(str:string){
   outputBuffer = str + "\n";
-  oel.innerText = outputBuffer;
+  oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputNext(str:string){
   outputBuffer += str;
-  oel.innerText = outputBuffer;
+  oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputNextLine(str:string){
   outputBuffer += str + "\n";
-  oel.innerText = outputBuffer;
+  oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputClear(){
   outputBuffer = "";
-  oel.innerText = outputBuffer;
+  oel.innerHTML = htmlEscape(outputBuffer);
 }
 function refreshMacroList(){
   var tbody = document.getElementById("macroList");
@@ -244,7 +244,7 @@ function refreshMacroList(){
   }
 }
 function htmlEscape(str:string):string{
-  return str.replace(/[&'`"<>]/g, function(match) {
+  return str.replace(/[&'`"<> \n]/g, function(match) {
     return {
       '&': '&amp;',
       "'": '&#x27;',
@@ -252,6 +252,8 @@ function htmlEscape(str:string):string{
       '"': '&quot;',
       '<': '&lt;',
       '>': '&gt;',
+      ' ': '&nbsp;',
+      '\n': '<br>'
     }[match]
   });
 }

@@ -80,6 +80,7 @@ body {
 
 #output {
   margin-bottom: 15px;
+  line-height: 1.6em;
 }
 
 #output-group li>a {

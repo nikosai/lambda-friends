@@ -314,13 +314,73 @@ class BetaRedex extends Redex {
         this.rule = "beta";
     }
     toString() {
-        return this.left + "(\\[" + this.la.boundval + "]." + this.la.expr + ")[" + this.arg + "]" + this.right;
+        let boundvals = [];
+        let expr = this.la.expr;
+        while (expr instanceof LambdaAbstraction) {
+            boundvals.push(expr.boundval);
+            expr = expr.expr;
+        }
+        let str = boundvals.join("") + ".";
+        if (expr instanceof Application) {
+            let expr1 = expr.left;
+            let str1 = expr.right.toString();
+            while (expr1 instanceof Application) {
+                str1 = expr1.right + str1;
+                expr1 = expr1.left;
+            }
+            str1 = expr1 + str1;
+            str = str + str1;
+        }
+        else {
+            str = str + expr;
+        }
+        return this.left + "(\\[" + this.la.boundval + "]" + str + ")[" + this.arg + "]" + this.right;
     }
     toTexString() {
-        return this.texLeft + "\\underline{\\strut " + this.la.toTexString() + "}\\,\\underline{\\strut " + this.arg.toTexString() + "}" + this.texRight;
+        let boundvals = [];
+        let expr = this.la.expr;
+        while (expr instanceof LambdaAbstraction) {
+            boundvals.push(expr.boundval.toTexString());
+            expr = expr.expr;
+        }
+        let str = boundvals.join("") + ".";
+        if (expr instanceof Application) {
+            let expr1 = expr.left;
+            let str1 = expr.right.toTexString();
+            while (expr1 instanceof Application) {
+                str1 = expr1.right.toTexString() + str1;
+                expr1 = expr1.left;
+            }
+            str1 = expr1.toTexString() + str1;
+            str = str + str1;
+        }
+        else {
+            str = str + expr.toTexString();
+        }
+        return this.texLeft + "(\\underline{\\strut \\lambda{" + this.la.boundval.toTexString() + "}" + str + ")\\underline{\\strut " + this.arg.toTexString() + "}" + this.texRight;
     }
     toHTMLString() {
-        return htmlEscape(this.left) + '(\\<span class="lf-beta lf-boundval">' + htmlEscape(this.la.boundval.toString()) + '</span>.' + htmlEscape(this.la.expr.toString()) + ')<span class="lf-beta lf-arg">' + htmlEscape(this.arg.toString()) + '</span>' + htmlEscape(this.right);
+        let boundvals = [];
+        let expr = this.la.expr;
+        while (expr instanceof LambdaAbstraction) {
+            boundvals.push(expr.boundval.toTexString());
+            expr = expr.expr;
+        }
+        let str = boundvals.join("") + ".";
+        if (expr instanceof Application) {
+            let expr1 = expr.left;
+            let str1 = expr.right.toTexString();
+            while (expr1 instanceof Application) {
+                str1 = expr1.right.toTexString() + str1;
+                expr1 = expr1.left;
+            }
+            str1 = expr1.toTexString() + str1;
+            str = str + str1;
+        }
+        else {
+            str = str + expr.toTexString();
+        }
+        return htmlEscape(this.left) + '(\\<span class="lf-beta lf-boundval">' + htmlEscape(this.la.boundval.toString()) + '</span>' + htmlEscape(str) + ')<span class="lf-beta lf-arg">' + htmlEscape(this.arg.toString()) + '</span>' + htmlEscape(this.right);
     }
     getTexRule() {
         return "\\beta";
@@ -336,13 +396,13 @@ class EtaRedex extends Redex {
         this.rule = "eta";
     }
     toString() {
-        return this.left + "[(\\" + this.content.boundval + "." + this.app + ")]" + this.right;
+        return this.left + "[" + this.content + "]" + this.right;
     }
     toTexString() {
         return this.texLeft + "\\underline{\\strut " + this.content.toTexString() + "}" + this.texRight;
     }
     toHTMLString() {
-        return htmlEscape(this.left) + '<span class="lf-eta">(\\' + htmlEscape(this.content.boundval.toString()) + '.' + htmlEscape(this.app.toString()) + ')</span>' + htmlEscape(this.right);
+        return htmlEscape(this.left) + '<span class="lf-eta">(\\' + htmlEscape(this.content.toString()) + ')</span>' + htmlEscape(this.right);
     }
     getTexRule() {
         return "\\eta";
@@ -410,6 +470,37 @@ class Expression {
     setRoot() {
         this.resetTopLevel();
         this.isTopLevel = true;
+    }
+    parseChurchNum() {
+        if (!(this instanceof LambdaAbstraction))
+            return null;
+        const f = this.boundval;
+        let e = this.expr;
+        let n = 0;
+        if (!(e instanceof LambdaAbstraction))
+            return null;
+        const x = e.boundval;
+        e = e.expr;
+        while (e instanceof Application) {
+            n++;
+            if (!(e.left.equals(f)))
+                return null;
+            e = e.right;
+        }
+        if (e.equals(x))
+            return n;
+        else
+            return null;
+    }
+    parseChurchBool() {
+        const t = new LambdaAbstraction(new Variable("x"), new LambdaAbstraction(new Variable("y"), new Variable("x")));
+        const f = new LambdaAbstraction(new Variable("x"), new LambdaAbstraction(new Variable("y"), new Variable("y")));
+        if (this.equalsAlpha(t))
+            return true;
+        else if (this.equalsAlpha(f))
+            return false;
+        else
+            return null;
     }
 }
 exports.Expression = Expression;
@@ -1550,7 +1641,18 @@ class LambdaFriends {
         this.expr.setRoot();
         this.curStep++;
         this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{" + redex.getTexRule() + "}& ";
-        return this.curStep + ": (" + redex.rule + ") --> " + this.expr.toString();
+        let ret = this.curStep + ": (" + redex.rule + ") --> " + this.expr.toString();
+        if (!this.hasNext()) {
+            ret += "    (normal form)\n";
+            let n = this.parseChurchNum();
+            if (n !== null)
+                ret += "  = " + n + " (as nat)\n";
+            let b = this.parseChurchBool();
+            if (b !== null)
+                ret += "  = " + b + " (as bool)\n";
+            ret.slice(0, ret.length - 1);
+        }
+        return ret;
     }
     // 連続nステップ最左簡約
     continualReduction(step) {
@@ -1668,12 +1770,27 @@ class LambdaFriends {
         return expression_1.Macro.clear(typed);
     }
     toString() {
-        return this.expr + " : " + this.type;
+        let ret = this.expr + " : " + this.type;
+        if (!this.hasNext()) {
+            ret += "    (normal form)\n";
+            let n = this.parseChurchNum();
+            if (n !== null)
+                ret += "  = " + n + " (as nat)\n";
+            let b = this.parseChurchBool();
+            if (b !== null)
+                ret += "  = " + b + " (as bool)\n";
+            ret = ret.slice(0, ret.length - 1);
+        }
+        return ret;
     }
     getOriginalString() {
         return this.original + " : " + this.type;
     }
-    parse() {
+    parseChurchNum() {
+        return this.expr.parseChurchNum();
+    }
+    parseChurchBool() {
+        return this.expr.parseChurchBool();
     }
 }
 exports.LambdaFriends = LambdaFriends;
@@ -2236,23 +2353,23 @@ document.getElementById("input").onkeydown = function (e) {
 let outputBuffer = "";
 function output(str) {
     outputBuffer = str;
-    oel.innerText = outputBuffer;
+    oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputLine(str) {
     outputBuffer = str + "\n";
-    oel.innerText = outputBuffer;
+    oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputNext(str) {
     outputBuffer += str;
-    oel.innerText = outputBuffer;
+    oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputNextLine(str) {
     outputBuffer += str + "\n";
-    oel.innerText = outputBuffer;
+    oel.innerHTML = htmlEscape(outputBuffer);
 }
 function outputClear() {
     outputBuffer = "";
-    oel.innerText = outputBuffer;
+    oel.innerHTML = htmlEscape(outputBuffer);
 }
 function refreshMacroList() {
     var tbody = document.getElementById("macroList");
@@ -2264,7 +2381,7 @@ function refreshMacroList() {
     }
 }
 function htmlEscape(str) {
-    return str.replace(/[&'`"<>]/g, function (match) {
+    return str.replace(/[&'`"<> \n]/g, function (match) {
         return {
             '&': '&amp;',
             "'": '&#x27;',
@@ -2272,6 +2389,8 @@ function htmlEscape(str) {
             '"': '&quot;',
             '<': '&lt;',
             '>': '&gt;',
+            ' ': '&nbsp;',
+            '\n': '<br>'
         }[match];
     });
 }

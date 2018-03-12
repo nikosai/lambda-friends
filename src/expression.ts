@@ -242,13 +242,70 @@ class BetaRedex extends Redex{
     this.rule = "beta";
   }
   public toString():string{
-    return this.left+"(\\["+this.la.boundval+"]."+this.la.expr+")["+this.arg+"]"+this.right;
+    let boundvals = [];
+    let expr = this.la.expr;
+    while(expr instanceof LambdaAbstraction){
+      boundvals.push(expr.boundval);
+      expr = expr.expr;
+    }
+    let str = boundvals.join("")+".";
+    if (expr instanceof Application){
+      let expr1 = expr.left;
+      let str1 = expr.right.toString();
+      while (expr1 instanceof Application){
+        str1 = expr1.right+str1;
+        expr1 = expr1.left;
+      }
+      str1 = expr1 + str1;
+      str = str+str1;
+    } else {
+      str = str+expr;
+    }
+    return this.left+"(\\["+this.la.boundval+"]"+str+")["+this.arg+"]"+this.right;
   }
   public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.la.toTexString()+"}\\,\\underline{\\strut "+this.arg.toTexString()+"}"+this.texRight;
+    let boundvals:string[] = [];
+    let expr = this.la.expr;
+    while(expr instanceof LambdaAbstraction){
+      boundvals.push(expr.boundval.toTexString());
+      expr = expr.expr;
+    }
+    let str = boundvals.join("")+".";
+    if (expr instanceof Application){
+      let expr1 = expr.left;
+      let str1 = expr.right.toTexString();
+      while (expr1 instanceof Application){
+        str1 = expr1.right.toTexString()+str1;
+        expr1 = expr1.left;
+      }
+      str1 = expr1.toTexString() + str1;
+      str = str+str1;
+    } else {
+      str = str+expr.toTexString();
+    }
+    return this.texLeft+"(\\underline{\\strut \\lambda{"+this.la.boundval.toTexString()+"}"+str+")\\underline{\\strut "+this.arg.toTexString()+"}"+this.texRight;
   }
   public toHTMLString():string{
-    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundval">'+htmlEscape(this.la.boundval.toString())+'</span>.'+htmlEscape(this.la.expr.toString())+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString())+'</span>'+htmlEscape(this.right);
+    let boundvals:string[] = [];
+    let expr = this.la.expr;
+    while(expr instanceof LambdaAbstraction){
+      boundvals.push(expr.boundval.toTexString());
+      expr = expr.expr;
+    }
+    let str = boundvals.join("")+".";
+    if (expr instanceof Application){
+      let expr1 = expr.left;
+      let str1 = expr.right.toTexString();
+      while (expr1 instanceof Application){
+        str1 = expr1.right.toTexString()+str1;
+        expr1 = expr1.left;
+      }
+      str1 = expr1.toTexString() + str1;
+      str = str+str1;
+    } else {
+      str = str+expr.toTexString();
+    }
+    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundval">'+htmlEscape(this.la.boundval.toString())+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString())+'</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\beta";
@@ -269,13 +326,13 @@ class EtaRedex extends Redex{
     this.rule = "eta";
   }
   public toString():string{
-    return this.left+"[(\\"+this.content.boundval+"."+this.app+")]"+this.right;
+    return this.left+"["+this.content+"]"+this.right;
   }
   public toTexString():string{
     return this.texLeft+"\\underline{\\strut "+this.content.toTexString()+"}"+this.texRight;
   }
   public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-eta">(\\'+htmlEscape(this.content.boundval.toString())+'.'+htmlEscape(this.app.toString())+')</span>'+htmlEscape(this.right);
+    return htmlEscape(this.left)+'<span class="lf-eta">(\\'+htmlEscape(this.content.toString())+')</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\eta";
@@ -356,6 +413,31 @@ export abstract class Expression{
   public setRoot(){
     this.resetTopLevel();
     this.isTopLevel = true;
+  }
+
+  public parseChurchNum():number{
+    if (!(this instanceof LambdaAbstraction)) return null;
+    const f = this.boundval;
+    let e = this.expr;
+    let n = 0;
+    if (!(e instanceof LambdaAbstraction)) return null;
+    const x = e.boundval;
+    e = e.expr;
+    while (e instanceof Application) {
+      n++;
+      if (!(e.left.equals(f))) return null;
+      e = e.right;
+    }
+    if (e.equals(x)) return n;
+    else return null;
+  }
+
+  public parseChurchBool():boolean{
+    const t = new LambdaAbstraction(new Variable("x"),new LambdaAbstraction(new Variable("y"),new Variable("x")));
+    const f = new LambdaAbstraction(new Variable("x"),new LambdaAbstraction(new Variable("y"),new Variable("y")));
+    if (this.equalsAlpha(t)) return true;
+    else if (this.equalsAlpha(f)) return false;
+    else return null;
   }
 
   public abstract toString():string;

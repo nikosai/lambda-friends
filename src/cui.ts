@@ -122,6 +122,8 @@ export class CUI{
             this.lf = lf;
             process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
             return;
+          } else {
+            this.lf = undefined;
           }
         }catch(e){
           console.log(e.toString()+"\n");
