@@ -157,10 +157,10 @@ var submitInput = function(){
     try{
       let ret = LambdaFriends.parseMacroDef(line,typed);
       if (ret===null) {
-        curlf = new LambdaFriends(line,typed);
+        curlf = new LambdaFriends(line,typed,etaAllowed);
         outputLine(curlf.toString());
         if (typed)
-          outputNextLine(curlf.continualReduction(steps,etaAllowed));
+          outputNextLine(curlf.continualReduction(steps));
         showContinueBtn();
       } else {
         let names = [].concat(ret.names);
@@ -259,7 +259,7 @@ function refreshTex(){
   tabC.textContent = null;
   let proc = "";
   let proof = "";
-  if (curlf !== undefined) proc = curlf.getProcessTex(etaAllowed);
+  if (curlf !== undefined) proc = curlf.getProcessTex();
   tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
   if (typed){
     if (curlf !== undefined) proof = curlf.getProofTree();
@@ -295,13 +295,13 @@ function makeTexDiv(title:string, content:string){
   return div;
 }
 function doContinual(){
-  outputNextLine(curlf.continualReduction(steps,etaAllowed));
+  outputNextLine(curlf.continualReduction(steps));
   showContinueBtn();
   refreshTex();
 }
 function showContinueBtn(){
   // 「さらに続ける」ボタンを表示
-  if (!curlf.hasNext(etaAllowed)) {
+  if (!curlf.hasNext()) {
     outputButtons.textContent = null;
     return;
   }
@@ -319,14 +319,14 @@ function showContinueBtn(){
   let div = document.createElement("div");
   div.className = "list-group";
   outputButtons.appendChild(div);
-  let rs = curlf.getRedexes(etaAllowed);
+  let rs = curlf.getRedexes();
   // console.log(rs);
   for (let r of rs){
     let b = document.createElement("button");
     b.className = "list-group-item code";
     b.innerHTML = r.toHTMLString();
     b.onclick = function(){
-      outputNextLine(curlf.reduction(etaAllowed,r));
+      outputNextLine(curlf.reduction(r));
       showContinueBtn();
       refreshTex();
     }

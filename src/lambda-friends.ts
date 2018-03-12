@@ -9,7 +9,8 @@ export class LambdaFriends{
   proofTree:string;
   processTex:string;
   original:Expression;
-  constructor(str:string,typed:boolean){
+  etaAllowed:boolean;
+  constructor(str:string,typed:boolean,etaAllowed:boolean){
     let l = str.split("#")[0].trim();
     let names = [];
     while (true) {
@@ -28,18 +29,19 @@ export class LambdaFriends{
       Macro.add(name, this, typed);
     }
     this.typed = typed;
+    this.etaAllowed = etaAllowed;
     this.processTex = "\\begin{eqnarray*}\n&& ";
     this.curStep = 0;
   }
 
-  public getRedexes(etaAllowed?:boolean){
-    return this.expr.getRedexes(this.typed,etaAllowed).sort(Redex.compare);
+  public getRedexes(){
+    return this.expr.getRedexes(this.typed,this.etaAllowed).sort(Redex.compare);
   }
 
-  public reduction(etaAllowed?:boolean,redex?:Redex):string{
+  public reduction(redex?:Redex):string{
     if (redex === undefined){
       // 簡約基指定のない場合、最左簡約
-      let rs = this.getRedexes(etaAllowed);
+      let rs = this.getRedexes();
       if (rs.length===0) return null;
       redex = rs[0];
     }
@@ -51,27 +53,27 @@ export class LambdaFriends{
   }
 
   // 連続nステップ最左簡約
-  public continualReduction(step?:number,etaAllowed?:boolean):string{
+  public continualReduction(step?:number):string{
     if (step === undefined) step = 100;
     let strs:string[] = [];
     for (let i=0; i<step; i++){
-      let result = this.reduction(etaAllowed);
+      let result = this.reduction();
       if (result === null) break;
       strs.push(result);
     }
     return strs.join("\n");
   }
 
-  public hasNext(etaAllowed?:boolean):boolean{
-    return !this.expr.isNormalForm(this.typed,etaAllowed);
+  public hasNext():boolean{
+    return !this.expr.isNormalForm(this.typed,this.etaAllowed);
   }
 
   public getProofTree(){
     return "\\begin{prooftree}\n"+this.proofTree+"\\end{prooftree}";
   }
 
-  public getProcessTex(etaAllowed?:boolean){
-    return this.processTex+this.expr.toTexString()+(this.hasNext(etaAllowed)?"":"\\not\\longrightarrow")+"\n\\end{eqnarray*}";
+  public getProcessTex(){
+    return this.processTex+this.expr.toTexString()+(this.hasNext()?"":"\\not\\longrightarrow")+"\n\\end{eqnarray*}";
   }
 
   public getType(typed:boolean):Type{
@@ -109,7 +111,7 @@ export class LambdaFriends{
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     if (names.length===0) return null;
-    let lf = new LambdaFriends(l,typed);
+    let lf = new LambdaFriends(l,typed,undefined); // ???
     for (let name of names){
       Macro.add(name, lf, typed);
     }
@@ -173,5 +175,9 @@ export class LambdaFriends{
 
   public getOriginalString():string{
     return this.original+" : "+this.type;
+  }
+
+  public parse(){
+
   }
 }

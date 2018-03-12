@@ -1511,7 +1511,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
 const type_1 = require("./type");
 class LambdaFriends {
-    constructor(str, typed) {
+    constructor(str, typed, etaAllowed) {
         let l = str.split("#")[0].trim();
         let names = [];
         while (true) {
@@ -1531,16 +1531,17 @@ class LambdaFriends {
             expression_1.Macro.add(name, this, typed);
         }
         this.typed = typed;
+        this.etaAllowed = etaAllowed;
         this.processTex = "\\begin{eqnarray*}\n&& ";
         this.curStep = 0;
     }
-    getRedexes(etaAllowed) {
-        return this.expr.getRedexes(this.typed, etaAllowed).sort(expression_1.Redex.compare);
+    getRedexes() {
+        return this.expr.getRedexes(this.typed, this.etaAllowed).sort(expression_1.Redex.compare);
     }
-    reduction(etaAllowed, redex) {
+    reduction(redex) {
         if (redex === undefined) {
             // 簡約基指定のない場合、最左簡約
-            let rs = this.getRedexes(etaAllowed);
+            let rs = this.getRedexes();
             if (rs.length === 0)
                 return null;
             redex = rs[0];
@@ -1552,26 +1553,26 @@ class LambdaFriends {
         return this.curStep + ": (" + redex.rule + ") --> " + this.expr.toString();
     }
     // 連続nステップ最左簡約
-    continualReduction(step, etaAllowed) {
+    continualReduction(step) {
         if (step === undefined)
             step = 100;
         let strs = [];
         for (let i = 0; i < step; i++) {
-            let result = this.reduction(etaAllowed);
+            let result = this.reduction();
             if (result === null)
                 break;
             strs.push(result);
         }
         return strs.join("\n");
     }
-    hasNext(etaAllowed) {
-        return !this.expr.isNormalForm(this.typed, etaAllowed);
+    hasNext() {
+        return !this.expr.isNormalForm(this.typed, this.etaAllowed);
     }
     getProofTree() {
         return "\\begin{prooftree}\n" + this.proofTree + "\\end{prooftree}";
     }
-    getProcessTex(etaAllowed) {
-        return this.processTex + this.expr.toTexString() + (this.hasNext(etaAllowed) ? "" : "\\not\\longrightarrow") + "\n\\end{eqnarray*}";
+    getProcessTex() {
+        return this.processTex + this.expr.toTexString() + (this.hasNext() ? "" : "\\not\\longrightarrow") + "\n\\end{eqnarray*}";
     }
     getType(typed) {
         if (!typed)
@@ -1611,7 +1612,7 @@ class LambdaFriends {
         }
         if (names.length === 0)
             return null;
-        let lf = new LambdaFriends(l, typed);
+        let lf = new LambdaFriends(l, typed, undefined); // ???
         for (let name of names) {
             expression_1.Macro.add(name, lf, typed);
         }
@@ -1671,6 +1672,8 @@ class LambdaFriends {
     }
     getOriginalString() {
         return this.original + " : " + this.type;
+    }
+    parse() {
     }
 }
 exports.LambdaFriends = LambdaFriends;
@@ -2173,10 +2176,10 @@ var submitInput = function () {
         try {
             let ret = lambda_friends_1.LambdaFriends.parseMacroDef(line, typed);
             if (ret === null) {
-                curlf = new lambda_friends_1.LambdaFriends(line, typed);
+                curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed);
                 outputLine(curlf.toString());
                 if (typed)
-                    outputNextLine(curlf.continualReduction(steps, etaAllowed));
+                    outputNextLine(curlf.continualReduction(steps));
                 showContinueBtn();
             }
             else {
@@ -2277,7 +2280,7 @@ function refreshTex() {
     let proc = "";
     let proof = "";
     if (curlf !== undefined)
-        proc = curlf.getProcessTex(etaAllowed);
+        proc = curlf.getProcessTex();
     tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
     if (typed) {
         if (curlf !== undefined)
@@ -2314,13 +2317,13 @@ function makeTexDiv(title, content) {
     return div;
 }
 function doContinual() {
-    outputNextLine(curlf.continualReduction(steps, etaAllowed));
+    outputNextLine(curlf.continualReduction(steps));
     showContinueBtn();
     refreshTex();
 }
 function showContinueBtn() {
     // 「さらに続ける」ボタンを表示
-    if (!curlf.hasNext(etaAllowed)) {
+    if (!curlf.hasNext()) {
         outputButtons.textContent = null;
         return;
     }
@@ -2339,14 +2342,14 @@ function showContinueBtn() {
     let div = document.createElement("div");
     div.className = "list-group";
     outputButtons.appendChild(div);
-    let rs = curlf.getRedexes(etaAllowed);
+    let rs = curlf.getRedexes();
     // console.log(rs);
     for (let r of rs) {
         let b = document.createElement("button");
         b.className = "list-group-item code";
         b.innerHTML = r.toHTMLString();
         b.onclick = function () {
-            outputNextLine(curlf.reduction(etaAllowed, r));
+            outputNextLine(curlf.reduction(r));
             showContinueBtn();
             refreshTex();
         };

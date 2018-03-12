@@ -33,7 +33,7 @@ export class CUI{
         }
         try{
           console.log(this.lf.continualReduction(this.steps));
-          if (!this.lf.hasNext(this.etaAllowed)) this.lf = undefined;
+          if (!this.lf.hasNext()) this.lf = undefined;
           else {
             process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
             return;
@@ -115,10 +115,10 @@ export class CUI{
         }
       } else {
         try{
-          var lf = new LambdaFriends(line,this.typed);
+          var lf = new LambdaFriends(line,this.typed,this.etaAllowed);
           console.log(lf.toString());
-          console.log(lf.continualReduction(this.steps,this.etaAllowed));
-          if (lf.hasNext(this.etaAllowed)){
+          console.log(lf.continualReduction(this.steps));
+          if (lf.hasNext()){
             this.lf = lf;
             process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
             return;

@@ -64,7 +64,6 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 ### 全体
 * リファクタリング
   + TypeVariable.maxIdの管理方法を見直す？
-  + etaAllowedをLambdaFriends側に持たせる？
   + toStringのやり方見直し（isTopLevelの廃止）
 * 不動点演算子の追加《型付き》
 * チャーチ数・true/falseの判定《型なし》
