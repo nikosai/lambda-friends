@@ -70,7 +70,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 * チャーチ数・true/falseの判定《型なし》
 * 簡約部・適用した規則の明示《主に型付き》
 
-## CUIモードの動かし方
+## CUIモードの動かし方（旧）
 ```
 $ git clone https://github.com/nikosai/lambda-friends.git
 $ npm install

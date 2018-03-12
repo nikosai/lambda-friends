@@ -4,11 +4,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // 例外の抽象クラス
 class LambdaFriendsError {
     constructor(name, message) {
-        this.name = name;
-        this.message = message;
         // if (typeof Error.captureStackTrace === "function"){
         //   Error.captureStackTrace(this,this.constructor);
         // }
+        if (message === undefined) {
+            this.name = "LambdaFriendsError";
+            this.message = name;
+        }
+        else {
+            this.name = name;
+            this.message = message;
+        }
     }
     toString() {
         // return this.stack;
@@ -64,180 +70,80 @@ exports.TexError = TexError;
 Object.defineProperty(exports, "__esModule", { value: true });
 const type_1 = require("./type");
 const error_1 = require("./error");
-function parseConst(str) {
-    switch (str) {
-        case "nil":
-            return exports.nil;
-        case "false":
-        case "true":
-            return new ConstBool(str === "true");
-        case "if":
-        case "then":
-        case "else":
-        case "let":
-        case "in":
-        case "case":
-        case "of":
-            return new Symbol(str);
-    }
-    if (str.match(/^\d+$|^-\d+$/) !== null) {
-        return new ConstInt(parseInt(str));
-    }
-    else {
-        return new ConstOp(str); // fail -> null
-    }
-}
-exports.parseConst = parseConst;
-function makeUntypedAST(str) {
-    var strs = str.split(/\s*/).join("").split("");
-    var tokens = [];
+// 字句解析
+function tokenize(str, typed) {
+    let strs = str.split(/\s*/).join("").split("");
+    let tokens = [];
     while (strs.length > 0) {
-        var c = strs.shift();
-        switch (c) {
-            case "<":
-                var content = "";
-                while (true) {
-                    if (strs.length == 0)
-                        throw new error_1.LambdaParseError("Too many LANGLE '<'");
-                    c = strs.shift();
-                    if (c === ">")
-                        break;
-                    else
-                        content += c;
-                }
-                tokens.push(Macro.get(content, false));
-                break;
-            case "=":
-                // Macro definition
-                var cmds = str.split("=");
-                var name = cmds.shift().trim();
-                var s = cmds.join("=");
-                return Macro.add(name, s, false);
-            default:
-                tokens.push(new Symbol(c));
+        let c = strs.shift();
+        if (c === "<") {
+            // <macro>
+            let content = "";
+            while (true) {
+                if (strs.length == 0)
+                    throw new error_1.LambdaParseError("Too many LANGLE '<'");
+                c = strs.shift();
+                if (c === ">")
+                    break;
+                else
+                    content += c;
+            }
+            tokens.push(Macro.get(content, typed));
+        }
+        else if (typed && c === "[") {
+            // [const]
+            let content = "";
+            while (true) {
+                if (strs.length == 0)
+                    throw new error_1.LambdaParseError("Too many LBRACKET '['");
+                c = strs.shift();
+                if (c === "]")
+                    break;
+                else
+                    content += c;
+            }
+            let result = null;
+            switch (content) {
+                case "nil":
+                    result = new Nil();
+                    break;
+                case "false":
+                case "true":
+                    result = new ConstBool(content === "true");
+                    break;
+                case "if":
+                case "then":
+                case "else":
+                case "let":
+                case "in":
+                case "case":
+                case "of":
+                    result = new Symbol(content);
+                    break;
+                default:
+                    if (str.match(/^\d+$|^-\d+$/) !== null) {
+                        result = new ConstInt(parseInt(str));
+                    }
+                    else {
+                        result = new ConstOp(str); // fail -> null
+                    }
+            }
+            if (result === null)
+                throw new error_1.LambdaParseError("Unknown Const: [" + content + "]");
+            tokens.push(result);
+        }
+        else {
+            tokens.push(new Symbol(c));
         }
     }
-    // console.log(tokens);
-    var ret = makeUntypedASTfromSymbols(tokens);
-    ret.isTopLevel = true;
-    return ret;
+    return tokens;
 }
-exports.makeUntypedAST = makeUntypedAST;
-function makeUntypedASTfromSymbols(tokens) {
-    var left = null;
+// 構文解析
+function parseSymbols(tokens, typed) {
+    let left = null;
     while (tokens.length > 0) {
         // 最初のSymbol
-        var first = tokens.shift();
-        if (first instanceof Macro) {
-            if (left === null)
-                left = first;
-            else
-                left = new Application(left, first);
-            continue;
-        }
-        switch (first.name) {
-            case "\\":
-            case "\u00a5":
-            case "λ":
-                // abst
-                if (left === null)
-                    return LambdaAbstraction.parse(tokens);
-                else
-                    return new Application(left, LambdaAbstraction.parse(tokens));
-            case "(":
-                // application
-                var content = [];
-                var i = 1;
-                while (true) {
-                    if (tokens.length == 0)
-                        throw new error_1.LambdaParseError("Too many LPAREN '('");
-                    var t = tokens.shift();
-                    if (t.name === "(")
-                        i++;
-                    else if (t.name === ")")
-                        i--;
-                    if (i == 0)
-                        break;
-                    content.push(t);
-                }
-                var contentExpr = makeUntypedASTfromSymbols(content);
-                if (left === null)
-                    left = contentExpr;
-                else
-                    left = new Application(left, contentExpr);
-                break;
-            default:
-                if (first.name.match(/^[A-Za-z]$/) === null)
-                    throw new error_1.LambdaParseError("Unexpected token: '" + first + "'");
-                // variable
-                if (left === null)
-                    left = new Variable(first.name);
-                else
-                    left = new Application(left, new Variable(first.name));
-        }
-    }
-    if (left === null)
-        throw new error_1.LambdaParseError("No contents in Expression");
-    return left;
-}
-exports.makeUntypedASTfromSymbols = makeUntypedASTfromSymbols;
-function makeAST(str) {
-    var strs = str.split(/\s*/).join("").split("");
-    var tokens = [];
-    while (strs.length > 0) {
-        var c = strs.shift();
-        switch (c) {
-            case "<":
-                var content = "";
-                while (true) {
-                    if (strs.length == 0)
-                        throw new error_1.LambdaParseError("Too many LANGLE '<'");
-                    c = strs.shift();
-                    if (c === ">")
-                        break;
-                    else
-                        content += c;
-                }
-                tokens.push(Macro.get(content, true));
-                break;
-            case "[":
-                var content = "";
-                while (true) {
-                    if (strs.length == 0)
-                        throw new error_1.LambdaParseError("Too many LBRACKET '['");
-                    c = strs.shift();
-                    if (c === "]")
-                        break;
-                    else
-                        content += c;
-                }
-                var result = parseConst(content);
-                if (result === null)
-                    throw new error_1.LambdaParseError("Unknown Const: [" + content + "]");
-                tokens.push(result);
-                break;
-            case "=":
-                // Macro definition
-                var cmds = str.split("=");
-                var name = cmds.shift().trim();
-                var s = cmds.join("=");
-                return Macro.add(name, s, true);
-            default:
-                tokens.push(new Symbol(c));
-        }
-    }
-    // console.log(tokens);
-    var ret = makeASTfromSymbols(tokens);
-    ret.getType();
-    ret.isTopLevel = true;
-    return ret;
-}
-exports.makeAST = makeAST;
-function makeASTfromSymbols(tokens) {
-    var left = null;
-    while (tokens.length > 0) {
-        // 最初のSymbol
-        var first = tokens.shift();
+        let first = tokens.shift();
         if (first instanceof Const || first instanceof Nil || first instanceof Macro) {
             if (left === null)
                 left = first;
@@ -248,20 +154,21 @@ function makeASTfromSymbols(tokens) {
         switch (first.name) {
             case "\\":
             case "\u00a5":
-            case "λ":
+            case "λ": {
                 // abst
                 if (left === null)
-                    return LambdaAbstraction.parse(tokens);
+                    return LambdaAbstraction.parse(tokens, typed);
                 else
-                    return new Application(left, LambdaAbstraction.parse(tokens));
-            case "(":
+                    return new Application(left, LambdaAbstraction.parse(tokens, typed));
+            }
+            case "(": {
                 // application
-                var content = [];
-                var i = 1;
+                let content = [];
+                let i = 1;
                 while (true) {
                     if (tokens.length == 0)
                         throw new error_1.LambdaParseError("Too many LPAREN '('");
-                    var t = tokens.shift();
+                    let t = tokens.shift();
                     if (t.name === "(")
                         i++;
                     else if (t.name === ")")
@@ -270,154 +177,37 @@ function makeASTfromSymbols(tokens) {
                         break;
                     content.push(t);
                 }
-                var contentExpr = makeASTfromSymbols(content);
+                let contentExpr = parseSymbols(content, typed);
                 if (left === null)
                     left = contentExpr;
                 else
                     left = new Application(left, contentExpr);
                 break;
-            case "if":
-                // if statement
-                var state = [];
-                var i_num = 0, t_num = 0, e_num = 0;
-                while (true) {
-                    if (tokens.length == 0)
-                        throw new error_1.LambdaParseError("Illegal If statement");
-                    var t = tokens.shift();
-                    switch (t.name) {
-                        case "if":
-                            i_num++;
-                            break;
-                        case "then":
-                            t_num++;
-                            break;
-                        case "else":
-                            e_num++;
-                            break;
+            }
+            default: {
+                if (typed) {
+                    switch (first.name) {
+                        case "if": {
+                            // if statement
+                            return If.parse(tokens, typed);
+                        }
+                        case "let": {
+                            // let statement
+                            return Let.parse(tokens, typed);
+                        }
+                        case "case": {
+                            // case statement: [case] M [of] [nil] -> M | x::x -> M
+                            return Case.parse(tokens, typed);
+                        }
+                        case ":": {
+                            // list
+                            let t = tokens.shift();
+                            if (t.name !== ":")
+                                throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+                            return new List(left, parseSymbols(tokens, typed));
+                        }
                     }
-                    if (i_num === e_num && t_num === i_num + 1)
-                        break;
-                    state.push(t);
                 }
-                var stateExpr = makeASTfromSymbols(state);
-                var ifTrue = [];
-                i_num = 0, t_num = 0, e_num = 0;
-                while (true) {
-                    if (tokens.length == 0)
-                        throw new error_1.LambdaParseError("Illegal If statement");
-                    var t = tokens.shift();
-                    switch (t.name) {
-                        case "if":
-                            i_num++;
-                            break;
-                        case "then":
-                            t_num++;
-                            break;
-                        case "else":
-                            e_num++;
-                            break;
-                    }
-                    if (i_num === t_num && e_num === i_num + 1)
-                        break;
-                    ifTrue.push(t);
-                }
-                var ifTrueExpr = makeASTfromSymbols(ifTrue);
-                var ifFalseExpr = makeASTfromSymbols(tokens);
-                return new If(stateExpr, ifTrueExpr, ifFalseExpr);
-            case "let":
-                // let statement
-                var t = tokens.shift();
-                if (t.name.match(/^[A-Za-z]$/) === null)
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var boundVal = new Variable(t.name);
-                if (tokens.shift().name !== "=")
-                    throw new error_1.LambdaParseError("'=' is expected");
-                var content = [];
-                var i = 1;
-                while (true) {
-                    // console.log(i);
-                    if (tokens.length == 0)
-                        throw new error_1.LambdaParseError("Illegal Let statement");
-                    var t = tokens.shift();
-                    if (t.name === "let")
-                        i++;
-                    else if (t.name === "in")
-                        i--;
-                    if (i == 0)
-                        break;
-                    content.push(t);
-                }
-                var contentExpr = makeASTfromSymbols(content);
-                var restExpr = makeASTfromSymbols(tokens);
-                return new Let(boundVal, contentExpr, restExpr);
-            case "case":
-                // case statement: [case] M [of] [nil] -> M | x::x -> M
-                var state = [];
-                var i = 1;
-                while (true) {
-                    if (tokens.length == 0)
-                        throw new error_1.LambdaParseError("Illegal Case statement");
-                    var t = tokens.shift();
-                    if (t.name === "case")
-                        i++;
-                    else if (t.name === "of")
-                        i--;
-                    if (i == 0)
-                        break;
-                    state.push(t);
-                }
-                var stateExpr = makeASTfromSymbols(state);
-                var t = tokens.shift();
-                if (t.name !== "nil")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var t = tokens.shift();
-                if (t.name !== "-")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var t = tokens.shift();
-                if (t.name !== ">")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var ifNil = [];
-                var i = 1;
-                while (true) {
-                    if (tokens.length == 0)
-                        throw new error_1.LambdaParseError("Too many [case]");
-                    var t = tokens.shift();
-                    if (t.name === "case")
-                        i++;
-                    else if (t.name === "|")
-                        i--;
-                    if (i == 0)
-                        break;
-                    ifNil.push(t);
-                }
-                var ifNilExpr = makeASTfromSymbols(ifNil);
-                var head = new Variable(tokens.shift().name);
-                if (head.name.match(/^[A-Za-z]$/) === null)
-                    throw new error_1.LambdaParseError("Unexpected token: '" + head.name + "'");
-                var t = tokens.shift();
-                if (t.name !== ":")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var t = tokens.shift();
-                if (t.name !== ":")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var tail = new Variable(tokens.shift().name);
-                if (tail.name.match(/^[A-Za-z]$/) === null)
-                    throw new error_1.LambdaParseError("Unexpected token: '" + tail.name + "'");
-                var t = tokens.shift();
-                if (t.name !== "-")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var t = tokens.shift();
-                if (t.name !== ">")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                var ifElseExpr = makeASTfromSymbols(tokens);
-                return new Case(stateExpr, ifNilExpr, head, tail, ifElseExpr);
-            case ":":
-                // list
-                var t = tokens.shift();
-                if (t.name !== ":")
-                    throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-                return new List(left, makeASTfromSymbols(tokens));
-            default:
                 if (first.name.match(/^[A-Za-z]$/) === null)
                     throw new error_1.LambdaParseError("Unexpected token: '" + first + "'");
                 // variable
@@ -425,25 +215,39 @@ function makeASTfromSymbols(tokens) {
                     left = new Variable(first.name);
                 else
                     left = new Application(left, new Variable(first.name));
+            }
         }
     }
     if (left === null)
         throw new error_1.LambdaParseError("No contents in Expression");
     return left;
 }
-exports.makeASTfromSymbols = makeASTfromSymbols;
-class ReductionResult {
-    constructor(expr, str, hasNext) {
-        this.expr = expr;
-        this.str = str;
-        this.hasNext = hasNext;
-    }
+// 字句解析と構文解析 return: root node
+function makeAST(str, typed) {
+    let t = parseSymbols(tokenize(str, typed), typed);
+    t.setRoot();
+    return t;
 }
-exports.ReductionResult = ReductionResult;
+exports.makeAST = makeAST;
+function htmlEscape(str) {
+    return str.replace(/[&'`"<>]/g, function (match) {
+        return {
+            '&': '&amp;',
+            "'": '&#x27;',
+            '`': '&#x60;',
+            '"': '&quot;',
+            '<': '&lt;',
+            '>': '&gt;',
+        }[match];
+    });
+}
+// 簡約基
 class Redex {
     constructor(type) {
         this.left = "";
         this.right = "";
+        this.texLeft = "";
+        this.texRight = "";
         this.type = type;
     }
     addLeft(s) {
@@ -452,17 +256,54 @@ class Redex {
     addRight(s) {
         this.right += s;
     }
-    static makeNext(es, prefix, suffix, func) {
-        var ret = [].concat(es);
-        for (var e of ret) {
+    addTexLeft(s) {
+        this.texLeft = s + this.texLeft;
+    }
+    addTexRight(s) {
+        this.texRight += s;
+    }
+    static makeNext(es, prefix, suffix, prefixTex, suffixTex, func) {
+        let ret = [].concat(es);
+        for (let e of ret) {
             e.next = func(e.next);
             e.addLeft(prefix);
             e.addRight(suffix);
+            e.addTexLeft(prefixTex);
+            e.addTexRight(suffixTex);
         }
         return ret;
     }
+    getName() {
+        return this.type;
+    }
+    getPos() {
+        return this.left.length;
+    }
+    // aの方が優先度高い → 負, 同等 → 0, bの方が優先度高い → 正
+    static compare(a, b) {
+        let map = {
+            "beta": 0,
+            "eta": 1,
+            "typed": 2,
+            "macro": 3
+        };
+        let ac = map[a.type];
+        let bc = map[b.type];
+        if (ac === bc) {
+            let ap = a.getPos();
+            let bp = b.getPos();
+            if (ap === bp)
+                return 0;
+            else
+                return ap - bp;
+        }
+        else {
+            return ac - bc;
+        }
+    }
 }
 exports.Redex = Redex;
+// β基 : (\x.M)N
 class BetaRedex extends Redex {
     constructor(e) {
         super("beta");
@@ -470,97 +311,105 @@ class BetaRedex extends Redex {
         this.la = e.left;
         this.next = this.la.expr.substitute(this.la.boundval, e.right);
         this.arg = e.right;
+        this.rule = "beta";
     }
     toString() {
         return this.left + "(\\[" + this.la.boundval + "]." + this.la.expr + ")[" + this.arg + "]" + this.right;
     }
+    toTexString() {
+        return this.texLeft + "\\underline{\\strut " + this.la.toTexString() + "}\\,\\underline{\\strut " + this.arg.toTexString() + "}" + this.texRight;
+    }
+    toHTMLString() {
+        return htmlEscape(this.left) + '(\\<span class="lf-beta lf-boundval">' + htmlEscape(this.la.boundval.toString()) + '</span>.' + htmlEscape(this.la.expr.toString()) + ')<span class="lf-beta lf-arg">' + htmlEscape(this.arg.toString()) + '</span>' + htmlEscape(this.right);
+    }
+    getTexRule() {
+        return "\\beta";
+    }
 }
-exports.BetaRedex = BetaRedex;
+// η基 : (\x.Mx)
 class EtaRedex extends Redex {
     constructor(e) {
         super("eta");
         this.content = e;
         this.app = e.expr;
         this.next = this.app.left;
+        this.rule = "eta";
     }
     toString() {
         return this.left + "[(\\" + this.content.boundval + "." + this.app + ")]" + this.right;
     }
+    toTexString() {
+        return this.texLeft + "\\underline{\\strut " + this.content.toTexString() + "}" + this.texRight;
+    }
+    toHTMLString() {
+        return htmlEscape(this.left) + '<span class="lf-eta">(\\' + htmlEscape(this.content.boundval.toString()) + '.' + htmlEscape(this.app.toString()) + ')</span>' + htmlEscape(this.right);
+    }
+    getTexRule() {
+        return "\\eta";
+    }
 }
-exports.EtaRedex = EtaRedex;
+// マクロ : <macro>
 class MacroRedex extends Redex {
     constructor(e) {
         super("macro");
         this.content = e;
         this.next = e.expr;
+        this.next.isTopLevel = false;
+        this.rule = "macro";
     }
     toString() {
         return this.left + "[<" + this.content.name + ">]" + this.right;
     }
+    toTexString() {
+        return this.texLeft + "\\underline{\\strut " + this.content.toTexString() + "}" + this.texRight;
+    }
+    toHTMLString() {
+        return htmlEscape(this.left) + '<span class="lf-macro">&lt;' + htmlEscape(this.content.name) + '&gt;</span>' + htmlEscape(this.right);
+    }
+    getTexRule() {
+        return "{\\rm macro}";
+    }
 }
-exports.MacroRedex = MacroRedex;
+// 型付きの簡約基（マクロ以外）
+class TypedRedex extends Redex {
+    constructor(e, next, rule) {
+        super("typed");
+        this.content = e;
+        this.next = next;
+        this.rule = rule;
+    }
+    toString() {
+        return this.left + "[" + this.content.toString() + "]" + this.right;
+    }
+    toTexString() {
+        return this.texLeft + "\\underline{\\strut " + this.content.toTexString() + "}" + this.texRight;
+    }
+    toHTMLString() {
+        return htmlEscape(this.left) + '<span class="lf-typed">' + htmlEscape(this.content.toString()) + '</span>' + htmlEscape(this.right);
+    }
+    getTexRule() {
+        return "{\\rm (" + this.rule + ")}";
+    }
+}
+// 型の連立方程式と証明木の組
 class TypeResult {
     constructor(eqs, proofTree) {
         this.eqs = eqs;
         this.proofTree = proofTree;
     }
 }
-exports.TypeResult = TypeResult;
 // ラムダ項（抽象クラス）
 class Expression {
     // type: Type;
     constructor(className) {
-        this.isTopLevel = false;
         this.className = className;
     }
-    continualReduction(n) {
-        var cur = this;
-        var str = cur.toString() + " : " + cur.getType() + "\n";
-        for (var i = 0; i < n; i++) {
-            var next = cur.reduction();
-            if (cur.equals(next))
-                break;
-            cur = next;
-            str += " ==> " + next.toString() + "\n";
-        }
-        return new ReductionResult(cur, str, cur.hasNext());
+    isNormalForm(type, etaAllowed) {
+        return this.getRedexes(type, etaAllowed).length === 0;
     }
-    hasNext() {
-        return !this.equals(this.reduction());
-    }
-    continualUntypedReduction(n, etaAllowed) {
-        var cur = this;
-        var str = cur.toString() + " : Untyped\n";
-        for (var i = 0; i < n; i++) {
-            var rs = cur.getRedexes(etaAllowed);
-            if (rs.length === 0)
-                break;
-            cur = rs.pop().next;
-            str += " ==> " + cur.toString() + "\n";
-        }
-        return new ReductionResult(cur, str, cur.isNormalForm(etaAllowed));
-    }
-    isNormalForm(etaAllowed) {
-        return this.getRedexes(etaAllowed).length === 0;
-    }
-    getType() {
-        type_1.TypeVariable.maxId = undefined;
-        var target = type_1.TypeVariable.getNew();
-        var eqs = this.getEquations([], target).eqs;
-        var ret = type_1.TypeEquation.get(target, type_1.TypeEquation.solve(eqs));
-        var vs = ret.getVariables();
-        // 't0,'t1,'t2,... から 'a,'b,'c,... に変換
-        var vars = [];
-        for (var v of vs) {
-            if (!type_1.TypeVariable.contains(vars, v))
-                vars.push(v);
-        }
-        var i = 0;
-        for (var v of vars) {
-            ret.replace(v, type_1.TypeVariable.getAlphabet(i));
-            i++;
-        }
-        return ret;
+    setRoot() {
+        this.resetTopLevel();
+        this.isTopLevel = true;
     }
 }
 exports.Expression = Expression;
@@ -591,17 +440,16 @@ class Symbol extends Expression {
     substitute(x, expr) {
         throw new error_1.SubstitutionError("Undefined Substitution");
     }
-    reduction() {
-        return this;
-    }
     getEquations(gamma, type) {
         throw new error_1.TypeError("Undefined Type");
     }
-    getRedexes(etaAllowed) {
+    getRedexes(typed, etaAllowed) {
         throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
     }
+    resetTopLevel() {
+        this.isTopLevel = false;
+    }
 }
-exports.Symbol = Symbol;
 // 変数 x
 class Variable extends Symbol {
     constructor(name) {
@@ -615,10 +463,10 @@ class Variable extends Symbol {
             return this;
     }
     getEquations(gamma, type) {
-        for (var g of gamma) {
+        for (let g of gamma) {
             if (g.equals(this)) {
                 // (var)
-                var str = "\\AxiomC{}\n";
+                let str = "\\AxiomC{}\n";
                 str += "\\RightLabel{\\scriptsize(var)}\n";
                 str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.name + " : " + type.toTexString() + " $}\n";
                 return new TypeResult([new type_1.TypeEquation(g.type, type)], str);
@@ -631,11 +479,11 @@ class Variable extends Symbol {
     }
     static union(a, b, c) {
         if (c === undefined) {
-            var ret = [];
-            for (var v of a) {
+            let ret = [];
+            for (let v of a) {
                 ret.push(v);
             }
-            for (var v of Variable.dif(b, a)) {
+            for (let v of Variable.dif(b, a)) {
                 ret.push(v);
             }
             return ret;
@@ -645,15 +493,15 @@ class Variable extends Symbol {
         }
     }
     static dif(a, b) {
-        var ret = [];
-        for (var ta of a) {
+        let ret = [];
+        for (let ta of a) {
             if (!Variable.contains(b, ta))
                 ret.push(ta);
         }
         return ret;
     }
     static contains(a, b) {
-        for (var ta of a) {
+        for (let ta of a) {
             if (ta.equals(b)) {
                 return true;
             }
@@ -663,27 +511,26 @@ class Variable extends Symbol {
     static gammaToTexString(gamma) {
         if (gamma.length === 0)
             return "";
-        var ret = gamma[0].name + " : " + gamma[0].type.toTexString();
-        for (var i = 1; i < gamma.length; i++) {
+        let ret = gamma[0].name + " : " + gamma[0].type.toTexString();
+        for (let i = 1; i < gamma.length; i++) {
             ret += ",~" + gamma[i].name + " : " + gamma[i].type.toTexString();
         }
         return ret;
     }
     static getNew(used) {
-        var alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-        for (var a of alphabet) {
-            var z = new Variable(a);
+        let alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+        for (let a of alphabet) {
+            let z = new Variable(a);
             if (!Variable.contains(used, z)) {
                 return z;
             }
         }
         throw new error_1.SubstitutionError("No more Variables available");
     }
-    getRedexes(etaAllowed) {
+    getRedexes(typed, etaAllowed) {
         return [];
     }
 }
-exports.Variable = Variable;
 // 定数 c
 class Const extends Symbol {
     constructor(name, className) {
@@ -695,37 +542,42 @@ class Const extends Symbol {
     }
     getEquations(gamma, type) {
         // (con)
-        var str = "\\AxiomC{}\n";
+        let str = "\\AxiomC{}\n";
         str += "\\RightLabel{\\scriptsize(con)}\n";
         str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult([new type_1.TypeEquation(this.type, type)], str);
     }
+    toString() {
+        return "[" + this.name + "]";
+    }
     toTexString() {
         return this.name + "^{" + this.type.toTexString() + "}";
     }
-    getRedexes(etaAllowed) {
-        throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    getRedexes(typed, etaAllowed) {
+        if (typed) {
+            return [];
+        }
+        else {
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+        }
     }
 }
-exports.Const = Const;
 // int型定数 c^{int}
 class ConstInt extends Const {
     constructor(value) {
         super(value.toString(), "ConstInt");
         this.value = value;
-        this.type = type_1.typeInt;
+        this.type = new type_1.TypeInt();
     }
 }
-exports.ConstInt = ConstInt;
 // bool型定数 c^{bool}
 class ConstBool extends Const {
     constructor(value) {
         super(value.toString(), "ConstBool");
         this.value = value;
-        this.type = type_1.typeBool;
+        this.type = new type_1.TypeBool();
     }
 }
-exports.ConstBool = ConstBool;
 // 関数型定数 c^{op} （前置記法・2項演算）
 class ConstOp extends Const {
     constructor(funcName) {
@@ -733,88 +585,87 @@ class ConstOp extends Const {
         switch (funcName) {
             case "+":
                 this.value = (x, y) => (new ConstInt(x.value + y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeInt));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeInt()));
                 break;
             case "-":
                 this.value = (x, y) => (new ConstInt(x.value - y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeInt));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeInt()));
                 break;
             case "*":
                 this.value = (x, y) => (new ConstInt(x.value * y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeInt));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeInt()));
                 break;
             case "/":
                 this.value = (x, y) => { if (y.value === 0)
                     throw new error_1.ReductionError("Dividing by '0' is not allowed");
                 else
                     return new ConstInt(Math.floor(x.value / y.value)); };
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeInt));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeInt()));
                 break;
             case "%":
                 this.value = (x, y) => { if (y.value === 0)
                     throw new error_1.ReductionError("Dividing by '0' is not allowed");
                 else
                     return new ConstInt(x.value - Math.floor(x.value / y.value) * 4); };
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeInt));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeInt()));
                 break;
             case "<":
                 this.value = (x, y) => (new ConstBool(x.value < y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeBool()));
                 break;
             case ">":
                 this.value = (x, y) => (new ConstBool(x.value > y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeBool()));
                 break;
             case "<=":
                 this.value = (x, y) => (new ConstBool(x.value <= y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeBool()));
                 break;
             case ">=":
                 this.value = (x, y) => (new ConstBool(x.value >= y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeBool()));
                 break;
             case "==":
                 this.value = (x, y) => (new ConstBool(x.value == y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeBool()));
                 break;
             case "!=":
                 this.value = (x, y) => (new ConstBool(x.value != y.value));
-                this.type = new type_1.TypeFunc(type_1.typeInt, new type_1.TypeFunc(type_1.typeInt, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeFunc(new type_1.TypeInt(), new type_1.TypeBool()));
                 break;
             case "eq":
                 this.value = (x, y) => (new ConstBool(x.value == y.value));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             case "eq":
                 this.value = (x, y) => (new ConstBool(x.value == y.value));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             case "xor":
                 this.value = (x, y) => (new ConstBool(x.value != y.value));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             case "or":
                 this.value = (x, y) => (new ConstBool(x.value || y.value));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             case "and":
                 this.value = (x, y) => (new ConstBool(x.value && y.value));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             case "nor":
                 this.value = (x, y) => (new ConstBool(!(x.value || y.value)));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             case "nand":
                 this.value = (x, y) => (new ConstBool(!(x.value && y.value)));
-                this.type = new type_1.TypeFunc(type_1.typeBool, new type_1.TypeFunc(type_1.typeBool, type_1.typeBool));
+                this.type = new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeFunc(new type_1.TypeBool(), new type_1.TypeBool()));
                 break;
             default:
                 throw new error_1.LambdaParseError("Undefined function: " + funcName);
         }
     }
 }
-exports.ConstOp = ConstOp;
 // 空リスト nil
 class Nil extends Symbol {
     substitute(x, expr) {
@@ -824,18 +675,11 @@ class Nil extends Symbol {
         super("nil", "Nil");
         this.freevals = [];
     }
-    static getInstance() {
-        if (Nil.instance === undefined) {
-            return Nil.instance = new Nil();
-        }
-        else
-            return Nil.instance;
-    }
     getEquations(gamma, type) {
         // (nil)
-        var t = type_1.TypeVariable.getNew();
-        var nType = new type_1.TypeList(t);
-        var str = "\\AxiomC{}\n";
+        let t = type_1.TypeVariable.getNew();
+        let nType = new type_1.TypeList(t);
+        let str = "\\AxiomC{}\n";
         str += "\\RightLabel{\\scriptsize(nil)}\n";
         str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.name + " : " + nType.toTexString() + " $}\n";
         return new TypeResult([new type_1.TypeEquation(type, nType)], str);
@@ -843,40 +687,48 @@ class Nil extends Symbol {
     toTexString() {
         return "{\\rm " + this.name + "}";
     }
-    getRedexes(etaAllowed) {
-        throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    getRedexes(typed, etaAllowed) {
+        if (typed) {
+            return [];
+        }
+        else {
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+        }
     }
 }
-exports.Nil = Nil;
-exports.nil = Nil.getInstance();
 // マクロ定義
 class Macro extends Symbol {
-    constructor(name, expr, typed) {
+    constructor(name, expr, typed, type) {
         super(name, "Macro");
         this.freevals = [];
         this.expr = expr;
         this.typed = typed;
+        this.type = type;
     }
-    static add(name, str, typed) {
+    static add(name, lf, typed) {
+        let expr = lf.expr;
+        if (!(/^[a-zA-Z0-9!?]+$/.test(name))) {
+            throw new error_1.MacroError("<" + name + "> cannot be used as a name of macro. Available characters: [a-zA-Z0-9!?]");
+        }
+        let map = (typed ? Macro.map : Macro.mapUntyped);
+        if (expr.getFV().length !== 0) {
+            throw new error_1.MacroError("<" + name + "> contains free variables: " + expr.getFV());
+        }
+        let m = new Macro(name, expr, typed, lf.type);
+        m.isTopLevel = true;
+        map[name] = m;
+        return map[name];
+    }
+    static clear(typed) {
         if (typed) {
-            var ret = makeAST(str);
-            if (ret.getFV().length !== 0) {
-                throw new error_1.MacroError("<" + name + "> contains free variables: " + ret.getFV());
-            }
-            Macro.map[name] = new Macro(name, ret, typed);
-            return Macro.map[name];
+            Macro.map = {};
         }
         else {
-            var ret = makeUntypedAST(str);
-            if (ret.getFV().length !== 0) {
-                throw new error_1.MacroError("<" + name + "> contains free variables: " + ret.getFV());
-            }
-            Macro.mapUntyped[name] = new Macro(name, ret, typed);
-            return Macro.mapUntyped[name];
+            Macro.mapUntyped = {};
         }
     }
     static get(name, typed) {
-        var ret;
+        let ret;
         if (typed) {
             ret = Macro.map[name];
         }
@@ -884,23 +736,21 @@ class Macro extends Symbol {
             ret = Macro.mapUntyped[name];
         }
         if (ret === undefined) {
-            return new Macro(name, undefined, typed);
+            // 発展の余地あり。typeを指定したundefマクロを許す？
+            return new Macro(name, undefined, typed, undefined);
         }
         else {
-            return new Macro(name, ret.expr, typed);
+            return new Macro(name, ret.expr, typed, ret.type);
         }
+    }
+    static getMap(typed) {
+        return Object.assign({}, (typed ? Macro.map : Macro.mapUntyped));
     }
     substitute(x, expr) {
         return this;
     }
     toString() {
         return "<" + this.name + ">";
-    }
-    reduction() {
-        if (this.expr === undefined)
-            return this;
-        else
-            return this.expr;
     }
     equalsAlpha(expr) {
         // 再検討の余地あり
@@ -919,11 +769,16 @@ class Macro extends Symbol {
     toTexString() {
         return "\\overline{\\bf " + this.name + "}";
     }
-    getRedexes(etaAllowed) {
+    getRedexes(typed, etaAllowed) {
         if (this.expr === undefined)
             return [];
         else
             return [new MacroRedex(this)];
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        if (this.expr !== undefined)
+            this.expr.resetTopLevel();
     }
 }
 Macro.map = {};
@@ -937,12 +792,12 @@ class LambdaAbstraction extends Expression {
         this.boundval = boundval;
         this.expr = expr;
     }
-    static parse(tokens) {
-        var boundvals = [];
+    static parse(tokens, typed) {
+        let boundvals = [];
         while (tokens.length > 0) {
-            var t = tokens.shift();
+            let t = tokens.shift();
             if (t.name === ".") {
-                var expr = makeASTfromSymbols(tokens);
+                let expr = parseSymbols(tokens, typed);
                 while (boundvals.length > 0) {
                     expr = new LambdaAbstraction(boundvals.pop(), expr);
                 }
@@ -958,16 +813,16 @@ class LambdaAbstraction extends Expression {
         throw new error_1.LambdaParseError("'.' is needed");
     }
     toString() {
-        var boundvals = [this.boundval];
-        var expr = this.expr;
+        let boundvals = [this.boundval];
+        let expr = this.expr;
         while (expr instanceof LambdaAbstraction) {
             boundvals.push(expr.boundval);
             expr = expr.expr;
         }
-        var str = "\\" + boundvals.join("") + ".";
+        let str = "\\" + boundvals.join("") + ".";
         if (expr instanceof Application) {
-            var expr1 = expr.left;
-            var str1 = expr.right.toString();
+            let expr1 = expr.left;
+            let str1 = expr.right.toString();
             while (expr1 instanceof Application) {
                 str1 = expr1.right + str1;
                 expr1 = expr1.left;
@@ -996,13 +851,10 @@ class LambdaAbstraction extends Expression {
             return new LambdaAbstraction(this.boundval, this.expr.substitute(y, expr));
         }
         else {
-            var uniFV = Variable.union(this.expr.getFV(), expr.getFV());
-            var z = Variable.getNew(uniFV);
+            let uniFV = Variable.union(this.expr.getFV(), expr.getFV());
+            let z = Variable.getNew(uniFV);
             return new LambdaAbstraction(z, this.expr.substitute(this.boundval, z)).substitute(y, expr);
         }
-    }
-    reduction() {
-        return this;
     }
     equals(expr) {
         return (expr instanceof LambdaAbstraction) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
@@ -1012,34 +864,34 @@ class LambdaAbstraction extends Expression {
             return false;
         if (this.equals(expr))
             return true;
-        var x = this.boundval;
-        var m = this.expr;
-        var y = expr.boundval;
-        var n = expr.expr;
+        let x = this.boundval;
+        let m = this.expr;
+        let y = expr.boundval;
+        let n = expr.expr;
         return (!Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y)));
     }
     getEquations(gamma, type) {
         // (abs)
-        var t0 = type_1.TypeVariable.getNew();
-        var t1 = type_1.TypeVariable.getNew();
+        let t0 = type_1.TypeVariable.getNew();
+        let t1 = type_1.TypeVariable.getNew();
         this.boundval.type = t1;
-        var next = this.expr.getEquations(gamma.concat(this.boundval), t0);
-        var str = next.proofTree;
+        let next = this.expr.getEquations(gamma.concat(this.boundval), t0);
+        let str = next.proofTree;
         str += "\\RightLabel{\\scriptsize(abs)}\n";
         str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult(next.eqs.concat(new type_1.TypeEquation(type, new type_1.TypeFunc(t1, t0))), str);
     }
     toTexString() {
-        var boundvals = [this.boundval.toTexString()];
-        var expr = this.expr;
+        let boundvals = [this.boundval.toTexString()];
+        let expr = this.expr;
         while (expr instanceof LambdaAbstraction) {
             boundvals.push(expr.boundval.toTexString());
             expr = expr.expr;
         }
-        var str = "(\\lambda " + boundvals.join("") + ".";
+        let str = "\\lambda " + boundvals.join("") + ".";
         if (expr instanceof Application) {
-            var expr1 = expr.left;
-            var str1 = expr.right.toTexString();
+            let expr1 = expr.left;
+            let str1 = expr.right.toTexString();
             while (expr1 instanceof Application) {
                 str1 = expr1.right.toTexString() + str1;
                 expr1 = expr1.left;
@@ -1057,21 +909,31 @@ class LambdaAbstraction extends Expression {
     isEtaRedex() {
         return (this.expr instanceof Application) && (this.expr.right.equals(this.boundval)) && (!Variable.contains(this.expr.left.getFV(), this.boundval));
     }
-    getRedexes(etaAllowed) {
-        var boundvals = [this.boundval];
-        var expr = this.expr;
+    getRedexes(typed, etaAllowed) {
+        if (typed)
+            return [];
+        let boundvals = [this.boundval];
+        let expr = this.expr;
         while (expr instanceof LambdaAbstraction) {
             boundvals.push(expr.boundval);
             expr = expr.expr;
         }
-        var ret = Redex.makeNext(this.expr.getRedexes(etaAllowed), "(\\" + boundvals.join("") + ".", ")", (prev) => (new LambdaAbstraction(this.boundval, prev)));
+        let ret = Redex.makeNext(this.expr.getRedexes(false, etaAllowed), "(\\" + boundvals.join("") + ".", ")", "(\\lambda{" + boundvals.join("") + "}.", ")", (prev) => (new LambdaAbstraction(this.boundval, prev)));
+        if (etaAllowed === undefined) {
+            console.error("etaAllowed is undefined.");
+            etaAllowed = false;
+        }
         if (etaAllowed && this.isEtaRedex()) {
             ret.push(new EtaRedex(this));
         }
         return ret;
     }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.boundval.resetTopLevel();
+        this.expr.resetTopLevel();
+    }
 }
-exports.LambdaAbstraction = LambdaAbstraction;
 // 関数適用 MN
 class Application extends Expression {
     constructor(left, right) {
@@ -1083,8 +945,8 @@ class Application extends Expression {
         return (this.left instanceof LambdaAbstraction);
     }
     toString() {
-        var expr = this.left;
-        var str = this.right.toString();
+        let expr = this.left;
+        let str = this.right.toString();
         while (expr instanceof Application) {
             str = expr.right + str;
             expr = expr.left;
@@ -1103,40 +965,6 @@ class Application extends Expression {
     substitute(y, expr) {
         return new Application(this.left.substitute(y, expr), this.right.substitute(y, expr));
     }
-    reduction() {
-        if (this.left instanceof LambdaAbstraction) {
-            // (app2)
-            return this.left.expr.substitute(this.left.boundval, this.right);
-        }
-        else if (this.left instanceof Application
-            && this.left.left instanceof ConstOp
-            && this.left.right instanceof Const) {
-            var op = this.left.left;
-            var left = this.left.right;
-            var right = this.right;
-            if (right instanceof Const) {
-                // (app5)
-                if (op.type.left.equals(left.type) && op.type.right instanceof type_1.TypeFunc && op.type.right.left.equals(right.type)) {
-                    return op.value(left, right);
-                }
-                else {
-                    throw new error_1.ReductionError(op.type + " cannot handle " + left.type + " and " + right.type + " as arguments");
-                }
-            }
-            else {
-                // (app4)
-                return new Application(this.left, right.reduction());
-            }
-        }
-        else if (this.left instanceof ConstOp) {
-            // (app3)
-            return new Application(this.left, this.right.reduction());
-        }
-        else {
-            // (app1)
-            return new Application(this.left.reduction(), this.right);
-        }
-    }
     equals(expr) {
         return (expr instanceof Application) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
     }
@@ -1145,17 +973,17 @@ class Application extends Expression {
     }
     getEquations(gamma, type) {
         // (app)
-        var t1 = type_1.TypeVariable.getNew();
-        var nextL = this.left.getEquations(gamma, new type_1.TypeFunc(t1, type));
-        var nextR = this.right.getEquations(gamma, t1);
-        var str = nextL.proofTree + nextR.proofTree;
+        let t1 = type_1.TypeVariable.getNew();
+        let nextL = this.left.getEquations(gamma, new type_1.TypeFunc(t1, type));
+        let nextR = this.right.getEquations(gamma, t1);
+        let str = nextL.proofTree + nextR.proofTree;
         str += "\\RightLabel{\\scriptsize(app)}\n";
         str += "\\BinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
     }
     toTexString() {
-        var expr = this.left;
-        var str = this.right.toTexString();
+        let expr = this.left;
+        let str = this.right.toTexString();
         while (expr instanceof Application) {
             str = expr.right.toTexString() + str;
             expr = expr.left;
@@ -1165,15 +993,83 @@ class Application extends Expression {
             str = "(" + str + ")";
         return str;
     }
-    getRedexes(etaAllowed) {
-        var ret = Redex.makeNext(this.left.getRedexes(etaAllowed), "(", ")", (prev) => (new Application(prev, this.right))).concat(Redex.makeNext(this.right.getRedexes(etaAllowed), "(", ")", (prev) => (new Application(this.left, prev))));
-        if (this.isBetaRedex()) {
-            ret.push(new BetaRedex(this));
+    getRedexes(typed, etaAllowed) {
+        if (typed) {
+            // typed
+            let lParen = (this.isTopLevel ? "" : "(");
+            let rParen = (this.isTopLevel ? "" : ")");
+            if (this.left instanceof LambdaAbstraction) {
+                // (app2)
+                return [new TypedRedex(this, this.left.expr.substitute(this.left.boundval, this.right), "app2")];
+            }
+            else if (this.left instanceof Application
+                && this.left.left instanceof ConstOp
+                && this.left.right instanceof Const) {
+                let op = this.left.left;
+                let left = this.left.right;
+                let right = this.right;
+                if (right instanceof Const) {
+                    // (app5)
+                    if (op.type.left.equals(left.type) && op.type.right instanceof type_1.TypeFunc && op.type.right.left.equals(right.type)) {
+                        return [new TypedRedex(this, op.value(left, right), "app5")];
+                    }
+                    else {
+                        throw new error_1.ReductionError(op.type + " cannot handle " + left.type + " and " + right.type + " as arguments");
+                    }
+                }
+                else {
+                    // (app4)
+                    return Redex.makeNext(right.getRedexes(true), lParen + op.toString() + left.toString(), rParen, lParen + op.toTexString() + left.toTexString(), rParen, (prev) => (new Application(new Application(op, left), prev)));
+                }
+            }
+            else if (this.left instanceof ConstOp) {
+                // (app3)
+                return Redex.makeNext(this.right.getRedexes(true), lParen + this.left.toString(), rParen, lParen + this.left.toTexString(), rParen, (prev) => (new Application(this.left, prev)));
+            }
+            else {
+                // (app1)
+                return Redex.makeNext(this.left.getRedexes(true), lParen, rParen + this.right.toString(), lParen, rParen + this.right.toTexString(), (prev) => (new Application(prev, this.right)));
+            }
         }
-        return ret;
+        else {
+            // untyped
+            let apps = [this];
+            let right = [""];
+            let texRight = [""];
+            while (true) {
+                let t = apps[apps.length - 1];
+                right.push(t.right.toString());
+                texRight.push(t.right.toTexString());
+                if (!(t.left instanceof Application))
+                    break;
+                apps.push(t.left);
+            }
+            // apps = [abc, ab]
+            // right = ["","c","bc"]
+            let ret = apps[apps.length - 1].left.getRedexes(false, etaAllowed);
+            while (apps.length > 0) {
+                let t = apps.pop();
+                let ret1 = Redex.makeNext(ret, "", right[right.length - 1], "", texRight[texRight.length - 1], (prev) => (new Application(prev, t.right)));
+                let ret2 = Redex.makeNext(t.right.getRedexes(false, etaAllowed), t.left.toString(), right[right.length - 2], t.left.toTexString(), texRight[texRight.length - 2], (prev) => (new Application(t.left, prev)));
+                ret = ret1.concat(ret2);
+                right.pop();
+                texRight.pop();
+                if (t.isBetaRedex()) {
+                    ret.push(new BetaRedex(t));
+                }
+            }
+            if (!this.isTopLevel) {
+                ret = Redex.makeNext(ret, "(", ")", "(", ")", (prev) => (prev));
+            }
+            return ret;
+        }
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.left.resetTopLevel();
+        this.right.resetTopLevel();
     }
 }
-exports.Application = Application;
 // リスト M::M
 class List extends Expression {
     constructor(head, tail) {
@@ -1193,9 +1089,6 @@ class List extends Expression {
     substitute(y, expr) {
         return new List(this.head.substitute(y, expr), this.tail.substitute(y, expr));
     }
-    reduction() {
-        return this;
-    }
     equals(expr) {
         return (expr instanceof List) && (expr.head.equals(this.head)) && (expr.tail.equals(this.tail));
     }
@@ -1204,11 +1097,11 @@ class List extends Expression {
     }
     getEquations(gamma, type) {
         // (list) 再検討の余地あり？ 新しい型変数要る？
-        var t = type_1.TypeVariable.getNew();
-        var lt = new type_1.TypeList(t);
-        var nextH = this.head.getEquations(gamma, t);
-        var nextT = this.tail.getEquations(gamma, lt);
-        var str = nextH.proofTree + nextT.proofTree;
+        let t = type_1.TypeVariable.getNew();
+        let lt = new type_1.TypeList(t);
+        let nextH = this.head.getEquations(gamma, t);
+        let nextT = this.tail.getEquations(gamma, lt);
+        let str = nextH.proofTree + nextT.proofTree;
         str += "\\RightLabel{\\scriptsize(list)}\n";
         str += "\\BinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + lt.toTexString() + " $}\n";
         return new TypeResult(nextH.eqs.concat(nextT.eqs, new type_1.TypeEquation(lt, type)), str);
@@ -1216,11 +1109,18 @@ class List extends Expression {
     toTexString() {
         return this.head.toTexString() + "::" + this.tail.toTexString();
     }
-    getRedexes(etaAllowed) {
-        throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    getRedexes(typed, etaAllowed) {
+        if (typed)
+            return [];
+        else
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.head.resetTopLevel();
+        this.tail.resetTopLevel();
     }
 }
-exports.List = List;
 // if
 class If extends Expression {
     constructor(state, ifTrue, ifFalse) {
@@ -1238,22 +1138,6 @@ class If extends Expression {
     substitute(y, expr) {
         return new If(this.state.substitute(y, expr), this.ifTrue.substitute(y, expr), this.ifFalse.substitute(y, expr));
     }
-    reduction() {
-        if (this.state instanceof ConstBool) {
-            if (this.state.value) {
-                // (if2)
-                return this.ifTrue;
-            }
-            else {
-                // (if3)
-                return this.ifFalse;
-            }
-        }
-        else {
-            // (if1)
-            return new If(this.state.reduction(), this.ifTrue, this.ifFalse);
-        }
-    }
     equals(expr) {
         return (expr instanceof If) && (expr.state.equals(this.state)) && (expr.ifTrue.equals(this.ifTrue)) && (expr.ifFalse.equals(this.ifFalse));
     }
@@ -1262,10 +1146,10 @@ class If extends Expression {
     }
     getEquations(gamma, type) {
         // (if)
-        var nextS = this.state.getEquations(gamma, type_1.typeBool);
-        var nextT = this.ifTrue.getEquations(gamma, type);
-        var nextF = this.ifFalse.getEquations(gamma, type);
-        var str = nextS.proofTree + nextT.proofTree + nextF.proofTree;
+        let nextS = this.state.getEquations(gamma, new type_1.TypeBool());
+        let nextT = this.ifTrue.getEquations(gamma, type);
+        let nextF = this.ifFalse.getEquations(gamma, type);
+        let str = nextS.proofTree + nextT.proofTree + nextF.proofTree;
         str += "\\RightLabel{\\scriptsize(if)}\n";
         str += "\\TrinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult(nextS.eqs.concat(nextT.eqs, nextF.eqs), str);
@@ -1273,11 +1157,79 @@ class If extends Expression {
     toTexString() {
         return "({\\bf if}~" + this.state.toTexString() + "~{\\bf then}~" + this.ifTrue.toTexString() + "~{\\bf else}~" + this.ifFalse.toTexString() + ")";
     }
-    getRedexes(etaAllowed) {
-        throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    getRedexes(typed, etaAllowed) {
+        if (!typed)
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+        if (this.state instanceof ConstBool) {
+            if (this.state.value) {
+                // (if2)
+                return [new TypedRedex(this, this.ifTrue, "if2")];
+            }
+            else {
+                // (if3)
+                return [new TypedRedex(this, this.ifFalse, "if3")];
+            }
+        }
+        else {
+            // (if1)
+            return Redex.makeNext(this.state.getRedexes(true), "([if]", "[then]" + this.ifTrue + "[else]" + this.ifFalse + ")", "({\\bf if}~", "~{\\bf then}~" + this.ifTrue.toTexString() + "~{\\bf else}~" + this.ifFalse.toTexString() + ")", (prev) => (new If(prev, this.ifTrue, this.ifFalse)));
+        }
+    }
+    static parse(tokens, typed) {
+        let state = [];
+        let i_num = 0, t_num = 0, e_num = 0;
+        while (true) {
+            if (tokens.length == 0)
+                throw new error_1.LambdaParseError("Illegal If statement");
+            let t = tokens.shift();
+            switch (t.name) {
+                case "if":
+                    i_num++;
+                    break;
+                case "then":
+                    t_num++;
+                    break;
+                case "else":
+                    e_num++;
+                    break;
+            }
+            if (i_num === e_num && t_num === i_num + 1)
+                break;
+            state.push(t);
+        }
+        let stateExpr = parseSymbols(state, typed);
+        let ifTrue = [];
+        i_num = 0, t_num = 0, e_num = 0;
+        while (true) {
+            if (tokens.length == 0)
+                throw new error_1.LambdaParseError("Illegal If statement");
+            let t = tokens.shift();
+            switch (t.name) {
+                case "if":
+                    i_num++;
+                    break;
+                case "then":
+                    t_num++;
+                    break;
+                case "else":
+                    e_num++;
+                    break;
+            }
+            if (i_num === t_num && e_num === i_num + 1)
+                break;
+            ifTrue.push(t);
+        }
+        let ifTrueExpr = parseSymbols(ifTrue, typed);
+        let ifFalseExpr = parseSymbols(tokens, typed);
+        return new If(stateExpr, ifTrueExpr, ifFalseExpr);
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.state.resetTopLevel();
+        this.ifTrue.resetTopLevel();
+        this.ifFalse.resetTopLevel();
     }
 }
-exports.If = If;
 // let in
 class Let extends Expression {
     constructor(boundVal, left, right) {
@@ -1289,8 +1241,8 @@ class Let extends Expression {
     getFV() {
         if (this.freevals !== undefined)
             return this.freevals;
-        var ret = [];
-        for (var fv of this.right.getFV()) {
+        let ret = [];
+        for (let fv of this.right.getFV()) {
             if (!fv.equals(this.boundVal)) {
                 ret.push(fv);
             }
@@ -1301,7 +1253,7 @@ class Let extends Expression {
         return "([let]" + this.boundVal + "[=]" + this.left + "[in]" + this.right + ")";
     }
     substitute(y, expr) {
-        var left = this.left.substitute(y, expr);
+        let left = this.left.substitute(y, expr);
         if (this.boundVal.equals(y)) {
             return new Let(this.boundVal, left, this.right);
         }
@@ -1309,8 +1261,8 @@ class Let extends Expression {
             return new Let(this.boundVal, left, this.right.substitute(y, expr));
         }
         else {
-            var uniFV = Variable.union(this.right.getFV(), expr.getFV());
-            var z = Variable.getNew(uniFV);
+            let uniFV = Variable.union(this.right.getFV(), expr.getFV());
+            let z = Variable.getNew(uniFV);
             if (z.equals(y)) {
                 return new Let(z, left, this.right.substitute(this.boundVal, z));
             }
@@ -1318,10 +1270,6 @@ class Let extends Expression {
                 return new Let(z, left, this.right.substitute(this.boundVal, z).substitute(y, expr));
             }
         }
-    }
-    reduction() {
-        // (let)
-        return this.right.substitute(this.boundVal, this.left);
     }
     equals(expr) {
         return (expr instanceof Let) && (expr.boundVal.equals(this.boundVal)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
@@ -1331,19 +1279,19 @@ class Let extends Expression {
             return false;
         if (this.equals(expr))
             return true;
-        var x = this.boundVal;
-        var m = this.right;
-        var y = expr.boundVal;
-        var n = expr.right;
+        let x = this.boundVal;
+        let m = this.right;
+        let y = expr.boundVal;
+        let n = expr.right;
         return (!Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y)));
     }
     getEquations(gamma, type) {
         // (let)
-        var t1 = type_1.TypeVariable.getNew();
+        let t1 = type_1.TypeVariable.getNew();
         this.boundVal.type = t1;
-        var nextL = this.left.getEquations(gamma, t1);
-        var nextR = this.right.getEquations(gamma.concat(this.boundVal), type);
-        var str = nextL.proofTree + nextR.proofTree;
+        let nextL = this.left.getEquations(gamma, t1);
+        let nextR = this.right.getEquations(gamma.concat(this.boundVal), type);
+        let str = nextL.proofTree + nextR.proofTree;
         str += "\\RightLabel{\\scriptsize(let)}\n";
         str += "\\TrinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
@@ -1351,11 +1299,45 @@ class Let extends Expression {
     toTexString() {
         return "({\\bf let}~" + this.boundVal.toTexString() + " = " + this.left.toTexString() + "~{\\bf in}~" + this.right.toTexString() + ")";
     }
-    getRedexes(etaAllowed) {
-        throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    getRedexes(typed, etaAllowed) {
+        if (!typed)
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+        // (let)
+        return [new TypedRedex(this, this.right.substitute(this.boundVal, this.left), "let")];
+    }
+    static parse(tokens, typed) {
+        let t = tokens.shift();
+        if (t.name.match(/^[A-Za-z]$/) === null)
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        let boundVal = new Variable(t.name);
+        if (tokens.shift().name !== "=")
+            throw new error_1.LambdaParseError("'=' is expected");
+        let content = [];
+        let i = 1;
+        while (true) {
+            // console.log(i);
+            if (tokens.length == 0)
+                throw new error_1.LambdaParseError("Illegal Let statement");
+            let t = tokens.shift();
+            if (t.name === "let")
+                i++;
+            else if (t.name === "in")
+                i--;
+            if (i == 0)
+                break;
+            content.push(t);
+        }
+        let contentExpr = parseSymbols(content, typed);
+        let restExpr = parseSymbols(tokens, typed);
+        return new Let(boundVal, contentExpr, restExpr);
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.boundVal.resetTopLevel();
+        this.left.resetTopLevel();
+        this.right.resetTopLevel();
     }
 }
-exports.Let = Let;
 // case文 [case] M [of] [nil] -> M | x::x -> M
 class Case extends Expression {
     constructor(state, ifNil, head, tail, ifElse) {
@@ -1376,8 +1358,8 @@ class Case extends Expression {
         return "([case]" + this.state + "[of][nil]->" + this.ifNil + " | " + this.head + "::" + this.tail + "->" + this.ifElse + ")";
     }
     substitute(y, expr) {
-        var state = this.state.substitute(y, expr);
-        var ifNil = this.ifNil.substitute(y, expr);
+        let state = this.state.substitute(y, expr);
+        let ifNil = this.ifNil.substitute(y, expr);
         if (this.head.equals(y) || this.tail.equals(y)) {
             return new Case(state, ifNil, this.head, this.tail, this.ifElse);
         }
@@ -1385,12 +1367,12 @@ class Case extends Expression {
             return new Case(state, ifNil, this.head, this.tail, this.ifElse.substitute(y, expr));
         }
         else {
-            var head = this.head;
-            var tail = this.tail;
-            var ifElse = this.ifElse;
+            let head = this.head;
+            let tail = this.tail;
+            let ifElse = this.ifElse;
             if (Variable.contains(expr.getFV(), head)) {
-                var uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
-                var z = Variable.getNew(uniFV);
+                let uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
+                let z = Variable.getNew(uniFV);
                 if (z.equals(y)) {
                     ifElse = ifElse.substitute(head, z);
                 }
@@ -1400,8 +1382,8 @@ class Case extends Expression {
                 head = z;
             }
             if (Variable.contains(expr.getFV(), tail)) {
-                var uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
-                var z = Variable.getNew(uniFV);
+                let uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
+                let z = Variable.getNew(uniFV);
                 if (z.equals(y)) {
                     ifElse = ifElse.substitute(tail, z);
                 }
@@ -1413,20 +1395,6 @@ class Case extends Expression {
             return new Case(state, ifNil, head, tail, ifElse);
         }
     }
-    reduction() {
-        if (this.state instanceof Nil) {
-            // (case2)
-            return this.ifNil;
-        }
-        else if (this.state instanceof List) {
-            // (case3)
-            return this.ifElse.substitute(this.head, this.state.head).substitute(this.tail, this.state.tail);
-        }
-        else {
-            // (case1)
-            return new Case(this.state.reduction(), this.ifNil, this.head, this.tail, this.ifElse);
-        }
-    }
     equals(expr) {
         return (expr instanceof Case) && (expr.state.equals(this.state)) && (expr.ifNil.equals(this.ifNil)) && (expr.head.equals(this.head)) && (expr.tail.equals(this.tail)) && (expr.ifElse.equals(this.ifElse));
     }
@@ -1435,14 +1403,14 @@ class Case extends Expression {
     }
     getEquations(gamma, type) {
         // (case)
-        var t1 = type_1.TypeVariable.getNew();
-        var lt1 = new type_1.TypeList(t1);
+        let t1 = type_1.TypeVariable.getNew();
+        let lt1 = new type_1.TypeList(t1);
         this.head.type = t1;
         this.tail.type = lt1;
-        var nextS = this.state.getEquations(gamma, lt1);
-        var nextN = this.ifNil.getEquations(gamma, type);
-        var nextE = this.ifElse.getEquations(gamma.concat(this.head, this.tail), type);
-        var str = nextS.proofTree + nextN.proofTree + nextE.proofTree;
+        let nextS = this.state.getEquations(gamma, lt1);
+        let nextN = this.ifNil.getEquations(gamma, type);
+        let nextE = this.ifElse.getEquations(gamma.concat(this.head, this.tail), type);
+        let str = nextS.proofTree + nextN.proofTree + nextE.proofTree;
         str += "\\RightLabel{\\scriptsize(case)}\n";
         str += "\\TrinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult(nextS.eqs.concat(nextN.eqs, nextE.eqs), str);
@@ -1450,102 +1418,264 @@ class Case extends Expression {
     toTexString() {
         return "({\\bf case} " + this.state + " {\\bf of} {\\rm nil} \\Rightarrow " + this.ifNil.toTexString() + " | " + this.head.toTexString() + "::" + this.tail.toTexString() + " \\Rightarrow " + this.ifElse.toTexString() + ")";
     }
-    getRedexes(etaAllowed) {
-        throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+    getRedexes(typed, etaAllowed) {
+        if (!typed)
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+        if (this.state instanceof Nil) {
+            // (case2)
+            return [new TypedRedex(this, this.ifNil, "case2")];
+        }
+        else if (this.state instanceof List) {
+            // (case3)
+            return [new TypedRedex(this, this.ifElse.substitute(this.head, this.state.head).substitute(this.tail, this.state.tail), "case3")];
+        }
+        else {
+            // (case1)
+            return Redex.makeNext(this.state.getRedexes(true), "([case]", "[of][nil]->" + this.ifNil + " | " + this.head + "::" + this.tail + "->" + this.ifElse + ")", "({\\bf case} ", " {\\bf of} {\\rm nil} \\Rightarrow " + this.ifNil.toTexString() + " | " + this.head.toTexString() + "::" + this.tail.toTexString() + " \\Rightarrow " + this.ifElse.toTexString() + ")", (prev) => (new Case(prev, this.ifNil, this.head, this.tail, this.ifElse)));
+        }
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.state.resetTopLevel();
+        this.ifNil.resetTopLevel();
+        this.head.resetTopLevel();
+        this.tail.resetTopLevel();
+        this.ifElse.resetTopLevel();
+    }
+    static parse(tokens, typed) {
+        let state = [];
+        let i = 1;
+        while (true) {
+            if (tokens.length == 0)
+                throw new error_1.LambdaParseError("Illegal Case statement");
+            let t = tokens.shift();
+            if (t.name === "case")
+                i++;
+            else if (t.name === "of")
+                i--;
+            if (i == 0)
+                break;
+            state.push(t);
+        }
+        let stateExpr = parseSymbols(state, typed);
+        let t = tokens.shift();
+        if (t.name !== "nil")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        t = tokens.shift();
+        if (t.name !== "-")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        t = tokens.shift();
+        if (t.name !== ">")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        let ifNil = [];
+        i = 1;
+        while (true) {
+            if (tokens.length == 0)
+                throw new error_1.LambdaParseError("Too many [case]");
+            let t = tokens.shift();
+            if (t.name === "case")
+                i++;
+            else if (t.name === "|")
+                i--;
+            if (i == 0)
+                break;
+            ifNil.push(t);
+        }
+        let ifNilExpr = parseSymbols(ifNil, typed);
+        let head = new Variable(tokens.shift().name);
+        if (head.name.match(/^[A-Za-z]$/) === null)
+            throw new error_1.LambdaParseError("Unexpected token: '" + head.name + "'");
+        t = tokens.shift();
+        if (t.name !== ":")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        t = tokens.shift();
+        if (t.name !== ":")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        let tail = new Variable(tokens.shift().name);
+        if (tail.name.match(/^[A-Za-z]$/) === null)
+            throw new error_1.LambdaParseError("Unexpected token: '" + tail.name + "'");
+        t = tokens.shift();
+        if (t.name !== "-")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        t = tokens.shift();
+        if (t.name !== ">")
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        let ifElseExpr = parseSymbols(tokens, typed);
+        return new Case(stateExpr, ifNilExpr, head, tail, ifElseExpr);
     }
 }
-exports.Case = Case;
 
 },{"./error":1,"./type":4}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
+const type_1 = require("./type");
 class LambdaFriends {
     constructor(str, typed) {
+        let l = str.split("#")[0].trim();
+        let names = [];
+        while (true) {
+            let ts = l.match(/^[^[]+?\s*=\s*/);
+            if (ts === null)
+                break;
+            let t = ts[0];
+            ts = l.split(t);
+            ts.shift();
+            l = ts.join(t);
+            names.push(t.split(/\s*=\s*$/)[0]);
+        }
+        this.expr = expression_1.makeAST(l, typed);
+        this.original = this.expr;
+        this.type = this.getType(typed);
+        for (let name of names) {
+            expression_1.Macro.add(name, this, typed);
+        }
         this.typed = typed;
-        if (typed) {
-            this.expr = expression_1.makeAST(str);
-            this.type = this.expr.getType();
-        }
-        else {
-            this.expr = expression_1.makeUntypedAST(str);
-            this.type = undefined;
-        }
-        if (this.expr instanceof expression_1.Macro) {
-            var e = this.expr;
-            while (true) {
-                LambdaFriends.output("<" + e.name + "> is defined as " + e.expr + " : " + (typed ? this.type : "Untyped") + "\n");
-                if (!(e.expr instanceof expression_1.Macro))
-                    break;
-                else
-                    e = e.expr;
-            }
-        }
+        this.processTex = "\\begin{eqnarray*}\n&& ";
+        this.curStep = 0;
     }
+    getRedexes(etaAllowed) {
+        return this.expr.getRedexes(this.typed, etaAllowed).sort(expression_1.Redex.compare);
+    }
+    reduction(etaAllowed, redex) {
+        if (redex === undefined) {
+            // 簡約基指定のない場合、最左簡約
+            let rs = this.getRedexes(etaAllowed);
+            if (rs.length === 0)
+                return null;
+            redex = rs[0];
+        }
+        this.expr = redex.next;
+        this.expr.setRoot();
+        this.curStep++;
+        this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{" + redex.getTexRule() + "}& ";
+        return this.curStep + ": (" + redex.rule + ") --> " + this.expr.toString();
+    }
+    // 連続nステップ最左簡約
     continualReduction(step, etaAllowed) {
         if (step === undefined)
             step = 100;
-        if (this.typed) {
-            var result = this.expr.continualReduction(step);
-            this.expr = result.expr;
-            return result.str;
+        let strs = [];
+        for (let i = 0; i < step; i++) {
+            let result = this.reduction(etaAllowed);
+            if (result === null)
+                break;
+            strs.push(result);
         }
-        else {
-            if (etaAllowed === undefined)
-                etaAllowed = false;
-            var result = this.expr.continualUntypedReduction(step, etaAllowed);
-            this.expr = result.expr;
-            return result.str;
-        }
+        return strs.join("\n");
     }
     hasNext(etaAllowed) {
-        if (this.typed) {
-            return this.expr.hasNext();
-        }
-        else {
-            if (etaAllowed === undefined)
-                etaAllowed = false;
-            return !this.expr.isNormalForm(etaAllowed);
-        }
+        return !this.expr.isNormalForm(this.typed, etaAllowed);
     }
+    getProofTree() {
+        return "\\begin{prooftree}\n" + this.proofTree + "\\end{prooftree}";
+    }
+    getProcessTex(etaAllowed) {
+        return this.processTex + this.expr.toTexString() + (this.hasNext(etaAllowed) ? "" : "\\not\\longrightarrow") + "\n\\end{eqnarray*}";
+    }
+    getType(typed) {
+        if (!typed)
+            return new type_1.TypeUntyped();
+        type_1.TypeVariable.maxId = undefined;
+        let target = type_1.TypeVariable.getNew();
+        let typeResult = this.expr.getEquations([], target);
+        let eqs = typeResult.eqs;
+        this.proofTree = typeResult.proofTree;
+        let ret = type_1.TypeEquation.get(target, type_1.TypeEquation.solve(eqs));
+        let vs = ret.getVariables();
+        // 't0,'t1,'t2,... から 'a,'b,'c,... に変換
+        let vars = [];
+        for (let v of vs) {
+            if (!type_1.TypeVariable.contains(vars, v))
+                vars.push(v);
+        }
+        let i = 0;
+        for (let v of vars) {
+            ret.replace(v, type_1.TypeVariable.getAlphabet(i));
+            i++;
+        }
+        return ret;
+    }
+    static parseMacroDef(str, typed) {
+        let l = str.split("#")[0].trim();
+        let names = [];
+        while (true) {
+            let ts = l.match(/^[^[]+?\s*=\s*/);
+            if (ts === null)
+                break;
+            let t = ts[0];
+            ts = l.split(t);
+            ts.shift();
+            l = ts.join(t);
+            names.push(t.split(/\s*=\s*$/)[0]);
+        }
+        if (names.length === 0)
+            return null;
+        let lf = new LambdaFriends(l, typed);
+        for (let name of names) {
+            expression_1.Macro.add(name, lf, typed);
+        }
+        // let name = names.shift();
+        // let ret = "<"+name+">"
+        // while (names.length>0){
+        //   let name = names.shift();
+        //   ret += " and <"+name+">";
+        // }
+        // ret += " is defined as "+lf.expr+" : "+lf.type;
+        return { names: names, expr: lf.expr.toString(), type: lf.type.toString() };
+    }
+    // return: file input log
     static fileInput(textData, typed) {
-        var lines = textData.split("\n");
-        for (var l of lines) {
-            l = l.split("#")[0].trim();
-            if (l === "")
-                continue;
+        let lines = textData.split("\n");
+        let errors = [];
+        let defs = [];
+        for (let l of lines) {
             try {
-                var lf = new LambdaFriends(l, typed);
+                let ret = LambdaFriends.parseMacroDef(l, typed);
+                if (ret !== null)
+                    defs.push(ret);
             }
             catch (e) {
-                LambdaFriends.output(e.toString() + "\n");
+                errors.push(e.toString());
             }
         }
-    }
-    isMacro() {
-        return this.expr instanceof expression_1.Macro;
+        let indent = "* ";
+        // let ret = "# File input completed.\n";
+        // if (defs.length !== 0){
+        //   ret += "## Finally, "+defs.length+" macros are successfully added.\n";
+        //   ret += indent + defs.join("\n"+indent) + "\n\n";
+        // }
+        // if (errors.length !== 0){
+        //   ret += "## Unfortunately, "+errors.length+" macros are rejected due to some errors\n";
+        //   ret += indent + errors.join("\n"+indent) + "\n";
+        // }
+        return { defs: defs, errs: errors };
     }
     static getMacroList(typed) {
-        var str = "";
-        if (typed) {
-            for (var key in expression_1.Macro.map) {
-                var e = expression_1.Macro.map[key];
-                str += "<" + e.name + "> is defined as " + e.expr + " : " + e.getType() + "\n";
-            }
-        }
-        else {
-            for (var key in expression_1.Macro.mapUntyped) {
-                var e = expression_1.Macro.mapUntyped[key];
-                str += "<" + e.name + "> is defined as " + e.expr + " : Untyped\n";
-            }
+        let str = "";
+        let map = expression_1.Macro.getMap(typed);
+        for (let key in map) {
+            let e = map[key];
+            str += "<" + e.name + "> is defined as " + e.expr + " : " + e.type + "\n";
         }
         return str;
     }
+    static getMacroListAsObject(typed) {
+        return expression_1.Macro.getMap(typed);
+    }
+    static clearMacro(typed) {
+        return expression_1.Macro.clear(typed);
+    }
+    toString() {
+        return this.expr + " : " + this.type;
+    }
+    getOriginalString() {
+        return this.original + " : " + this.type;
+    }
 }
-LambdaFriends.output = console.log;
 exports.LambdaFriends = LambdaFriends;
 
-},{"./expression":2}],4:[function(require,module,exports){
+},{"./expression":2,"./type":4}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const error_1 = require("./error");
@@ -1653,13 +1783,6 @@ class TypeInt extends TypeConstructor {
     constructor() {
         super("TypeInt");
     }
-    static getInstance() {
-        if (TypeInt.instance === undefined) {
-            return TypeInt.instance = new TypeInt();
-        }
-        else
-            return TypeInt.instance;
-    }
     toString() {
         return "int";
     }
@@ -1689,17 +1812,9 @@ class TypeInt extends TypeConstructor {
     }
 }
 exports.TypeInt = TypeInt;
-exports.typeInt = TypeInt.getInstance();
 class TypeBool extends TypeConstructor {
     constructor() {
         super("TypeBool");
-    }
-    static getInstance() {
-        if (TypeBool.instance === undefined) {
-            return TypeBool.instance = new TypeBool();
-        }
-        else
-            return TypeBool.instance;
     }
     toString() {
         return "bool";
@@ -1730,7 +1845,6 @@ class TypeBool extends TypeConstructor {
     }
 }
 exports.TypeBool = TypeBool;
-exports.typeBool = TypeBool.getInstance();
 class TypeList extends TypeConstructor {
     constructor(x) {
         super("TypeList");
@@ -1885,34 +1999,47 @@ TypeVariable.texAlphabet = [
     "\\alpha", "\\beta", "\\gamma", "\\delta", "\\varepsilon", "\\zeta", "\\eta", "\\theta", "\\iota", "\\kappa", "\\mu", "\\nu", "\\xi", "\\pi", "\\rho", "\\sigma", "\\upsilon", "\\phi", "\\chi", "\\psi", "\\omega", "\\Gamma", "\\Delta", "\\Theta", "\\Xi", "\\Pi", "\\Sigma", "\\Phi", "\\Psi", "\\Omega"
 ].concat(TypeVariable.alphabet);
 exports.TypeVariable = TypeVariable;
+class TypeUntyped extends Type {
+    constructor() {
+        super("TypeUntyped");
+    }
+    toString() {
+        return "Untyped";
+    }
+    toTexString() {
+        return "{\\rm Untyped}";
+    }
+    equals(t) {
+        if (t instanceof TypeUntyped)
+            return true;
+        else
+            return false;
+    }
+    contains(t) {
+        return false;
+    }
+    replace(from, to) { }
+    getVariables() {
+        return [];
+    }
+}
+exports.TypeUntyped = TypeUntyped;
 
 },{"./error":1}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const lambda_friends_1 = require("./lambda-friends");
-class WebUI {
-    constructor() {
-        this.steps = WebUI.defaultSteps;
-        this.typed = true;
-        this.etaAllowed = false;
-        lambda_friends_1.LambdaFriends.output = outputNext;
-        this.mainFunc = (line) => {
-            line = line.split("#")[0];
-            line = line.trim();
-            if (line !== "") {
-                try {
-                    var lf = new lambda_friends_1.LambdaFriends(line, this.typed);
-                    output(lf.continualReduction(this.steps, this.etaAllowed));
-                }
-                catch (e) {
-                    output(e.toString());
-                }
-            }
-        };
-    }
-}
-WebUI.defaultSteps = 100;
-var webUI = new WebUI();
+var MicroModal = require('micromodal');
+// Initial config for setting up modals
+MicroModal.init({
+    openTrigger: 'data-custom-open',
+    disableScroll: false,
+    awaitCloseAnimation: true
+});
+var steps = undefined;
+var typed = true;
+var etaAllowed = false;
+var curlf = undefined;
 var input = document.getElementById("input");
 var oel = document.getElementById("output");
 var untypedButton = document.getElementById("untyped");
@@ -1921,8 +2048,13 @@ var etaEnableButton = document.getElementById("etaEnable");
 var etaDisableButton = document.getElementById("etaDisable");
 var fileInput = document.getElementById("fileInput");
 var fileReader = new FileReader();
+var clearMacroButton = document.getElementById("clearMacroBtn");
+var tabC = document.getElementById("tabC");
+// var macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
+// var macroInput = <HTMLInputElement>document.getElementById("macroInput");
+// var submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
+var outputButtons = document.getElementById("outputBtns");
 var stepInput = document.getElementById("stepInput");
-// var macroListButton = document.getElementById("macroList");
 var graphDiv = document.getElementById("graph");
 fileInput.addEventListener("change", function (ev) {
     var target = ev.target;
@@ -1937,47 +2069,137 @@ fileInput.addEventListener("change", function (ev) {
     fileReader.readAsText(file);
 });
 fileReader.addEventListener("load", function () {
-    outputClear();
-    lambda_friends_1.LambdaFriends.fileInput(fileReader.result, webUI.typed);
+    let ret = lambda_friends_1.LambdaFriends.fileInput(fileReader.result, typed);
+    refreshMacroList();
+    let div = document.getElementById("fileInputLog");
+    div.textContent = null;
+    if (ret.defs.length > 0) {
+        let div1 = document.createElement("div");
+        let title1 = document.createElement("p");
+        title1.innerText = "Finally, " + ret.defs.length + " macros are successfully added.";
+        let list1 = document.createElement("ul");
+        list1.className = "code";
+        for (let t of ret.defs) {
+            let li = document.createElement("li");
+            let names = [].concat(t.names);
+            let name = names.shift();
+            let ret = "<" + name + ">";
+            while (names.length > 0) {
+                let name = names.shift();
+                ret += " and <" + name + ">";
+            }
+            li.innerText = ret + " is defined as " + t.expr + " : " + t.type;
+            list1.appendChild(li);
+        }
+        div1.appendChild(title1);
+        div1.appendChild(list1);
+        div.appendChild(div1);
+    }
+    if (ret.errs.length > 0) {
+        let div2 = document.createElement("div");
+        let title2 = document.createElement("p");
+        title2.innerText = "Unfortunately, " + ret.errs.length + " macros are rejected due to some errors.";
+        let list2 = document.createElement("ul");
+        list2.className = "code";
+        for (let t of ret.errs) {
+            let li = document.createElement("li");
+            li.innerText = t;
+            list2.appendChild(li);
+        }
+        div2.appendChild(title2);
+        div2.appendChild(list2);
+        div.appendChild(div2);
+    }
+    MicroModal.show('modal-1', {
+        debugMode: true,
+        disableScroll: true,
+        awaitCloseAnimation: true
+    });
 });
 untypedButton.onclick = function () {
     untypedButton.className = "btn btn-primary";
     typedButton.className = "btn btn-default";
-    webUI.typed = false;
+    typed = false;
     etaEnableButton.disabled = false;
     etaDisableButton.disabled = false;
+    refreshMacroList();
 };
 typedButton.onclick = function () {
     typedButton.className = "btn btn-primary";
     untypedButton.className = "btn btn-default";
-    webUI.typed = true;
+    typed = true;
     etaEnableButton.disabled = true;
     etaDisableButton.disabled = true;
+    refreshMacroList();
 };
 etaEnableButton.onclick = function () {
     etaEnableButton.className = "btn btn-primary";
     etaDisableButton.className = "btn btn-default";
-    webUI.etaAllowed = true;
+    etaAllowed = true;
 };
 etaDisableButton.onclick = function () {
     etaDisableButton.className = "btn btn-primary";
     etaEnableButton.className = "btn btn-default";
-    webUI.etaAllowed = false;
+    etaAllowed = false;
 };
-// macroListButton.onclick = function(){
-//   output(LambdaFriends.getMacroList(webUI.typed));
-// }
+clearMacroButton.onclick = function () {
+    lambda_friends_1.LambdaFriends.clearMacro(typed);
+    refreshMacroList();
+};
 stepInput.addEventListener("change", function () {
     var new_s = parseInt(stepInput.value);
     if (!isNaN(new_s)) {
-        webUI.steps = new_s;
+        steps = new_s;
     }
     else {
-        webUI.steps = WebUI.defaultSteps;
+        steps = undefined;
     }
 });
+var history = [];
+var historyNum = 0;
+var workspace = [""];
 var submitInput = function () {
-    webUI.mainFunc(input.value);
+    let line = input.value;
+    if (line === "" && curlf !== undefined) {
+        doContinual();
+    }
+    history.unshift(line);
+    historyNum = 0;
+    workspace = [].concat(history);
+    workspace.unshift("");
+    line = line.split("#")[0];
+    line = line.trim();
+    if (line !== "") {
+        try {
+            let ret = lambda_friends_1.LambdaFriends.parseMacroDef(line, typed);
+            if (ret === null) {
+                curlf = new lambda_friends_1.LambdaFriends(line, typed);
+                outputLine(curlf.toString());
+                if (typed)
+                    outputNextLine(curlf.continualReduction(steps, etaAllowed));
+                showContinueBtn();
+            }
+            else {
+                let names = [].concat(ret.names);
+                let name = names.shift();
+                let str = "<" + name + ">";
+                while (names.length > 0) {
+                    let name = names.shift();
+                    str += " and <" + name + ">";
+                }
+                str += " is defined as " + ret.expr + " : " + ret.type;
+                outputLine(str);
+                outputButtons.textContent = null;
+            }
+            refreshTex();
+        }
+        catch (e) {
+            outputLine(e.toString());
+            console.log(e);
+            outputButtons.textContent = null;
+        }
+        refreshMacroList();
+    }
     input.value = "";
 };
 document.getElementById("submit").onclick = submitInput;
@@ -1986,22 +2208,563 @@ document.getElementById("input").onkeydown = function (e) {
         submitInput();
         e.preventDefault();
     }
+    else if (e.keyCode === 38) {
+        // up
+        if (historyNum < workspace.length - 1) {
+            workspace[historyNum] = input.value;
+            historyNum++;
+            input.value = workspace[historyNum];
+        }
+        e.preventDefault();
+    }
+    else if (e.keyCode === 40) {
+        // down
+        if (historyNum > 0) {
+            workspace[historyNum] = input.value;
+            historyNum--;
+            input.value = workspace[historyNum];
+        }
+        e.preventDefault();
+    }
 };
+// var submitMacro = function(){
+//   LambdaFriends.parseMacroDef()
+// }
+let outputBuffer = "";
 function output(str) {
-    oel.innerText = str;
+    outputBuffer = str;
+    oel.innerText = outputBuffer;
+}
+function outputLine(str) {
+    outputBuffer = str + "\n";
+    oel.innerText = outputBuffer;
 }
 function outputNext(str) {
-    oel.innerText += str;
+    outputBuffer += str;
+    oel.innerText = outputBuffer;
 }
 function outputNextLine(str) {
-    oel.innerText += str + "\n";
+    outputBuffer += str + "\n";
+    oel.innerText = outputBuffer;
 }
 function outputClear() {
-    oel.innerText = "";
+    outputBuffer = "";
+    oel.innerText = outputBuffer;
 }
+function refreshMacroList() {
+    var tbody = document.getElementById("macroList");
+    tbody.innerHTML = "";
+    var ret = lambda_friends_1.LambdaFriends.getMacroListAsObject(typed);
+    for (var r in ret) {
+        var m = ret[r];
+        tbody.innerHTML += "<tr><th>" + htmlEscape(m.name) + "</th><td>" + htmlEscape(m.expr.toString()) + "</td><td>" + htmlEscape(m.type.toString()) + "</td></tr>";
+    }
+}
+function htmlEscape(str) {
+    return str.replace(/[&'`"<>]/g, function (match) {
+        return {
+            '&': '&amp;',
+            "'": '&#x27;',
+            '`': '&#x60;',
+            '"': '&quot;',
+            '<': '&lt;',
+            '>': '&gt;',
+        }[match];
+    });
+}
+function refreshTex() {
+    tabC.textContent = null;
+    let proc = "";
+    let proof = "";
+    if (curlf !== undefined)
+        proc = curlf.getProcessTex(etaAllowed);
+    tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+    if (typed) {
+        if (curlf !== undefined)
+            proof = curlf.getProofTree();
+        tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+    }
+}
+function makeTexDiv(title, content) {
+    let p = document.createElement("p");
+    let btn = document.createElement("button");
+    let span = document.createElement("span");
+    let pre = document.createElement("pre");
+    let code = document.createElement("code");
+    p.appendChild(btn);
+    p.appendChild(span);
+    code.appendChild(pre);
+    pre.innerText = content;
+    span.innerText = title;
+    btn.type = "button";
+    btn.className = "btn btn-default btn-sm";
+    btn.innerText = "クリップボードにコピー";
+    // btn.setAttribute("data-toggle","popover");
+    // btn.setAttribute("data-content","Copied!");
+    // $(function(){$('[data-toggle="popover"]').popover();});
+    btn.onclick = function () {
+        let s = document.getSelection();
+        s.selectAllChildren(code);
+        document.execCommand('copy');
+        s.collapse(document.body, 0);
+    };
+    let div = document.createElement("div");
+    div.appendChild(p);
+    div.appendChild(code);
+    return div;
+}
+function doContinual() {
+    outputNextLine(curlf.continualReduction(steps, etaAllowed));
+    showContinueBtn();
+    refreshTex();
+}
+function showContinueBtn() {
+    // 「さらに続ける」ボタンを表示
+    if (!curlf.hasNext(etaAllowed)) {
+        outputButtons.textContent = null;
+        return;
+    }
+    let b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-default btn-sm";
+    b.innerText = "最左簡約を続ける";
+    b.onclick = doContinual;
+    outputButtons.textContent = null;
+    outputButtons.appendChild(b);
+    if (typed)
+        return;
+    let span = document.createElement("span");
+    span.innerText = "または、以下から簡約基を選ぶ：";
+    outputButtons.appendChild(span);
+    let div = document.createElement("div");
+    div.className = "list-group";
+    outputButtons.appendChild(div);
+    let rs = curlf.getRedexes(etaAllowed);
+    // console.log(rs);
+    for (let r of rs) {
+        let b = document.createElement("button");
+        b.className = "list-group-item code";
+        b.innerHTML = r.toHTMLString();
+        b.onclick = function () {
+            outputNextLine(curlf.reduction(etaAllowed, r));
+            showContinueBtn();
+            refreshTex();
+        };
+        div.appendChild(b);
+    }
+}
+// function showLog(str:string){
+//   let newWin = window.open('','ログ - らむだフレンズ','width=400,height=300,scrollbars=no,status=no,toolbar=no,location=no,menubar=no,resizable=yes');
+//   newWin.focus();
+//   let doc = newWin.document;
+//   doc.open();
+//   doc.write("<!DOCTYPE html>");
+//   doc.write('<html lang="ja">');
+//   doc.write("<body>");
+//   doc.write(htmlEscape(str).replace("\n","<br>"));
+//   doc.write("</body>");
+//   doc.write("</html>");
+//   doc.close();
+// }
+// ===== initialize =====
+untypedButton.onclick(null);
+etaDisableButton.onclick(null);
+refreshMacroList();
 // var cytoscape = require("cytoscape")
 // var cy = cytoscape({
 //   container: graphDiv
-// }); 
+// });
 
-},{"./lambda-friends":3}]},{},[5]);
+},{"./lambda-friends":3,"micromodal":6}],6:[function(require,module,exports){
+(function (global, factory) {
+	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+	typeof define === 'function' && define.amd ? define(factory) :
+	(global.MicroModal = factory());
+}(this, (function () { 'use strict';
+
+var version = "0.3.1";
+
+var classCallCheck = function (instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+};
+
+var createClass = function () {
+  function defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
+
+  return function (Constructor, protoProps, staticProps) {
+    if (protoProps) defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) defineProperties(Constructor, staticProps);
+    return Constructor;
+  };
+}();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var toConsumableArray = function (arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+    return arr2;
+  } else {
+    return Array.from(arr);
+  }
+};
+
+var MicroModal = function () {
+  var FOCUSABLE_ELEMENTS = ['a[href]', 'area[href]', 'input:not([disabled]):not([type="hidden"]):not([aria-hidden])', 'select:not([disabled]):not([aria-hidden])', 'textarea:not([disabled]):not([aria-hidden])', 'button:not([disabled]):not([aria-hidden])', 'iframe', 'object', 'embed', '[contenteditable]', '[tabindex]:not([tabindex^="-"])'];
+
+  var Modal = function () {
+    function Modal(_ref) {
+      var targetModal = _ref.targetModal,
+          _ref$triggers = _ref.triggers,
+          triggers = _ref$triggers === undefined ? [] : _ref$triggers,
+          _ref$onShow = _ref.onShow,
+          onShow = _ref$onShow === undefined ? function () {} : _ref$onShow,
+          _ref$onClose = _ref.onClose,
+          onClose = _ref$onClose === undefined ? function () {} : _ref$onClose,
+          _ref$openTrigger = _ref.openTrigger,
+          openTrigger = _ref$openTrigger === undefined ? 'data-micromodal-trigger' : _ref$openTrigger,
+          _ref$closeTrigger = _ref.closeTrigger,
+          closeTrigger = _ref$closeTrigger === undefined ? 'data-micromodal-close' : _ref$closeTrigger,
+          _ref$disableScroll = _ref.disableScroll,
+          disableScroll = _ref$disableScroll === undefined ? false : _ref$disableScroll,
+          _ref$disableFocus = _ref.disableFocus,
+          disableFocus = _ref$disableFocus === undefined ? false : _ref$disableFocus,
+          _ref$awaitCloseAnimat = _ref.awaitCloseAnimation,
+          awaitCloseAnimation = _ref$awaitCloseAnimat === undefined ? false : _ref$awaitCloseAnimat,
+          _ref$debugMode = _ref.debugMode,
+          debugMode = _ref$debugMode === undefined ? false : _ref$debugMode;
+      classCallCheck(this, Modal);
+
+      // Save a reference of the modal
+      this.modal = document.getElementById(targetModal);
+
+      // Save a reference to the passed config
+      this.config = { debugMode: debugMode, disableScroll: disableScroll, openTrigger: openTrigger, closeTrigger: closeTrigger, onShow: onShow, onClose: onClose, awaitCloseAnimation: awaitCloseAnimation, disableFocus: disableFocus
+
+        // Register click events only if prebinding eventListeners
+      };if (triggers.length > 0) this.registerTriggers.apply(this, toConsumableArray(triggers));
+
+      // prebind functions for event listeners
+      this.onClick = this.onClick.bind(this);
+      this.onKeydown = this.onKeydown.bind(this);
+    }
+
+    /**
+     * Loops through all openTriggers and binds click event
+     * @param  {array} triggers [Array of node elements]
+     * @return {void}
+     */
+
+
+    createClass(Modal, [{
+      key: 'registerTriggers',
+      value: function registerTriggers() {
+        var _this = this;
+
+        for (var _len = arguments.length, triggers = Array(_len), _key = 0; _key < _len; _key++) {
+          triggers[_key] = arguments[_key];
+        }
+
+        triggers.forEach(function (trigger) {
+          trigger.addEventListener('click', function () {
+            return _this.showModal();
+          });
+        });
+      }
+    }, {
+      key: 'showModal',
+      value: function showModal() {
+        this.activeElement = document.activeElement;
+        this.modal.setAttribute('aria-hidden', 'false');
+        this.modal.classList.add('is-open');
+        this.setFocusToFirstNode();
+        this.scrollBehaviour('disable');
+        this.addEventListeners();
+        this.config.onShow(this.modal);
+      }
+    }, {
+      key: 'closeModal',
+      value: function closeModal() {
+        var modal = this.modal;
+        this.modal.setAttribute('aria-hidden', 'true');
+        this.removeEventListeners();
+        this.scrollBehaviour('enable');
+        this.activeElement.focus();
+        this.config.onClose(this.modal);
+
+        if (this.config.awaitCloseAnimation) {
+          this.modal.addEventListener('animationend', function handler() {
+            modal.classList.remove('is-open');
+            modal.removeEventListener('animationend', handler, false);
+          }, false);
+        } else {
+          modal.classList.remove('is-open');
+        }
+      }
+    }, {
+      key: 'scrollBehaviour',
+      value: function scrollBehaviour(toggle) {
+        if (!this.config.disableScroll) return;
+        var body = document.querySelector('body');
+        switch (toggle) {
+          case 'enable':
+            Object.assign(body.style, { overflow: 'initial', height: 'initial' });
+            break;
+          case 'disable':
+            Object.assign(body.style, { overflow: 'hidden', height: '100vh' });
+            break;
+          default:
+        }
+      }
+    }, {
+      key: 'addEventListeners',
+      value: function addEventListeners() {
+        this.modal.addEventListener('touchstart', this.onClick);
+        this.modal.addEventListener('click', this.onClick);
+        document.addEventListener('keydown', this.onKeydown);
+      }
+    }, {
+      key: 'removeEventListeners',
+      value: function removeEventListeners() {
+        this.modal.removeEventListener('touchstart', this.onClick);
+        this.modal.removeEventListener('click', this.onClick);
+        document.removeEventListener('keydown', this.onKeydown);
+      }
+    }, {
+      key: 'onClick',
+      value: function onClick(event) {
+        if (event.target.hasAttribute(this.config.closeTrigger)) {
+          this.closeModal();
+          event.preventDefault();
+        }
+      }
+    }, {
+      key: 'onKeydown',
+      value: function onKeydown(event) {
+        if (event.keyCode === 27) this.closeModal(event);
+        if (event.keyCode === 9) this.maintainFocus(event);
+      }
+    }, {
+      key: 'getFocusableNodes',
+      value: function getFocusableNodes() {
+        var nodes = this.modal.querySelectorAll(FOCUSABLE_ELEMENTS);
+        return Object.keys(nodes).map(function (key) {
+          return nodes[key];
+        });
+      }
+    }, {
+      key: 'setFocusToFirstNode',
+      value: function setFocusToFirstNode() {
+        if (this.config.disableFocus) return;
+        var focusableNodes = this.getFocusableNodes();
+        if (focusableNodes.length) focusableNodes[0].focus();
+      }
+    }, {
+      key: 'maintainFocus',
+      value: function maintainFocus(event) {
+        var focusableNodes = this.getFocusableNodes();
+
+        // if disableFocus is true
+        if (!this.modal.contains(document.activeElement)) {
+          focusableNodes[0].focus();
+        } else {
+          var focusedItemIndex = focusableNodes.indexOf(document.activeElement);
+
+          if (event.shiftKey && focusedItemIndex === 0) {
+            focusableNodes[focusableNodes.length - 1].focus();
+            event.preventDefault();
+          }
+
+          if (!event.shiftKey && focusedItemIndex === focusableNodes.length - 1) {
+            focusableNodes[0].focus();
+            event.preventDefault();
+          }
+        }
+      }
+    }]);
+    return Modal;
+  }();
+
+  /**
+   * Modal prototype ends.
+   * Here on code is reposible for detecting and
+   * autobinding event handlers on modal triggers
+   */
+
+  // Keep a reference to the opened modal
+
+
+  var activeModal = null;
+
+  /**
+   * Generates an associative array of modals and it's
+   * respective triggers
+   * @param  {array} triggers     An array of all triggers
+   * @param  {string} triggerAttr The data-attribute which triggers the module
+   * @return {array}
+   */
+  var generateTriggerMap = function generateTriggerMap(triggers, triggerAttr) {
+    var triggerMap = [];
+
+    triggers.forEach(function (trigger) {
+      var targetModal = trigger.attributes[triggerAttr].value;
+      if (triggerMap[targetModal] === undefined) triggerMap[targetModal] = [];
+      triggerMap[targetModal].push(trigger);
+    });
+
+    return triggerMap;
+  };
+
+  /**
+   * Validates whether a modal of the given id exists
+   * in the DOM
+   * @param  {number} id  The id of the modal
+   * @return {boolean}
+   */
+  var validateModalPresence = function validateModalPresence(id) {
+    if (!document.getElementById(id)) {
+      console.warn('MicroModal v' + version + ': \u2757Seems like you have missed %c\'' + id + '\'', 'background-color: #f8f9fa;color: #50596c;font-weight: bold;', 'ID somewhere in your code. Refer example below to resolve it.');
+      console.warn('%cExample:', 'background-color: #f8f9fa;color: #50596c;font-weight: bold;', '<div class="modal" id="' + id + '"></div>');
+      return false;
+    }
+  };
+
+  /**
+   * Validates if there are modal triggers present
+   * in the DOM
+   * @param  {array} triggers An array of data-triggers
+   * @return {boolean}
+   */
+  var validateTriggerPresence = function validateTriggerPresence(triggers) {
+    if (triggers.length <= 0) {
+      console.warn('MicroModal v' + version + ': \u2757Please specify at least one %c\'micromodal-trigger\'', 'background-color: #f8f9fa;color: #50596c;font-weight: bold;', 'data attribute.');
+      console.warn('%cExample:', 'background-color: #f8f9fa;color: #50596c;font-weight: bold;', '<a href="#" data-micromodal-trigger="my-modal"></a>');
+      return false;
+    }
+  };
+
+  /**
+   * Checks if triggers and their corresponding modals
+   * are present in the DOM
+   * @param  {array} triggers   Array of DOM nodes which have data-triggers
+   * @param  {array} triggerMap Associative array of modals and thier triggers
+   * @return {boolean}
+   */
+  var validateArgs = function validateArgs(triggers, triggerMap) {
+    validateTriggerPresence(triggers);
+    if (!triggerMap) return true;
+    for (var id in triggerMap) {
+      validateModalPresence(id);
+    }return true;
+  };
+
+  /**
+   * Binds click handlers to all modal triggers
+   * @param  {object} config [description]
+   * @return void
+   */
+  var init = function init(config) {
+    // Create an config object with default openTrigger
+    var options = Object.assign({}, { openTrigger: 'data-micromodal-trigger' }, config);
+
+    // Collects all the nodes with the trigger
+    var triggers = [].concat(toConsumableArray(document.querySelectorAll('[' + options.openTrigger + ']')));
+
+    // Makes a mappings of modals with their trigger nodes
+    var triggerMap = generateTriggerMap(triggers, options.openTrigger);
+
+    // Checks if modals and triggers exist in dom
+    if (options.debugMode === true && validateArgs(triggers, triggerMap) === false) return;
+
+    // For every target modal creates a new instance
+    for (var key in triggerMap) {
+      var value = triggerMap[key];
+      options.targetModal = key;
+      options.triggers = [].concat(toConsumableArray(value));
+      new Modal(options); // eslint-disable-line no-new
+    }
+  };
+
+  /**
+   * Shows a particular modal
+   * @param  {string} targetModal [The id of the modal to display]
+   * @param  {object} config [The configuration object to pass]
+   * @return {void}
+   */
+  var show = function show(targetModal, config) {
+    var options = config || {};
+    options.targetModal = targetModal;
+
+    // Checks if modals and triggers exist in dom
+    if (options.debugMode === true && validateModalPresence(targetModal) === false) return;
+
+    // stores reference to active modal
+    activeModal = new Modal(options); // eslint-disable-line no-new
+    activeModal.showModal();
+  };
+
+  /**
+   * Closes the active modal
+   * @return {void}
+   */
+  var close = function close() {
+    activeModal.closeModal();
+  };
+
+  return { init: init, show: show, close: close };
+}();
+
+return MicroModal;
+
+})));
+
+},{}]},{},[5]);

@@ -106,15 +106,8 @@ export abstract class TypeConstructor extends Type{
 }
 
 export class TypeInt extends TypeConstructor{
-  static instance:TypeInt;
-  
-  private constructor(){
+  constructor(){
     super("TypeInt");
-  }
-  static getInstance():TypeInt{
-    if (TypeInt.instance === undefined){
-      return TypeInt.instance = new TypeInt();
-    } else return TypeInt.instance;
   }
   public toString():string{
     return "int";
@@ -141,18 +134,10 @@ export class TypeInt extends TypeConstructor{
     return [];
   }
 }
-export var typeInt:TypeInt = TypeInt.getInstance();
 
 export class TypeBool extends TypeConstructor{
-  static instance:TypeBool;
-  
-  private constructor(){
+  constructor(){
     super("TypeBool");
-  }
-  static getInstance():TypeInt{
-    if (TypeBool.instance === undefined){
-      return TypeBool.instance = new TypeBool();
-    } else return TypeBool.instance;
   }
   public toString():string{
     return "bool";
@@ -179,7 +164,6 @@ export class TypeBool extends TypeConstructor{
     return [];
   }
 }
-export var typeBool:TypeBool = TypeBool.getInstance();
 
 export class TypeList extends TypeConstructor{
   content:Type;
@@ -320,5 +304,28 @@ export class TypeVariable extends Type{
       }
     }
     return false;
+  }
+}
+
+export class TypeUntyped extends Type{
+  constructor(){
+    super("TypeUntyped");
+  }
+  public toString():string{
+    return "Untyped";
+  }
+  public toTexString():string{
+    return "{\\rm Untyped}";
+  }
+  public equals(t:Type):boolean{
+    if (t instanceof TypeUntyped) return true;
+    else return false;
+  }
+  public contains(t:TypeVariable):boolean{
+    return false;
+  }
+  public replace(from:TypeVariable, to:Type){}
+  public getVariables():TypeVariable[]{
+    return [];
   }
 }

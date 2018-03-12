@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
+declare var require: any;
 
 export class CUI{
   mainFunc: Function;
@@ -20,22 +21,26 @@ export class CUI{
     this.steps = 100;
     this.typed = false;
     this.etaAllowed = false;
-    LambdaFriends.output = function (line:string){
-      process.stdout.write(line);
-    }
     this.mainFunc = (line:string)=>{
       line = line.split("#")[0];
       line = line.trim();
-      if (this.lf !== undefined && line!=="n"){
+      if (this.lf !== undefined){
+        if (line.toLowerCase() === "n"){
+          this.lf = undefined;
+          console.log();
+          process.stdout.write(this.prompt);
+          return;
+        }
         try{
-          process.stdout.write(this.lf.continualReduction(this.steps));
+          console.log(this.lf.continualReduction(this.steps));
           if (!this.lf.hasNext(this.etaAllowed)) this.lf = undefined;
           else {
-            process.stdout.write("\n"+this.steps+" Steps Done. Continue? (Y/n)> ");
+            process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
             return;
           }
         }catch(e){
           console.log(e.toString());
+          return;
         }
       }
       if (line===""){}
@@ -78,10 +83,32 @@ export class CUI{
               console.log("File Not Found: "+file);
               break;
             }
-            LambdaFriends.fileInput(fs.readFileSync(file,"utf8"),this.typed);
+            let ret = LambdaFriends.fileInput(fs.readFileSync(file,"utf8"),this.typed);
+            console.log("File input completed.");
+            if (ret.defs.length!==0){
+              console.log("\nFinally, "+ret.defs.length+" macros are successfully added.");
+              for (let r of ret.defs){
+                let names = r.names;
+                let name = names.shift();
+                let ret = "<"+name+">";
+                while (names.length>0){
+                  let name = names.shift();
+                  ret += " and <"+name+">";
+                }
+                ret += " is defined as "+r.expr+" : "+r.type;
+                console.log("  * "+ret);
+              } 
+            }
+            if (ret.errs.length!==0){
+              console.log("\nUnfortunately, "+ret.errs.length+" macros are rejected due to some errors");
+              for (let r of ret.errs){
+                console.log("  * "+r);
+              }
+            }
+            console.log();
             break;
           case "m":
-            process.stdout.write(LambdaFriends.getMacroList(this.typed));
+            console.log(LambdaFriends.getMacroList(this.typed));
             break;
           default:
             console.log("Undefined command: "+line);
@@ -89,20 +116,18 @@ export class CUI{
       } else {
         try{
           var lf = new LambdaFriends(line,this.typed);
-          if (lf.isMacro()){
-            process.stdout.write("\n"+this.prompt);
-            return;
-          }
-          process.stdout.write(lf.continualReduction(this.steps));
+          console.log(lf.toString());
+          console.log(lf.continualReduction(this.steps,this.etaAllowed));
           if (lf.hasNext(this.etaAllowed)){
-            process.stdout.write("\n"+this.steps+" Steps Done. Continue? (Y/n)> ");
+            this.lf = lf;
+            process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
             return;
           }
         }catch(e){
-          console.log(e.toString());
+          console.log(e.toString()+"\n");
         }
       }
-      process.stdout.write("\n"+this.prompt);
+      process.stdout.write(this.prompt);
     };
   }
 
