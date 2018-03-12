@@ -1,10 +1,19 @@
 // 例外の抽象クラス
-export abstract class LambdaFriendsError implements Error{
+export class LambdaFriendsError implements Error{
   stack:any;
-  constructor(public name:string, public message:string){
+  public name:string;
+  public message:string;
+  constructor(name:string, message?:string){
     // if (typeof Error.captureStackTrace === "function"){
     //   Error.captureStackTrace(this,this.constructor);
     // }
+    if (message===undefined){
+      this.name = "LambdaFriendsError";
+      this.message = name;
+    } else {
+      this.name = name;
+      this.message = message;
+    }
   }
   public toString():string{
     // return this.stack;
@@ -44,5 +53,12 @@ export class MacroError extends LambdaFriendsError{
 export class TypeError extends LambdaFriendsError{
   constructor(message: string){
     super("TypeError",message);
+  }
+}
+
+// TexにParseする際の例外
+export class TexError extends LambdaFriendsError{
+  constructor(message: string){
+    super("TexError",message);
   }
 }

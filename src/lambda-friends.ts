@@ -1,67 +1,205 @@
-import { Expression, makeAST, makeUntypedAST, Macro } from "./expression";
-import { Type } from "./type";
+import { Expression, Macro, makeAST, Redex } from "./expression";
+import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 
 export class LambdaFriends{
-  static output:Function = console.log;
-  private expr:Expression;
-  private typed:boolean;
-  private type:Type;
-  constructor(str:string,typed:boolean){
+  expr:Expression;
+  typed:boolean;
+  curStep: number;
+  type:Type;
+  proofTree:string;
+  processTex:string;
+  original:Expression;
+  etaAllowed:boolean;
+  constructor(str:string,typed:boolean,etaAllowed:boolean){
+    let l = str.split("#")[0].trim();
+    let names = [];
+    while (true) {
+      let ts = l.match(/^[^[]+?\s*=\s*/);
+      if (ts === null) break;
+      let t = ts[0];
+      ts = l.split(t);
+      ts.shift();
+      l = ts.join(t);
+      names.push(t.split(/\s*=\s*$/)[0]);
+    }
+    this.expr = makeAST(l,typed);
+    this.original = this.expr;
+    this.type = this.getType(typed);
+    for (let name of names){
+      Macro.add(name, this, typed);
+    }
     this.typed = typed;
-    if (typed){
-      this.expr = makeAST(str);
-      this.type = this.expr.getType();
-    } else {
-      this.expr = makeUntypedAST(str);
-      this.type = undefined;
-    }
-    if (this.expr instanceof Macro){
-      var e:Macro = this.expr;
-      while (true){
-        LambdaFriends.output("<"+e.name+"> is defined as "+e.expr+" : "+(typed?this.type:"Untyped")+"\n");
-        if (!(e.expr instanceof Macro)) break;
-        else e = e.expr;
-      }
-    }
+    this.etaAllowed = etaAllowed;
+    this.processTex = "\\begin{eqnarray*}\n&& ";
+    this.curStep = 0;
   }
 
-  public continualReduction(step?:number,etaAllowed?:boolean):string{
+  public getRedexes(){
+    return this.expr.getRedexes(this.typed,this.etaAllowed).sort(Redex.compare);
+  }
+
+  public reduction(redex?:Redex):string{
+    if (redex === undefined){
+      // 簡約基指定のない場合、最左簡約
+      let rs = this.getRedexes();
+      if (rs.length===0) return null;
+      redex = rs[0];
+    }
+    this.expr = redex.next;
+    this.expr.setRoot();
+    this.curStep++;
+    this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
+    let ret = this.curStep+": ("+redex.rule+") --> " + this.expr.toString();
+    if (!this.hasNext()){
+      ret += "    (normal form)\n";
+      let n = this.parseChurchNum();
+      if (n!==null) ret += "  = "+n+" (as nat)\n";
+      let b = this.parseChurchBool();
+      if (b!==null) ret += "  = "+b+" (as bool)\n";
+      ret.slice(0,ret.length-1);
+    }
+    return ret;
+  }
+
+  // 連続nステップ最左簡約
+  public continualReduction(step?:number):string{
     if (step === undefined) step = 100;
-    if (this.typed){
-      var result = this.expr.continualReduction(step);
-      this.expr = result.expr;
-      return result.str;
-    } else {
-      if (etaAllowed===undefined) etaAllowed = false;
-      var result = this.expr.continualUntypedReduction(step,etaAllowed);
-      this.expr = result.expr;
-      return result.str;
+    let strs:string[] = [];
+    for (let i=0; i<step; i++){
+      let result = this.reduction();
+      if (result === null) break;
+      strs.push(result);
     }
+    return strs.join("\n");
   }
 
-  public hasNext(etaAllowed?:boolean):boolean{
-    if (this.typed){
-      return this.expr.hasNext();
-    } else {
-      if (etaAllowed===undefined) etaAllowed = false;
-      return !this.expr.isNormalForm(etaAllowed);
-    }
+  public hasNext():boolean{
+    return !this.expr.isNormalForm(this.typed,this.etaAllowed);
   }
 
-  public static fileInput(textData:string,typed:boolean){
-    var lines = textData.split("\n");
-    for (var l of lines){
-      l = l.split("#")[0].trim();
-      if (l==="") continue;
+  public getProofTree(){
+    return "\\begin{prooftree}\n"+this.proofTree+"\\end{prooftree}";
+  }
+
+  public getProcessTex(){
+    return this.processTex+this.expr.toTexString()+(this.hasNext()?"":"\\not\\longrightarrow")+"\n\\end{eqnarray*}";
+  }
+
+  public getType(typed:boolean):Type{
+    if (!typed) return new TypeUntyped();
+    TypeVariable.maxId=undefined;
+    let target = TypeVariable.getNew();
+    let typeResult = this.expr.getEquations([],target);
+    let eqs = typeResult.eqs;
+    this.proofTree = typeResult.proofTree;
+    let ret = TypeEquation.get(target, TypeEquation.solve(eqs));
+    let vs = ret.getVariables();
+    // 't0,'t1,'t2,... から 'a,'b,'c,... に変換
+    let vars:TypeVariable[] = [];
+    for (let v of vs){
+      if (!TypeVariable.contains(vars,v)) vars.push(v);
+    }
+    let i=0;
+    for (let v of vars){
+      ret.replace(v, TypeVariable.getAlphabet(i));
+      i++;
+    }
+    return ret;
+  }
+
+  public static parseMacroDef(str:string, typed:boolean):{names:string[],expr:string,type:string}{
+    let l = str.split("#")[0].trim();
+    let names = [];
+    while (true) {
+      let ts = l.match(/^[^[]+?\s*=\s*/);
+      if (ts === null) break;
+      let t = ts[0];
+      ts = l.split(t);
+      ts.shift();
+      l = ts.join(t);
+      names.push(t.split(/\s*=\s*$/)[0]);
+    }
+    if (names.length===0) return null;
+    let lf = new LambdaFriends(l,typed,undefined); // ???
+    for (let name of names){
+      Macro.add(name, lf, typed);
+    }
+    // let name = names.shift();
+    // let ret = "<"+name+">"
+    // while (names.length>0){
+    //   let name = names.shift();
+    //   ret += " and <"+name+">";
+    // }
+    // ret += " is defined as "+lf.expr+" : "+lf.type;
+    return {names:names,expr:lf.expr.toString(),type:lf.type.toString()};
+  }
+
+  // return: file input log
+  public static fileInput(textData:string,typed:boolean):{defs:{names:string[],expr:string,type:string}[],errs:string[]}{
+    let lines = textData.split("\n");
+    let errors:string[] = [];
+    let defs:{names:string[],expr:string,type:string}[] = [];
+    for (let l of lines){
       try{
-        var lf = new LambdaFriends(l,typed);
+        let ret = LambdaFriends.parseMacroDef(l,typed);
+        if (ret!==null) defs.push(ret);
       }catch(e){
-        LambdaFriends.output(e.toString());
+        errors.push(e.toString());
       }
     }
+    let indent = "* ";
+    // let ret = "# File input completed.\n";
+    // if (defs.length !== 0){
+    //   ret += "## Finally, "+defs.length+" macros are successfully added.\n";
+    //   ret += indent + defs.join("\n"+indent) + "\n\n";
+    // }
+    // if (errors.length !== 0){
+    //   ret += "## Unfortunately, "+errors.length+" macros are rejected due to some errors\n";
+    //   ret += indent + errors.join("\n"+indent) + "\n";
+    // }
+    return {defs:defs,errs:errors};
   }
 
-  public isMacro():boolean{
-    return this.expr instanceof Macro;
+  public static getMacroList(typed:boolean):string{
+    let str = "";
+    let map = Macro.getMap(typed);
+    for (let key in map){
+      let e = map[key];
+      str += "<"+e.name+"> is defined as "+e.expr+" : "+e.type+"\n";
+    }
+    return str;
+  }
+
+  public static getMacroListAsObject(typed:boolean){
+    return Macro.getMap(typed);
+  }
+
+  public static clearMacro(typed:boolean){
+    return Macro.clear(typed);
+  }
+  
+  public toString():string{
+    let ret = this.expr+" : "+this.type;
+    if (!this.hasNext()){
+      ret += "    (normal form)\n";
+      let n = this.parseChurchNum();
+      if (n!==null) ret += "  = "+n+" (as nat)\n";
+      let b = this.parseChurchBool();
+      if (b!==null) ret += "  = "+b+" (as bool)\n";
+      ret = ret.slice(0,ret.length-1);
+    }
+    return ret;
+  }
+
+  public getOriginalString():string{
+    return this.original+" : "+this.type;
+  }
+
+  public parseChurchNum():number{
+    return this.expr.parseChurchNum();
+  }
+
+  public parseChurchBool():boolean{
+    return this.expr.parseChurchBool();
   }
 }

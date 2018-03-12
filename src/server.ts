@@ -23,6 +23,26 @@ export class Server{
 			res.sendFile(__dirname.replace(/\/js$/g,"/docs") + '/main.css');
 		});
 
+		app.get('/back.jpg', (req, res) => {
+			res.sendFile(__dirname.replace(/\/js$/g,"/docs") + '/back.jpg');
+		});
+
+		app.get('/fonts/sourcehancodejp-normal-webfont.woff2', (req, res) => {
+			res.sendFile(__dirname.replace(/\/js$/g,"/docs") + '/fonts/sourcehancodejp-normal-webfont.woff2');
+		});
+
+		app.get('/fonts/sourcehancodejp-normal-webfont.woff', (req, res) => {
+			res.sendFile(__dirname.replace(/\/js$/g,"/docs") + '/fonts/sourcehancodejp-normal-webfont.woff');
+		});
+
+		app.get('/fonts/SourceHanCodeJP-Normal.otf', (req, res) => {
+			res.sendFile(__dirname.replace(/\/js$/g,"/docs") + '/fonts/SourceHanCodeJP-Normal.otf');
+		});
+
+		app.get('/fonts/sourcehancodejp-normal-webfont.ttf', (req, res) => {
+			res.sendFile(__dirname.replace(/\/js$/g,"/docs") + '/fonts/sourcehancodejp-normal-webfont.ttf');
+		});
+
     http.listen(this.port, () => {
 			console.log('listening on *:' + this.port);
 		});

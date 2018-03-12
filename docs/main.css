@@ -1,8 +1,42 @@
-body {
-  background-color: #eee;
+/*!
+ * "SourceHanCodeJP" is lisenced under the SIL Open Font License 1.1
+ * by Masataka Hattori
+ */
+@font-face {
+  font-family: 'SourceHanCodeJP';
+  src: 
+    url('./fonts/sourcehancodejp-normal-webfont.woff2') format('woff2'),
+    url('./fonts/sourcehancodejp-normal-webfont.woff') format('woff'),
+    url('./fonts/SourceHanCodeJP-Normal.otf') format('opentype'),
+    url('./fonts/sourcehancodejp-normal-webfont.ttf') format('truetype');
 }
 
-header{
+html,body {
+  margin: 0;
+  height: 100%;
+}
+
+#wrapper {
+  background-color: rgba(255, 226, 173, 0.685);
+  min-height: 100%;
+}
+
+body {
+  background: url("back.jpg") no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  font-family: 'mgenplus-p-w', 'Noto Sans CJK JP', '源ノ角ゴシック', 'Source Han Sans', '源真ゴシック', 'GenShinGothic', 'M+ 2c', 'Mgen+ 2c', 'Hiragino Sans', 'ヒラギノ角ゴシック', 'ヒラギノ角ゴ Pro W3' ,'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ ProN W3', 'Hiragino Kaku Gothic ProN', 'GenShinGothic-w', sans-serif;
+}
+
+.container-fluid {
+  margin: 0 3%;
+}
+
+.code,code {
+  font-family: 'SourceHanCodeJP', 'Courier New', Courier, monospace;
+}
+
+#wrapper header{
   display: flex;
   align-items: center;
   justify-content: center;
@@ -27,14 +61,314 @@ header{
   margin: 7px;
 }
 
-#output {
+#output-group {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+#output-group .tab-pane {
+  padding: 15px;
+  border: 1.5px solid #DDD;
+  box-shadow: none;
+  border-top: 0;
+  background-color: #ffffffcf;
+  border-radius:0px 0px 5px 5px;
   resize: none;
   height: 400px;
-  margin-top: 10px;
-  font-size: 1.2em;
   overflow-y: scroll;
 }
 
-#input {
-  font-size: 1.2em;
+#output {
+  margin-bottom: 15px;
+  line-height: 1.6em;
+}
+
+#output-group li>a {
+  background-color: inherit;
+}
+#output-group li>a:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+#output-group li.active>a {
+  background-color: #ffffffcf;
+  border: 1.5px solid #DDD;
+  border-bottom: 0;
+  outline: none;
+}
+#output-group .nav-tabs{
+  border-bottom: 1.5px solid #DDD;
+}
+#output-group .nav-tabs>li{
+  margin-bottom: -1.5px;
+}
+
+#tabA .list-group-item {
+  font-size: 85%;
+}
+#outputBtns {
+  margin-bottom: 20px;
+}
+
+#outputBtns *{
+  vertical-align: middle;
+}
+
+#outputBtns>button {
+  margin-right: 5px;
+}
+
+#outputBtns .list-group {
+  margin-top: 5px;
+}
+
+#outputBtns .list-group-item>span {
+  border-radius: 5px;
+}
+
+#outputBtns .lf-beta {
+  background-color: rgba(30, 165, 255, 0.3)
+}
+
+#outputBtns .lf-eta {
+  background-color: rgba(255, 203, 30, 0.3)
+}
+
+#outputBtns .lf-macro {
+  background-color: rgba(139, 255, 30, 0.3)
+}
+
+#outputBtns .lf-typed {
+  background-color: rgba(255, 30, 60, 0.3)
+}
+
+#tabB>.btn {
+  margin-top: 5px;
+}
+
+#tabB table {
+  margin-top: 15px;
+  table-layout: fixed;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+#tabB .form-inline>* {
+  margin-top: 5px;
+}
+
+#tabC code {
+  margin: 0;
+  padding: 0;
+}
+
+#tabC>div {
+  margin-bottom: 15px;
+}
+
+#tabC>div button {
+  margin-right: 10px;
+}
+#tabC>div p * {
+  vertical-align: middle;
+}
+
+.modal {
+  display: none;
+}
+
+.modal.is-open {
+  display: block;
+}
+
+#modal-1 ul {
+  overflow-y: scroll;
+  height: 100px;
+  border: 1px solid rgb(126, 126, 126);
+  border-radius: 5px;
+  background: rgb(243, 243, 243);
+  padding-top: 5px;
+  padding-bottom: 10px;
+  padding-left: 30px;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+#modal-1 p {
+  margin-bottom: 5px;
+}
+
+@media screen and (min-width: 769px) {
+  #macroNameInput {
+    min-width: 12em;
+  }
+
+  #macroInput {
+    min-width: 29em;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  #output-group {
+    flex-wrap: wrap;
+  }
+  #sidebar {
+    width:100%;
+    margin-top:10px;
+    margin-bottom:20px;
+    margin-left: 0;
+  }
+  #submitMacro {
+    width:100%;
+  }
+}
+
+/**************************\
+  Basic Modal Styles
+\**************************/
+
+.modal {
+  font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
+}
+
+.modal__overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal__container {
+  background-color: #fff;
+  padding: 30px;
+  max-width: 500px;
+  max-height: 100vh;
+  border-radius: 4px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal__title {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  color: #00449e;
+  box-sizing: border-box;
+}
+
+.modal__close {
+  background: transparent;
+  border: 0;
+}
+
+.modal__header .modal__close:before { content: "\2715"; }
+
+.modal__content {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+  color: rgba(0,0,0,.8);
+}
+
+.modal__btn {
+  font-size: .875rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
+  background-color: #e6e6e6;
+  color: rgba(0,0,0,.8);
+  border-radius: .25rem;
+  border-style: none;
+  border-width: 0;
+  cursor: pointer;
+  -webkit-appearance: button;
+  text-transform: none;
+  overflow: visible;
+  line-height: 1.15;
+  margin: 0;
+  will-change: transform;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  transition: -webkit-transform .25s ease-out;
+  transition: transform .25s ease-out;
+  transition: transform .25s ease-out,-webkit-transform .25s ease-out;
+}
+
+.modal__btn:focus, .modal__btn:hover {
+  -webkit-transform: scale(1.05);
+  transform: scale(1.05);
+}
+
+.modal__btn-primary {
+  background-color: #00449e;
+  color: #fff;
+}
+
+
+
+/**************************\
+  Demo Animation Style
+\**************************/
+@keyframes mmfadeIn {
+    from { opacity: 0; }
+      to { opacity: 1; }
+}
+
+@keyframes mmfadeOut {
+    from { opacity: 1; }
+      to { opacity: 0; }
+}
+
+@keyframes mmslideIn {
+  from { transform: translateY(15%); }
+    to { transform: translateY(0); }
+}
+
+@keyframes mmslideOut {
+    from { transform: translateY(0); }
+    to { transform: translateY(-10%); }
+}
+
+.micromodal-slide {
+  display: none;
+}
+
+.micromodal-slide.is-open {
+  display: block;
+}
+
+.micromodal-slide[aria-hidden="false"] .modal__overlay {
+  animation: mmfadeIn .3s cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+.micromodal-slide[aria-hidden="false"] .modal__container {
+  animation: mmslideIn .3s cubic-bezier(0, 0, .2, 1);
+}
+
+.micromodal-slide[aria-hidden="true"] .modal__overlay {
+  animation: mmfadeOut .3s cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+.micromodal-slide[aria-hidden="true"] .modal__container {
+  animation: mmslideOut .3s cubic-bezier(0, 0, .2, 1);
+}
+
+.micromodal-slide .modal__container,
+.micromodal-slide .modal__overlay {
+  will-change: transform;
 }
