@@ -363,22 +363,22 @@ class BetaRedex extends Redex {
         let boundvals = [];
         let expr = this.la.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval.toTexString());
+            boundvals.push(expr.boundval.toString());
             expr = expr.expr;
         }
         let str = boundvals.join("") + ".";
         if (expr instanceof Application) {
             let expr1 = expr.left;
-            let str1 = expr.right.toTexString();
+            let str1 = expr.right.toString();
             while (expr1 instanceof Application) {
-                str1 = expr1.right.toTexString() + str1;
+                str1 = expr1.right.toString() + str1;
                 expr1 = expr1.left;
             }
-            str1 = expr1.toTexString() + str1;
+            str1 = expr1.toString() + str1;
             str = str + str1;
         }
         else {
-            str = str + expr.toTexString();
+            str = str + expr.toString();
         }
         return htmlEscape(this.left) + '(\\<span class="lf-beta lf-boundval">' + htmlEscape(this.la.boundval.toString()) + '</span>' + htmlEscape(str) + ')<span class="lf-beta lf-arg">' + htmlEscape(this.arg.toString()) + '</span>' + htmlEscape(this.right);
     }
@@ -465,7 +465,7 @@ class Expression {
         this.className = className;
     }
     isNormalForm(type, etaAllowed) {
-        return this.getRedexes(type, etaAllowed).length === 0;
+        return this.getRedexes(type, etaAllowed, true).length === 0;
     }
     setRoot() {
         this.resetTopLevel();
@@ -534,7 +534,7 @@ class Symbol extends Expression {
     getEquations(gamma, type) {
         throw new error_1.TypeError("Undefined Type");
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
     }
     resetTopLevel() {
@@ -618,7 +618,7 @@ class Variable extends Symbol {
         }
         throw new error_1.SubstitutionError("No more Variables available");
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         return [];
     }
 }
@@ -644,7 +644,7 @@ class Const extends Symbol {
     toTexString() {
         return this.name + "^{" + this.type.toTexString() + "}";
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (typed) {
             return [];
         }
@@ -778,7 +778,7 @@ class Nil extends Symbol {
     toTexString() {
         return "{\\rm " + this.name + "}";
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (typed) {
             return [];
         }
@@ -860,7 +860,7 @@ class Macro extends Symbol {
     toTexString() {
         return "\\overline{\\bf " + this.name + "}";
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (this.expr === undefined)
             return [];
         else
@@ -1000,7 +1000,7 @@ class LambdaAbstraction extends Expression {
     isEtaRedex() {
         return (this.expr instanceof Application) && (this.expr.right.equals(this.boundval)) && (!Variable.contains(this.expr.left.getFV(), this.boundval));
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (typed)
             return [];
         let boundvals = [this.boundval];
@@ -1009,7 +1009,12 @@ class LambdaAbstraction extends Expression {
             boundvals.push(expr.boundval);
             expr = expr.expr;
         }
-        let ret = Redex.makeNext(this.expr.getRedexes(false, etaAllowed), "(\\" + boundvals.join("") + ".", ")", "(\\lambda{" + boundvals.join("") + "}.", ")", (prev) => (new LambdaAbstraction(this.boundval, prev)));
+        let lParen = "", rParen = "";
+        if (!this.isTopLevel && !noParen) {
+            lParen = "(";
+            rParen = ")";
+        }
+        let ret = Redex.makeNext(this.expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvals.join("") + ".", rParen, lParen + "\\lambda{" + boundvals.join("") + "}.", rParen, (prev) => (new LambdaAbstraction(this.boundval, prev)));
         if (etaAllowed === undefined) {
             console.error("etaAllowed is undefined.");
             etaAllowed = false;
@@ -1084,7 +1089,7 @@ class Application extends Expression {
             str = "(" + str + ")";
         return str;
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (typed) {
             // typed
             let lParen = (this.isTopLevel ? "" : "(");
@@ -1110,16 +1115,16 @@ class Application extends Expression {
                 }
                 else {
                     // (app4)
-                    return Redex.makeNext(right.getRedexes(true), lParen + op.toString() + left.toString(), rParen, lParen + op.toTexString() + left.toTexString(), rParen, (prev) => (new Application(new Application(op, left), prev)));
+                    return Redex.makeNext(right.getRedexes(true, false, false), lParen + op.toString() + left.toString(), rParen, lParen + op.toTexString() + left.toTexString(), rParen, (prev) => (new Application(new Application(op, left), prev)));
                 }
             }
             else if (this.left instanceof ConstOp) {
                 // (app3)
-                return Redex.makeNext(this.right.getRedexes(true), lParen + this.left.toString(), rParen, lParen + this.left.toTexString(), rParen, (prev) => (new Application(this.left, prev)));
+                return Redex.makeNext(this.right.getRedexes(true, false, false), lParen + this.left.toString(), rParen, lParen + this.left.toTexString(), rParen, (prev) => (new Application(this.left, prev)));
             }
             else {
                 // (app1)
-                return Redex.makeNext(this.left.getRedexes(true), lParen, rParen + this.right.toString(), lParen, rParen + this.right.toTexString(), (prev) => (new Application(prev, this.right)));
+                return Redex.makeNext(this.left.getRedexes(true, false, false), lParen, rParen + this.right.toString(), lParen, rParen + this.right.toTexString(), (prev) => (new Application(prev, this.right)));
             }
         }
         else {
@@ -1129,19 +1134,22 @@ class Application extends Expression {
             let texRight = [""];
             while (true) {
                 let t = apps[apps.length - 1];
-                right.push(t.right.toString());
-                texRight.push(t.right.toTexString());
+                right.push(t.right.toString() + right[right.length - 1]);
+                texRight.push(t.right.toTexString() + right[texRight.length - 1]);
                 if (!(t.left instanceof Application))
                     break;
                 apps.push(t.left);
             }
             // apps = [abc, ab]
             // right = ["","c","bc"]
-            let ret = apps[apps.length - 1].left.getRedexes(false, etaAllowed);
+            let ret = apps[apps.length - 1].left.getRedexes(false, etaAllowed, false);
             while (apps.length > 0) {
                 let t = apps.pop();
-                let ret1 = Redex.makeNext(ret, "", right[right.length - 1], "", texRight[texRight.length - 1], (prev) => (new Application(prev, t.right)));
-                let ret2 = Redex.makeNext(t.right.getRedexes(false, etaAllowed), t.left.toString(), right[right.length - 2], t.left.toTexString(), texRight[texRight.length - 2], (prev) => (new Application(t.left, prev)));
+                let ret1 = Redex.makeNext(ret, "", t.right.toString(), "", t.right.toTexString(), (prev) => (new Application(prev, t.right)));
+                let lstr = t.left.toString();
+                if (t.left instanceof Application)
+                    lstr = lstr.slice(1, -1);
+                let ret2 = Redex.makeNext(t.right.getRedexes(false, etaAllowed, false), lstr, "", t.left.toTexString(), "", (prev) => (new Application(t.left, prev)));
                 ret = ret1.concat(ret2);
                 right.pop();
                 texRight.pop();
@@ -1149,7 +1157,7 @@ class Application extends Expression {
                     ret.push(new BetaRedex(t));
                 }
             }
-            if (!this.isTopLevel) {
+            if (!this.isTopLevel && !noParen) {
                 ret = Redex.makeNext(ret, "(", ")", "(", ")", (prev) => (prev));
             }
             return ret;
@@ -1200,7 +1208,7 @@ class List extends Expression {
     toTexString() {
         return this.head.toTexString() + "::" + this.tail.toTexString();
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (typed)
             return [];
         else
@@ -1248,7 +1256,7 @@ class If extends Expression {
     toTexString() {
         return "({\\bf if}~" + this.state.toTexString() + "~{\\bf then}~" + this.ifTrue.toTexString() + "~{\\bf else}~" + this.ifFalse.toTexString() + ")";
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (!typed)
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         if (this.state instanceof ConstBool) {
@@ -1263,7 +1271,7 @@ class If extends Expression {
         }
         else {
             // (if1)
-            return Redex.makeNext(this.state.getRedexes(true), "([if]", "[then]" + this.ifTrue + "[else]" + this.ifFalse + ")", "({\\bf if}~", "~{\\bf then}~" + this.ifTrue.toTexString() + "~{\\bf else}~" + this.ifFalse.toTexString() + ")", (prev) => (new If(prev, this.ifTrue, this.ifFalse)));
+            return Redex.makeNext(this.state.getRedexes(true, false, false), "([if]", "[then]" + this.ifTrue + "[else]" + this.ifFalse + ")", "({\\bf if}~", "~{\\bf then}~" + this.ifTrue.toTexString() + "~{\\bf else}~" + this.ifFalse.toTexString() + ")", (prev) => (new If(prev, this.ifTrue, this.ifFalse)));
         }
     }
     static parse(tokens, typed) {
@@ -1390,7 +1398,7 @@ class Let extends Expression {
     toTexString() {
         return "({\\bf let}~" + this.boundVal.toTexString() + " = " + this.left.toTexString() + "~{\\bf in}~" + this.right.toTexString() + ")";
     }
-    getRedexes(typed, etaAllowed) {
+    getRedexes(typed, etaAllowed, noParen) {
         if (!typed)
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         // (let)
@@ -1522,7 +1530,7 @@ class Case extends Expression {
         }
         else {
             // (case1)
-            return Redex.makeNext(this.state.getRedexes(true), "([case]", "[of][nil]->" + this.ifNil + " | " + this.head + "::" + this.tail + "->" + this.ifElse + ")", "({\\bf case} ", " {\\bf of} {\\rm nil} \\Rightarrow " + this.ifNil.toTexString() + " | " + this.head.toTexString() + "::" + this.tail.toTexString() + " \\Rightarrow " + this.ifElse.toTexString() + ")", (prev) => (new Case(prev, this.ifNil, this.head, this.tail, this.ifElse)));
+            return Redex.makeNext(this.state.getRedexes(true, false, false), "([case]", "[of][nil]->" + this.ifNil + " | " + this.head + "::" + this.tail + "->" + this.ifElse + ")", "({\\bf case} ", " {\\bf of} {\\rm nil} \\Rightarrow " + this.ifNil.toTexString() + " | " + this.head.toTexString() + "::" + this.tail.toTexString() + " \\Rightarrow " + this.ifElse.toTexString() + ")", (prev) => (new Case(prev, this.ifNil, this.head, this.tail, this.ifElse)));
         }
     }
     resetTopLevel() {
@@ -1627,7 +1635,7 @@ class LambdaFriends {
         this.curStep = 0;
     }
     getRedexes() {
-        return this.expr.getRedexes(this.typed, this.etaAllowed).sort(expression_1.Redex.compare);
+        return this.expr.getRedexes(this.typed, this.etaAllowed, true).sort(expression_1.Redex.compare);
     }
     reduction(redex) {
         if (redex === undefined) {
@@ -2462,7 +2470,7 @@ function showContinueBtn() {
     div.className = "list-group";
     outputButtons.appendChild(div);
     let rs = curlf.getRedexes();
-    // console.log(rs);
+    console.log(rs);
     for (let r of rs) {
         let b = document.createElement("button");
         b.className = "list-group-item code";

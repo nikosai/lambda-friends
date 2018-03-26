@@ -322,7 +322,7 @@ function showContinueBtn(){
   div.className = "list-group";
   outputButtons.appendChild(div);
   let rs = curlf.getRedexes();
-  // console.log(rs);
+  console.log(rs);
   for (let r of rs){
     let b = document.createElement("button");
     b.className = "list-group-item code";

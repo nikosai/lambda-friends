@@ -35,7 +35,7 @@ export class LambdaFriends{
   }
 
   public getRedexes(){
-    return this.expr.getRedexes(this.typed,this.etaAllowed).sort(Redex.compare);
+    return this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
   }
 
   public reduction(redex?:Redex):string{
