@@ -159,7 +159,7 @@ body {
 #tabC code {
   margin: 0;
   padding: 0;
-  max-height: 150px;
+  height: 150px;
   overflow-y: scroll;
 }
 
