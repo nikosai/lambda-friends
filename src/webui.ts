@@ -28,7 +28,6 @@ var tabC = document.getElementById("tabC");
 // var submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
 var outputButtons = document.getElementById("outputBtns");
 var stepInput = <HTMLInputElement>document.getElementById("stepInput");
-var graphDiv = document.getElementById("graph");
 
 fileInput.addEventListener("change",function (ev){
   var target:any = ev.target;
@@ -354,7 +353,49 @@ untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
 
-// var cytoscape = require("cytoscape")
-// var cy = cytoscape({
-//   container: graphDiv
-// });
+window.onload = function(){
+var cytoscape = require("cytoscape");
+var cy = cytoscape({
+
+  container: document.getElementById('graph'), // container to render in
+
+  elements: [ // list of graph elements to start with
+    { // node a
+      data: { id: 'a' }
+    },
+    { // node b
+      data: { id: 'b' }
+    },
+    { // edge ab
+      data: { id: 'ab', source: 'a', target: 'b' }
+    }
+  ],
+
+  style: [ // the stylesheet for the graph
+    {
+      selector: 'node',
+      style: {
+        'background-color': '#666',
+        'label': 'data(id)'
+      }
+    },
+
+    {
+      selector: 'edge',
+      style: {
+        'width': 3,
+        'line-color': '#ccc',
+        'target-arrow-color': '#ccc',
+        'target-arrow-shape': 'triangle'
+      }
+    }
+  ],
+
+  layout: {
+    name: 'breadthfirst',
+    rows: 1
+  }
+
+});
+console.log(cy);
+};
