@@ -1,5 +1,8 @@
 import { LambdaFriends } from "./lambda-friends";
+import { ReductionNode } from "./graph";
 declare let require: any;
+declare let cytoscape: any;
+let cy;
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
@@ -29,6 +32,9 @@ let tabC = document.getElementById("tabC");
 let outputButtons = document.getElementById("outputBtns");
 let stepInput = <HTMLInputElement>document.getElementById("stepInput");
 let graphDiv = document.getElementById("graph");
+let startGraph = document.getElementById("startGraph");
+let stopGraph = document.getElementById("stopGraph");
+let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
 
 fileInput.addEventListener("change",function (ev){
   let target:any = ev.target;
@@ -146,6 +152,7 @@ let submitInput = function(){
   let line = input.value;
   if (line==="" && curlf!==undefined){
     doContinual();
+    return;
   }
   history.unshift(line);
   historyNum = 0;
@@ -153,35 +160,33 @@ let submitInput = function(){
   workspace.unshift("");
   line = line.split("#")[0];
   line = line.trim();
-  if (line!==""){
-    try{
-      let ret = LambdaFriends.parseMacroDef(line,typed);
-      if (ret===null) {
-        curlf = new LambdaFriends(line,typed,etaAllowed);
-        outputLine(curlf.toString());
-        if (typed)
-          outputNextLine(curlf.continualReduction(steps));
-        showContinueBtn();
-      } else {
-        let names = [].concat(ret.names);
+  try{
+    let ret = LambdaFriends.parseMacroDef(line,typed);
+    if (ret===null) {
+      curlf = new LambdaFriends(line,typed,etaAllowed);
+      outputLine(curlf.toString());
+      if (typed)
+        outputNextLine(curlf.continualReduction(steps));
+      showContinueBtn();
+    } else {
+      let names = [].concat(ret.names);
+      let name = names.shift();
+      let str = "<"+name+">"
+      while (names.length>0){
         let name = names.shift();
-        let str = "<"+name+">"
-        while (names.length>0){
-          let name = names.shift();
-          str += " and <"+name+">";
-        }
-        str += " is defined as "+ret.expr+" : "+ret.type;
-        outputLine(str);
-        outputButtons.textContent = null;
+        str += " and <"+name+">";
       }
-      refreshTex();
-    }catch(e){
-      outputLine(e.toString());
-      console.log(e);
+      str += " is defined as "+ret.expr+" : "+ret.type;
+      outputLine(str);
       outputButtons.textContent = null;
     }
-    refreshMacroList();
+    refreshTex();
+  }catch(e){
+    outputLine(e.toString());
+    console.log(e);
+    outputButtons.textContent = null;
   }
+  refreshMacroList();
   input.value = "";
 }
 
@@ -208,6 +213,64 @@ document.getElementById("input").onkeydown = function(e){
     e.preventDefault();
   }
 }
+let curNodes:ReductionNode[] = [];
+let graphStop:boolean = false;
+let graphDepth:number;
+startGraph.onclick = function(){
+  let line = input.value;
+  if (line!==""){
+    history.unshift(line);
+    historyNum = 0;
+    workspace = [].concat(history);
+    workspace.unshift("");
+    line = line.split("#")[0];
+    line = line.trim();
+    input.value = "";
+    let root:ReductionNode;
+    try{
+      let ret = LambdaFriends.parseMacroDef(line,typed);
+      if (ret===null) {
+        graphClear();
+        ReductionNode.init(typed,etaAllowed);
+        root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
+      }
+    }catch(e){
+      alert(e.toString());
+      console.log(e);
+      return;
+    }
+    curNodes = [root];
+  }
+  graphStop = false;
+  while (!graphStop && curNodes.length>0){
+    let t = curNodes.shift();
+    if (t.depth>=(graphDepth===undefined?20:graphDepth)) break;
+    let ret = t.visit();
+    if (ret===null) continue;
+    let ans:any[] = [];
+    for (let n of ret.nodes){
+      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString(), classes:(n.isNormalForm?"goal":"")}});
+      curNodes.push(n);
+    }
+    for (let e of ret.edges){
+      ans.push({group: "edges", data: {source:e.from,target:e.to}});
+    }
+    cy.add(ans);
+  }
+  console.log(cy.$("*"));
+}
+stopGraph.onclick = function(){
+  graphStop = true;
+}
+
+maxDepth.addEventListener("change",function(){
+  let new_s = parseInt(maxDepth.value);
+  if (!isNaN(new_s)){
+    graphDepth = new_s;
+  } else {
+    graphDepth = undefined;
+  }
+});
 
 // let submitMacro = function(){
 //   LambdaFriends.parseMacroDef()
@@ -336,19 +399,10 @@ function showContinueBtn(){
     div.appendChild(b);
   }
 }
-// function showLog(str:string){
-//   let newWin = window.open('','ログ - らむだフレンズ','width=400,height=300,scrollbars=no,status=no,toolbar=no,location=no,menubar=no,resizable=yes');
-//   newWin.focus();
-//   let doc = newWin.document;
-//   doc.open();
-//   doc.write("<!DOCTYPE html>");
-//   doc.write('<html lang="ja">');
-//   doc.write("<body>");
-//   doc.write(htmlEscape(str).replace("\n","<br>"));
-//   doc.write("</body>");
-//   doc.write("</html>");
-//   doc.close();
-// }
+function graphClear(){
+  cy.remove("*");
+}
+// { group: "edges", data: { id: "e0", source: "n0", target: "n1" } }
 
 // ===== initialize =====
 untypedButton.onclick(null);
@@ -356,48 +410,45 @@ etaDisableButton.onclick(null);
 refreshMacroList();
 
 window.onload = function(){
-var cytoscape = require("cytoscape");
-var cy = cytoscape({
+cy = cytoscape({
+  container: document.getElementById('graph'),
 
-  container: document.getElementById('graph'), // container to render in
+  boxSelectionEnabled: false,
+  autounselectify: true,
 
-  elements: [ // list of graph elements to start with
-    { // node a
-      data: { id: 'a' }
-    },
-    { // node b
-      data: { id: 'b' }
-    },
-    { // edge ab
-      data: { id: 'ab', source: 'a', target: 'b' }
-    }
-  ],
-
-  style: [ // the stylesheet for the graph
+  layout: {
+    name: 'dagre'
+  },
+  style: [
     {
       selector: 'node',
       style: {
-        'background-color': '#666',
-        'label': 'data(id)'
+        // 'content': 'data(id)',  /* must be specified if you want to display the node text */
+        /**
+        'text-opacity': 0.5,
+        'text-valign': 'center',
+        'text-halign': 'right',
+        */
+        "label": "data(label)",
+        'background-color': '#11479e'
       }
     },
-
     {
       selector: 'edge',
       style: {
-        'width': 3,
-        'line-color': '#ccc',
-        'target-arrow-color': '#ccc',
-        'target-arrow-shape': 'triangle'
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        'target-arrow-color': '#9dbaea',
+        'width': 4,
+        'line-color': '#9dbaea',
       }
     }
   ],
 
-  layout: {
-    name: 'breadthfirst',
-    rows: 1
+  elements: {
+    "nodes": [],
+    "edges": []
   }
-
 });
 console.log(cy);
 };
