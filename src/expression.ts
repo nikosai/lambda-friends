@@ -283,7 +283,7 @@ class BetaRedex extends Redex{
     } else {
       str = str+expr.toTexString();
     }
-    return this.texLeft+"(\\underline{\\strut \\lambda{"+this.la.boundval.toTexString()+"}"+str+")\\underline{\\strut "+this.arg.toTexString()+"}"+this.texRight;
+    return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundval.toTexString()+"}}"+str+")\\underline{\\strut "+this.arg.toTexString()+"}"+this.texRight;
   }
   public toHTMLString():string{
     let boundvals:string[] = [];
@@ -361,7 +361,7 @@ class MacroRedex extends Redex{
     return htmlEscape(this.left)+'<span class="lf-macro">&lt;'+htmlEscape(this.content.name)+'&gt;</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
-    return "{\\rm macro}";
+    return "{\\rm m}";
   }
 }
 
@@ -815,7 +815,7 @@ export class Macro extends Symbol{
     else return this.expr.getEquations(gamma,type);
   }
   public toTexString():string{
-    return "\\overline{\\bf "+this.name+"}";
+    return "\\,\\overline{\\bf "+this.name+"}\\,";
   }
   public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
     if (this.expr === undefined) return [];

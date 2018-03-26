@@ -357,7 +357,7 @@ class BetaRedex extends Redex {
         else {
             str = str + expr.toTexString();
         }
-        return this.texLeft + "(\\underline{\\strut \\lambda{" + this.la.boundval.toTexString() + "}" + str + ")\\underline{\\strut " + this.arg.toTexString() + "}" + this.texRight;
+        return this.texLeft + "(\\strut \\lambda{\\underline{" + this.la.boundval.toTexString() + "}}" + str + ")\\underline{\\strut " + this.arg.toTexString() + "}" + this.texRight;
     }
     toHTMLString() {
         let boundvals = [];
@@ -427,7 +427,7 @@ class MacroRedex extends Redex {
         return htmlEscape(this.left) + '<span class="lf-macro">&lt;' + htmlEscape(this.content.name) + '&gt;</span>' + htmlEscape(this.right);
     }
     getTexRule() {
-        return "{\\rm macro}";
+        return "{\\rm m}";
     }
 }
 // 型付きの簡約基（マクロ以外）
@@ -858,7 +858,7 @@ class Macro extends Symbol {
             return this.expr.getEquations(gamma, type);
     }
     toTexString() {
-        return "\\overline{\\bf " + this.name + "}";
+        return "\\,\\overline{\\bf " + this.name + "}\\,";
     }
     getRedexes(typed, etaAllowed, noParen) {
         if (this.expr === undefined)
@@ -2419,12 +2419,13 @@ function makeTexDiv(title, content) {
     let p = document.createElement("p");
     let btn = document.createElement("button");
     let span = document.createElement("span");
-    let pre = document.createElement("pre");
-    let code = document.createElement("code");
+    let code = document.createElement("div");
+    let inner = document.createElement("p");
+    code.classList.add("code");
     p.appendChild(btn);
     p.appendChild(span);
-    code.appendChild(pre);
-    pre.innerText = content;
+    code.appendChild(inner);
+    inner.innerText = content;
     span.innerText = title;
     btn.type = "button";
     btn.className = "btn btn-default btn-sm";

@@ -272,12 +272,13 @@ function makeTexDiv(title:string, content:string){
   let p = document.createElement("p");
   let btn = document.createElement("button");
   let span = document.createElement("span");
-  let pre = document.createElement("pre");
-  let code = document.createElement("code");
+  let code = document.createElement("div");
+  let inner = document.createElement("p");
+  code.classList.add("code");
   p.appendChild(btn);
   p.appendChild(span);
-  code.appendChild(pre);
-  pre.innerText=content;
+  code.appendChild(inner);
+  inner.innerText=content;
   span.innerText=title;
   btn.type="button";
   btn.className = "btn btn-default btn-sm";
