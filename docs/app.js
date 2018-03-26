@@ -2157,38 +2157,38 @@ exports.TypeUntyped = TypeUntyped;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const lambda_friends_1 = require("./lambda-friends");
-var MicroModal = require('micromodal');
+let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
     openTrigger: 'data-custom-open',
     disableScroll: false,
     awaitCloseAnimation: true
 });
-var steps = undefined;
-var typed = true;
-var etaAllowed = false;
-var curlf = undefined;
-var input = document.getElementById("input");
-var oel = document.getElementById("output");
-var untypedButton = document.getElementById("untyped");
-var typedButton = document.getElementById("typed");
-var etaEnableButton = document.getElementById("etaEnable");
-var etaDisableButton = document.getElementById("etaDisable");
-var fileInput = document.getElementById("fileInput");
-var fileReader = new FileReader();
-var clearMacroButton = document.getElementById("clearMacroBtn");
-var tabC = document.getElementById("tabC");
-// var macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
-// var macroInput = <HTMLInputElement>document.getElementById("macroInput");
-// var submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
-var outputButtons = document.getElementById("outputBtns");
-var stepInput = document.getElementById("stepInput");
-var graphDiv = document.getElementById("graph");
+let steps = undefined;
+let typed = true;
+let etaAllowed = false;
+let curlf = undefined;
+let input = document.getElementById("input");
+let oel = document.getElementById("output");
+let untypedButton = document.getElementById("untyped");
+let typedButton = document.getElementById("typed");
+let etaEnableButton = document.getElementById("etaEnable");
+let etaDisableButton = document.getElementById("etaDisable");
+let fileInput = document.getElementById("fileInput");
+let fileReader = new FileReader();
+let clearMacroButton = document.getElementById("clearMacroBtn");
+let tabC = document.getElementById("tabC");
+// let macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
+// let macroInput = <HTMLInputElement>document.getElementById("macroInput");
+// let submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
+let outputButtons = document.getElementById("outputBtns");
+let stepInput = document.getElementById("stepInput");
+let graphDiv = document.getElementById("graph");
 fileInput.addEventListener("change", function (ev) {
-    var target = ev.target;
-    var file = target.files[0];
-    var type = file.type; // MIMEタイプ
-    // var size = file.size; // ファイル容量（byte）
+    let target = ev.target;
+    let file = target.files[0];
+    let type = file.type; // MIMEタイプ
+    // let size = file.size; // ファイル容量（byte）
     if (type !== "text/plain") {
         alert("プレーンテキストを選択してください");
         fileInput.value = "";
@@ -2275,7 +2275,7 @@ clearMacroButton.onclick = function () {
     refreshMacroList();
 };
 stepInput.addEventListener("change", function () {
-    var new_s = parseInt(stepInput.value);
+    let new_s = parseInt(stepInput.value);
     if (!isNaN(new_s)) {
         steps = new_s;
     }
@@ -2283,10 +2283,10 @@ stepInput.addEventListener("change", function () {
         steps = undefined;
     }
 });
-var history = [];
-var historyNum = 0;
-var workspace = [""];
-var submitInput = function () {
+let history = [];
+let historyNum = 0;
+let workspace = [""];
+let submitInput = function () {
     let line = input.value;
     if (line === "" && curlf !== undefined) {
         doContinual();
@@ -2355,7 +2355,7 @@ document.getElementById("input").onkeydown = function (e) {
         e.preventDefault();
     }
 };
-// var submitMacro = function(){
+// let submitMacro = function(){
 //   LambdaFriends.parseMacroDef()
 // }
 let outputBuffer = "";
@@ -2380,11 +2380,11 @@ function outputClear() {
     oel.innerHTML = htmlEscape(outputBuffer);
 }
 function refreshMacroList() {
-    var tbody = document.getElementById("macroList");
+    let tbody = document.getElementById("macroList");
     tbody.innerHTML = "";
-    var ret = lambda_friends_1.LambdaFriends.getMacroListAsObject(typed);
-    for (var r in ret) {
-        var m = ret[r];
+    let ret = lambda_friends_1.LambdaFriends.getMacroListAsObject(typed);
+    for (let r in ret) {
+        let m = ret[r];
         tbody.innerHTML += "<tr><th>" + htmlEscape(m.name) + "</th><td>" + htmlEscape(m.expr.toString()) + "</td><td>" + htmlEscape(m.type.toString()) + "</td></tr>";
     }
 }
@@ -2500,8 +2500,8 @@ function showContinueBtn() {
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
-// var cytoscape = require("cytoscape")
-// var cy = cytoscape({
+// let cytoscape = require("cytoscape")
+// let cy = cytoscape({
 //   container: graphDiv
 // });
 
