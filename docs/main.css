@@ -160,7 +160,7 @@ body {
   margin: 0;
   padding: 0;
   max-height: 150px;
-  overflow-x: scroll;
+  overflow-y: scroll;
 }
 
 #tabC>div {
