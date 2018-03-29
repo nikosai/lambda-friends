@@ -402,7 +402,7 @@ class EtaRedex extends Redex {
         return this.texLeft + "\\underline{\\strut " + this.content.toTexString() + "}" + this.texRight;
     }
     toHTMLString() {
-        return htmlEscape(this.left) + '<span class="lf-eta">(\\' + htmlEscape(this.content.toString()) + ')</span>' + htmlEscape(this.right);
+        return htmlEscape(this.left) + '<span class="lf-eta">(' + htmlEscape(this.content.toString()) + ')</span>' + htmlEscape(this.right);
     }
     getTexRule() {
         return "\\eta";
@@ -414,7 +414,6 @@ class MacroRedex extends Redex {
         super("macro");
         this.content = e;
         this.next = e.expr;
-        this.next.isTopLevel = false;
         this.rule = "macro";
     }
     toString() {
@@ -540,6 +539,9 @@ class Symbol extends Expression {
     resetTopLevel() {
         this.isTopLevel = false;
     }
+    extractMacros() {
+        throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
+    }
 }
 // 変数 x
 class Variable extends Symbol {
@@ -621,6 +623,9 @@ class Variable extends Symbol {
     getRedexes(typed, etaAllowed, noParen) {
         return [];
     }
+    extractMacros() {
+        return this;
+    }
 }
 // 定数 c
 class Const extends Symbol {
@@ -651,6 +656,9 @@ class Const extends Symbol {
         else {
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         }
+    }
+    extractMacros() {
+        return this;
     }
 }
 // int型定数 c^{int}
@@ -786,6 +794,9 @@ class Nil extends Symbol {
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         }
     }
+    extractMacros() {
+        return this;
+    }
 }
 // マクロ定義
 class Macro extends Symbol {
@@ -870,6 +881,12 @@ class Macro extends Symbol {
         this.isTopLevel = false;
         if (this.expr !== undefined)
             this.expr.resetTopLevel();
+    }
+    extractMacros() {
+        if (this.expr === undefined)
+            return this;
+        else
+            return this.expr;
     }
 }
 Macro.map = {};
@@ -959,7 +976,12 @@ class LambdaAbstraction extends Expression {
         let m = this.expr;
         let y = expr.boundval;
         let n = expr.expr;
-        return (!Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y)));
+        if (Variable.contains(m.getFV(), y)) {
+            return n.equalsAlpha(m);
+        }
+        else {
+            return n.equalsAlpha(m.substitute(x, y));
+        }
     }
     getEquations(gamma, type) {
         // (abs)
@@ -1028,6 +1050,9 @@ class LambdaAbstraction extends Expression {
         this.isTopLevel = false;
         this.boundval.resetTopLevel();
         this.expr.resetTopLevel();
+    }
+    extractMacros() {
+        return new LambdaAbstraction(this.boundval, this.expr.extractMacros());
     }
 }
 // 関数適用 MN
@@ -1168,6 +1193,9 @@ class Application extends Expression {
         this.left.resetTopLevel();
         this.right.resetTopLevel();
     }
+    extractMacros() {
+        return new Application(this.left.extractMacros(), this.right.extractMacros());
+    }
 }
 // リスト M::M
 class List extends Expression {
@@ -1218,6 +1246,9 @@ class List extends Expression {
         this.isTopLevel = false;
         this.head.resetTopLevel();
         this.tail.resetTopLevel();
+    }
+    extractMacros() {
+        return new List(this.head.extractMacros(), this.tail.extractMacros());
     }
 }
 // if
@@ -1328,6 +1359,9 @@ class If extends Expression {
         this.ifTrue.resetTopLevel();
         this.ifFalse.resetTopLevel();
     }
+    extractMacros() {
+        return new If(this.state.extractMacros(), this.ifTrue.extractMacros(), this.ifFalse.extractMacros());
+    }
 }
 // let in
 class Let extends Expression {
@@ -1435,6 +1469,9 @@ class Let extends Expression {
         this.boundVal.resetTopLevel();
         this.left.resetTopLevel();
         this.right.resetTopLevel();
+    }
+    extractMacros() {
+        return new Let(this.boundVal, this.left.extractMacros(), this.right.extractMacros());
     }
 }
 // case文 [case] M [of] [nil] -> M | x::x -> M
@@ -1602,9 +1639,75 @@ class Case extends Expression {
         let ifElseExpr = parseSymbols(tokens, typed);
         return new Case(stateExpr, ifNilExpr, head, tail, ifElseExpr);
     }
+    extractMacros() {
+        return new Case(this.state.extractMacros(), this.ifNil.extractMacros(), this.head, this.tail, this.ifElse.extractMacros());
+    }
 }
 
-},{"./error":1,"./type":4}],3:[function(require,module,exports){
+},{"./error":1,"./type":5}],3:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const expression_1 = require("./expression");
+class ReductionNode {
+    constructor(expr, parent) {
+        this.children = [];
+        this.expr = expr.extractMacros();
+        this.expr.setRoot();
+        this.parent = parent;
+        this.id = ReductionNode.nextId;
+        if (parent === null)
+            this.depth = 0;
+        else
+            this.depth = parent.depth + 1;
+        ReductionNode.nextId++;
+        ReductionNode.nodes.push(this);
+        this.isNormalForm = this.expr.isNormalForm(ReductionNode.typed, ReductionNode.etaAllowed);
+    }
+    static init(typed, etaAllowed) {
+        ReductionNode.typed = typed;
+        ReductionNode.etaAllowed = etaAllowed;
+        ReductionNode.nodes = [];
+        ReductionNode.edges = [];
+        ReductionNode.nextId = 0;
+    }
+    visit() {
+        if (this.isNormalForm)
+            return null;
+        let rs = this.expr.getRedexes(ReductionNode.typed, ReductionNode.etaAllowed, true).sort(expression_1.Redex.compare);
+        let ans;
+        ans = { nodes: [], edges: [] };
+        for (let r of rs) {
+            let ret = ReductionNode.find(r.next);
+            if (ret === null) {
+                let n = new ReductionNode(r.next, this);
+                this.children.push(n);
+                ans.nodes.push(n);
+                ans.edges.push({ from: this, to: n });
+                ReductionNode.edges.push({ from: this, to: n });
+            }
+            else {
+                this.children.push(ret);
+                ans.edges.push({ from: this, to: ret });
+                ReductionNode.edges.push({ from: this, to: ret });
+            }
+        }
+        return ans;
+    }
+    toString() {
+        return this.expr.toString();
+    }
+    static find(expr) {
+        for (let n of ReductionNode.nodes) {
+            if (n.expr.equalsAlpha(expr)) {
+                return n;
+            }
+        }
+        return null;
+    }
+}
+exports.ReductionNode = ReductionNode;
+
+},{"./expression":2}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
@@ -1803,7 +1906,7 @@ class LambdaFriends {
 }
 exports.LambdaFriends = LambdaFriends;
 
-},{"./expression":2,"./type":4}],4:[function(require,module,exports){
+},{"./expression":2,"./type":5}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const error_1 = require("./error");
@@ -2153,10 +2256,47 @@ class TypeUntyped extends Type {
 }
 exports.TypeUntyped = TypeUntyped;
 
-},{"./error":1}],5:[function(require,module,exports){
+},{"./error":1}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const lambda_friends_1 = require("./lambda-friends");
+const graph_1 = require("./graph");
+let cy = cytoscape({
+    container: document.getElementById('graph'),
+    boxSelectionEnabled: false,
+    autounselectify: true,
+    style: [
+        {
+            selector: 'node',
+            style: {
+                // 'content': 'data(label)',  /* must be specified if you want to display the node text */
+                /**
+                'text-opacity': 0.5,
+                'text-valign': 'center',
+                'text-halign': 'right',
+                */
+                "label": "data(label)",
+                'background-color': '#11479e'
+            }
+        },
+        {
+            selector: 'edge',
+            style: {
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier',
+                'target-arrow-color': '#9dbaea',
+                'width': 3,
+                'line-color': '#9dbaea',
+            }
+        },
+        {
+            selector: '.goal',
+            style: {
+                'background-color': '#B3424A'
+            }
+        }
+    ]
+});
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
@@ -2184,6 +2324,10 @@ let tabC = document.getElementById("tabC");
 let outputButtons = document.getElementById("outputBtns");
 let stepInput = document.getElementById("stepInput");
 let graphDiv = document.getElementById("graph");
+let startGraph = document.getElementById("startGraph");
+let stopGraph = document.getElementById("stopGraph");
+let maxDepth = document.getElementById("maxDepth");
+let tabDbtn = document.getElementById("tabDbtn");
 fileInput.addEventListener("change", function (ev) {
     let target = ev.target;
     let file = target.files[0];
@@ -2290,6 +2434,7 @@ let submitInput = function () {
     let line = input.value;
     if (line === "" && curlf !== undefined) {
         doContinual();
+        return;
     }
     history.unshift(line);
     historyNum = 0;
@@ -2297,37 +2442,35 @@ let submitInput = function () {
     workspace.unshift("");
     line = line.split("#")[0];
     line = line.trim();
-    if (line !== "") {
-        try {
-            let ret = lambda_friends_1.LambdaFriends.parseMacroDef(line, typed);
-            if (ret === null) {
-                curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed);
-                outputLine(curlf.toString());
-                if (typed)
-                    outputNextLine(curlf.continualReduction(steps));
-                showContinueBtn();
-            }
-            else {
-                let names = [].concat(ret.names);
-                let name = names.shift();
-                let str = "<" + name + ">";
-                while (names.length > 0) {
-                    let name = names.shift();
-                    str += " and <" + name + ">";
-                }
-                str += " is defined as " + ret.expr + " : " + ret.type;
-                outputLine(str);
-                outputButtons.textContent = null;
-            }
-            refreshTex();
+    try {
+        let ret = lambda_friends_1.LambdaFriends.parseMacroDef(line, typed);
+        if (ret === null) {
+            curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed);
+            outputLine(curlf.toString());
+            if (typed)
+                outputNextLine(curlf.continualReduction(steps));
+            showContinueBtn();
         }
-        catch (e) {
-            outputLine(e.toString());
-            console.log(e);
+        else {
+            let names = [].concat(ret.names);
+            let name = names.shift();
+            let str = "<" + name + ">";
+            while (names.length > 0) {
+                let name = names.shift();
+                str += " and <" + name + ">";
+            }
+            str += " is defined as " + ret.expr + " : " + ret.type;
+            outputLine(str);
             outputButtons.textContent = null;
         }
-        refreshMacroList();
+        refreshTex();
     }
+    catch (e) {
+        outputLine(e.toString());
+        console.log(e);
+        outputButtons.textContent = null;
+    }
+    refreshMacroList();
     input.value = "";
 };
 document.getElementById("submit").onclick = submitInput;
@@ -2355,6 +2498,83 @@ document.getElementById("input").onkeydown = function (e) {
         e.preventDefault();
     }
 };
+let curNodes = [];
+let graphStop = false;
+let graphDepth;
+startGraph.onclick = function () {
+    cy.resize();
+    makeLayout();
+    let line = input.value;
+    if (line !== "") {
+        history.unshift(line);
+        historyNum = 0;
+        workspace = [].concat(history);
+        workspace.unshift("");
+        line = line.split("#")[0];
+        line = line.trim();
+        input.value = "";
+        let root;
+        try {
+            if (lambda_friends_1.LambdaFriends.parseMacroDef(line, typed) !== null)
+                return;
+            graphClear();
+            graph_1.ReductionNode.init(typed, etaAllowed);
+            root = new graph_1.ReductionNode(new lambda_friends_1.LambdaFriends(line, typed, etaAllowed).expr, null);
+        }
+        catch (e) {
+            alert(e.toString());
+            console.log(e);
+            return;
+        }
+        cy.add({ group: "nodes", data: { id: "" + root.id, label: root.toString(), classes: (root.isNormalForm ? "goal" : "") } });
+        makeLayout();
+        curNodes = [root];
+    }
+    graphStop = false;
+    let f = () => setTimeout(() => {
+        if (graphStop || curNodes.length === 0) {
+            makeLayout();
+            return;
+        }
+        let t = curNodes.shift();
+        if (t.depth >= (graphDepth === undefined ? 10 : graphDepth)) {
+            curNodes.push(t);
+            makeLayout();
+            return;
+        }
+        let ret = t.visit();
+        if (ret === null) {
+            f();
+            makeLayout();
+            return;
+        }
+        let ans = [];
+        for (let n of ret.nodes) {
+            ans.push({ group: "nodes", data: { id: "" + n.id, label: n.toString(), classes: (n.isNormalForm ? "goal" : "") } });
+            curNodes.push(n);
+        }
+        for (let e of ret.edges) {
+            ans.push({ group: "edges", data: { source: e.from.id.toString(), target: e.to.id.toString() } });
+        }
+        makeLayout();
+        cy.add(ans);
+        f();
+        makeLayout();
+    }, 1);
+    f();
+};
+stopGraph.onclick = function () {
+    graphStop = true;
+};
+maxDepth.addEventListener("change", function () {
+    let new_s = parseInt(maxDepth.value);
+    if (!isNaN(new_s)) {
+        graphDepth = new_s;
+    }
+    else {
+        graphDepth = undefined;
+    }
+});
 // let submitMacro = function(){
 //   LambdaFriends.parseMacroDef()
 // }
@@ -2406,13 +2626,15 @@ function refreshTex() {
     tabC.textContent = null;
     let proc = "";
     let proof = "";
-    if (curlf !== undefined)
+    if (curlf !== undefined) {
         proc = curlf.getProcessTex();
-    tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+        tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+    }
     if (typed) {
-        if (curlf !== undefined)
+        if (curlf !== undefined) {
             proof = curlf.getProofTree();
-        tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+            tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+        }
     }
 }
 function makeTexDiv(title, content) {
@@ -2484,29 +2706,24 @@ function showContinueBtn() {
         div.appendChild(b);
     }
 }
-// function showLog(str:string){
-//   let newWin = window.open('','ログ - らむだフレンズ','width=400,height=300,scrollbars=no,status=no,toolbar=no,location=no,menubar=no,resizable=yes');
-//   newWin.focus();
-//   let doc = newWin.document;
-//   doc.open();
-//   doc.write("<!DOCTYPE html>");
-//   doc.write('<html lang="ja">');
-//   doc.write("<body>");
-//   doc.write(htmlEscape(str).replace("\n","<br>"));
-//   doc.write("</body>");
-//   doc.write("</html>");
-//   doc.close();
-// }
+function graphClear() {
+    cy.remove("*");
+}
+function makeLayout() {
+    cy.elements().makeLayout({
+        name: "dagre",
+        nodeSpacing: 5,
+        animate: true,
+        randomize: false,
+        maxSimulationTime: 1500
+    }).run();
+}
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
-// let cytoscape = require("cytoscape")
-// let cy = cytoscape({
-//   container: graphDiv
-// });
 
-},{"./lambda-friends":3,"micromodal":6}],6:[function(require,module,exports){
+},{"./graph":3,"./lambda-friends":4,"micromodal":7}],7:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -2539,46 +2756,6 @@ var createClass = function () {
   };
 }();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 var toConsumableArray = function (arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
@@ -2590,6 +2767,7 @@ var toConsumableArray = function (arr) {
 };
 
 var MicroModal = function () {
+
   var FOCUSABLE_ELEMENTS = ['a[href]', 'area[href]', 'input:not([disabled]):not([type="hidden"]):not([aria-hidden])', 'select:not([disabled]):not([aria-hidden])', 'textarea:not([disabled]):not([aria-hidden])', 'button:not([disabled]):not([aria-hidden])', 'iframe', 'object', 'embed', '[contenteditable]', '[tabindex]:not([tabindex^="-"])'];
 
   var Modal = function () {
@@ -2898,4 +3076,4 @@ return MicroModal;
 
 })));
 
-},{}]},{},[5]);
+},{}]},{},[6]);

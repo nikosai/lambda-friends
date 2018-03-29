@@ -49,7 +49,7 @@
         <li class="active"><a href="#tabA" data-toggle="tab">出力</a></li>
         <li><a href="#tabB" data-toggle="tab">マクロ</a></li>
         <li><a href="#tabC" data-toggle="tab">TeX</a></li>
-        <!-- <li><a href="#tabD" data-toggle="tab">タブＤ</a></li> -->
+        <li><a id="tabDbtn" href="#tabD" data-toggle="tab">グラフ</a></li>
       </ul>
 
       <!-- タブ内容 -->
@@ -84,9 +84,19 @@
         <div class="tab-pane" id="tabC">
           これまでの簡約過程と、型付けの証明木（bussproofs.sty形式）を表示します。
         </div>
-        <!-- <div class="tab-pane" id="tabD">
-          <p>タブＤの内容</p>
-        </div> -->
+        <div class="tab-pane" id="tabD">
+          <div id="graphSettings">
+            <button type="button" id="startGraph" class="btn btn-info">start</button>
+            <button type="button" id="stopGraph" class="btn btn-danger">stop</button>
+            <div class="form-inline" style="margin:7px; display:inline-table">
+              <div class="input-group">
+                <span class="input-group-addon">深さ</span>
+                <input type="text" class="form-control" placeholder="10" id="maxDepth" style="width: 60px; text-align:center" autocomplete="off">
+              </div>
+            </div>
+          </div>
+          <div id="graph"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -110,8 +120,12 @@
     </div>
   </div>
 </div>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <!-- for 'layout: "dagre"' -->
+  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
   <script src="app.js"></script>
 </body>

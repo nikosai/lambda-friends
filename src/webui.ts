@@ -1,5 +1,45 @@
 import { LambdaFriends } from "./lambda-friends";
+import { ReductionNode } from "./graph";
 declare let require: any;
+declare let cytoscape: any;
+let cy = cytoscape({
+  container: document.getElementById('graph'),
+
+  boxSelectionEnabled: false,
+  autounselectify: true,
+
+  style: [
+    {
+      selector: 'node',
+      style: {
+        // 'content': 'data(label)',  /* must be specified if you want to display the node text */
+        /**
+        'text-opacity': 0.5,
+        'text-valign': 'center',
+        'text-halign': 'right',
+        */
+        "label": "data(label)",
+        'background-color': '#11479e'
+      }
+    },
+    {
+      selector: 'edge',
+      style: {
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        'target-arrow-color': '#9dbaea',
+        'width': 3,
+        'line-color': '#9dbaea',
+      }
+    },
+    {
+      selector: '.goal',
+      style: {
+        'background-color': '#B3424A'
+      }
+    }
+  ]
+});
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
@@ -29,6 +69,10 @@ let tabC = document.getElementById("tabC");
 let outputButtons = document.getElementById("outputBtns");
 let stepInput = <HTMLInputElement>document.getElementById("stepInput");
 let graphDiv = document.getElementById("graph");
+let startGraph = document.getElementById("startGraph");
+let stopGraph = document.getElementById("stopGraph");
+let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
+let tabDbtn = document.getElementById("tabDbtn");
 
 fileInput.addEventListener("change",function (ev){
   let target:any = ev.target;
@@ -146,6 +190,7 @@ let submitInput = function(){
   let line = input.value;
   if (line==="" && curlf!==undefined){
     doContinual();
+    return;
   }
   history.unshift(line);
   historyNum = 0;
@@ -153,35 +198,33 @@ let submitInput = function(){
   workspace.unshift("");
   line = line.split("#")[0];
   line = line.trim();
-  if (line!==""){
-    try{
-      let ret = LambdaFriends.parseMacroDef(line,typed);
-      if (ret===null) {
-        curlf = new LambdaFriends(line,typed,etaAllowed);
-        outputLine(curlf.toString());
-        if (typed)
-          outputNextLine(curlf.continualReduction(steps));
-        showContinueBtn();
-      } else {
-        let names = [].concat(ret.names);
+  try{
+    let ret = LambdaFriends.parseMacroDef(line,typed);
+    if (ret===null) {
+      curlf = new LambdaFriends(line,typed,etaAllowed);
+      outputLine(curlf.toString());
+      if (typed)
+        outputNextLine(curlf.continualReduction(steps));
+      showContinueBtn();
+    } else {
+      let names = [].concat(ret.names);
+      let name = names.shift();
+      let str = "<"+name+">"
+      while (names.length>0){
         let name = names.shift();
-        let str = "<"+name+">"
-        while (names.length>0){
-          let name = names.shift();
-          str += " and <"+name+">";
-        }
-        str += " is defined as "+ret.expr+" : "+ret.type;
-        outputLine(str);
-        outputButtons.textContent = null;
+        str += " and <"+name+">";
       }
-      refreshTex();
-    }catch(e){
-      outputLine(e.toString());
-      console.log(e);
+      str += " is defined as "+ret.expr+" : "+ret.type;
+      outputLine(str);
       outputButtons.textContent = null;
     }
-    refreshMacroList();
+    refreshTex();
+  }catch(e){
+    outputLine(e.toString());
+    console.log(e);
+    outputButtons.textContent = null;
   }
+  refreshMacroList();
   input.value = "";
 }
 
@@ -208,6 +251,81 @@ document.getElementById("input").onkeydown = function(e){
     e.preventDefault();
   }
 }
+let curNodes:ReductionNode[] = [];
+let graphStop:boolean = false;
+let graphDepth:number;
+startGraph.onclick = function(){
+  cy.resize();
+  makeLayout();
+  let line = input.value;
+  if (line!==""){
+    history.unshift(line);
+    historyNum = 0;
+    workspace = [].concat(history);
+    workspace.unshift("");
+    line = line.split("#")[0];
+    line = line.trim();
+    input.value = "";
+    let root:ReductionNode;
+    try{
+      if (LambdaFriends.parseMacroDef(line,typed)!==null) return;
+      graphClear();
+      ReductionNode.init(typed,etaAllowed);
+      root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
+    }catch(e){
+      alert(e.toString());
+      console.log(e);
+      return;
+    }
+    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString(), classes:(root.isNormalForm?"goal":"")}})
+    makeLayout();
+    curNodes = [root];
+  }
+  graphStop = false;
+  let f = () => setTimeout(()=>{
+    if (graphStop || curNodes.length===0){
+      makeLayout();
+      return;
+    }
+    let t = curNodes.shift();
+    if (t.depth>=(graphDepth===undefined?10:graphDepth)){
+      curNodes.push(t);
+      makeLayout();
+      return;
+    }
+    let ret = t.visit();
+    if (ret===null) {
+      f();
+      makeLayout();
+      return;
+    }
+    let ans:any[] = [];
+    for (let n of ret.nodes){
+      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString(), classes:(n.isNormalForm?"goal":"")}});
+      curNodes.push(n);
+    }
+    for (let e of ret.edges){
+      ans.push({group: "edges", data: {source:e.from.id.toString(),target:e.to.id.toString()}});
+    }
+    makeLayout();
+    cy.add(ans);
+    f();
+    makeLayout();
+  },1);
+  f();
+}
+stopGraph.onclick = function(){
+  graphStop = true;
+}
+
+maxDepth.addEventListener("change",function(){
+  let new_s = parseInt(maxDepth.value);
+  if (!isNaN(new_s)){
+    graphDepth = new_s;
+  } else {
+    graphDepth = undefined;
+  }
+});
 
 // let submitMacro = function(){
 //   LambdaFriends.parseMacroDef()
@@ -261,11 +379,15 @@ function refreshTex(){
   tabC.textContent = null;
   let proc = "";
   let proof = "";
-  if (curlf !== undefined) proc = curlf.getProcessTex();
-  tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+  if (curlf !== undefined) {
+    proc = curlf.getProcessTex();
+    tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+  }
   if (typed){
-    if (curlf !== undefined) proof = curlf.getProofTree();
-    tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+    if (curlf !== undefined) {
+      proof = curlf.getProofTree();
+      tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+    }
   }
 }
 function makeTexDiv(title:string, content:string){
@@ -336,26 +458,20 @@ function showContinueBtn(){
     div.appendChild(b);
   }
 }
-// function showLog(str:string){
-//   let newWin = window.open('','ログ - らむだフレンズ','width=400,height=300,scrollbars=no,status=no,toolbar=no,location=no,menubar=no,resizable=yes');
-//   newWin.focus();
-//   let doc = newWin.document;
-//   doc.open();
-//   doc.write("<!DOCTYPE html>");
-//   doc.write('<html lang="ja">');
-//   doc.write("<body>");
-//   doc.write(htmlEscape(str).replace("\n","<br>"));
-//   doc.write("</body>");
-//   doc.write("</html>");
-//   doc.close();
-// }
+function graphClear(){
+  cy.remove("*");
+}
+function makeLayout(){
+  cy.elements().makeLayout({
+    name: "dagre",
+    nodeSpacing: 5,
+    animate: true,
+    randomize: false,
+    maxSimulationTime: 1500
+  }).run();
+}
 
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
-
-// let cytoscape = require("cytoscape")
-// let cy = cytoscape({
-//   container: graphDiv
-// });
