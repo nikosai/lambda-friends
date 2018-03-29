@@ -959,7 +959,12 @@ class LambdaAbstraction extends Expression {
         let m = this.expr;
         let y = expr.boundval;
         let n = expr.expr;
-        return (!Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y)));
+        if (Variable.contains(m.getFV(), y)) {
+            return n.equalsAlpha(m);
+        }
+        else {
+            return n.equalsAlpha(m.substitute(x, y));
+        }
     }
     getEquations(gamma, type) {
         // (abs)
@@ -1612,6 +1617,7 @@ class ReductionNode {
     constructor(expr, parent) {
         this.children = [];
         this.expr = expr;
+        this.expr.isTopLevel = true;
         this.parent = parent;
         this.id = ReductionNode.nextId;
         if (parent === null)
@@ -1619,13 +1625,13 @@ class ReductionNode {
         else
             this.depth = parent.depth + 1;
         ReductionNode.nextId++;
-        ReductionNode.nodes[expr.toString()] = this;
+        ReductionNode.nodes.push(this);
         this.isNormalForm = expr.isNormalForm(ReductionNode.typed, ReductionNode.etaAllowed);
     }
     static init(typed, etaAllowed) {
         ReductionNode.typed = typed;
         ReductionNode.etaAllowed = etaAllowed;
-        ReductionNode.nodes = {};
+        ReductionNode.nodes = [];
         ReductionNode.edges = [];
         ReductionNode.nextId = 0;
     }
@@ -1636,24 +1642,32 @@ class ReductionNode {
         let ans;
         ans = { nodes: [], edges: [] };
         for (let r of rs) {
-            let ret = ReductionNode.find(r.next.toString());
-            ReductionNode.edges.push({ from: this.expr.toString(), to: r.next.toString() });
-            ans.edges.push({ from: this.expr.toString(), to: r.next.toString() });
+            let ret = ReductionNode.find(r.next);
             if (ret === null) {
                 let n = new ReductionNode(r.next, this);
                 this.children.push(n);
                 ans.nodes.push(n);
+                ans.edges.push({ from: this, to: n });
+                ReductionNode.edges.push({ from: this, to: n });
             }
-            else
+            else {
                 this.children.push(ret);
+                ans.edges.push({ from: this, to: ret });
+                ReductionNode.edges.push({ from: this, to: ret });
+            }
         }
         return ans;
     }
     toString() {
         return this.expr.toString();
     }
-    static find(str) {
-        return ReductionNode.nodes[str] || null;
+    static find(expr) {
+        for (let n of ReductionNode.nodes) {
+            if (n.expr.equalsAlpha(expr)) {
+                return n;
+            }
+        }
+        return null;
     }
 }
 exports.ReductionNode = ReductionNode;
@@ -2212,7 +2226,36 @@ exports.TypeUntyped = TypeUntyped;
 Object.defineProperty(exports, "__esModule", { value: true });
 const lambda_friends_1 = require("./lambda-friends");
 const graph_1 = require("./graph");
-let cy;
+let cy = cytoscape({
+    container: document.getElementById('graph'),
+    boxSelectionEnabled: false,
+    autounselectify: true,
+    style: [
+        {
+            selector: 'node',
+            style: {
+                // 'content': 'data(label)',  /* must be specified if you want to display the node text */
+                /**
+                'text-opacity': 0.5,
+                'text-valign': 'center',
+                'text-halign': 'right',
+                */
+                "label": "data(label)",
+                'background-color': '#11479e'
+            }
+        },
+        {
+            selector: 'edge',
+            style: {
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier',
+                'target-arrow-color': '#9dbaea',
+                'width': 3,
+                'line-color': '#9dbaea',
+            }
+        }
+    ]
+});
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
@@ -2243,6 +2286,7 @@ let graphDiv = document.getElementById("graph");
 let startGraph = document.getElementById("startGraph");
 let stopGraph = document.getElementById("stopGraph");
 let maxDepth = document.getElementById("maxDepth");
+let tabDbtn = document.getElementById("tabDbtn");
 fileInput.addEventListener("change", function (ev) {
     let target = ev.target;
     let file = target.files[0];
@@ -2417,6 +2461,7 @@ let curNodes = [];
 let graphStop = false;
 let graphDepth;
 startGraph.onclick = function () {
+    cy.resize();
     let line = input.value;
     if (line !== "") {
         history.unshift(line);
@@ -2428,39 +2473,58 @@ startGraph.onclick = function () {
         input.value = "";
         let root;
         try {
-            let ret = lambda_friends_1.LambdaFriends.parseMacroDef(line, typed);
-            if (ret === null) {
-                graphClear();
-                graph_1.ReductionNode.init(typed, etaAllowed);
-                root = new graph_1.ReductionNode(new lambda_friends_1.LambdaFriends(line, typed, etaAllowed).expr, null);
-            }
+            if (lambda_friends_1.LambdaFriends.parseMacroDef(line, typed) !== null)
+                return;
+            graphClear();
+            graph_1.ReductionNode.init(typed, etaAllowed);
+            root = new graph_1.ReductionNode(new lambda_friends_1.LambdaFriends(line, typed, etaAllowed).expr, null);
         }
         catch (e) {
             alert(e.toString());
             console.log(e);
             return;
         }
+        cy.add({ group: "nodes", data: { id: "" + root.id, label: root.toString(), classes: (root.isNormalForm ? "goal" : "") } });
+        cy.elements().makeLayout({
+            name: "dagre",
+            nodeSpacing: 5,
+            animate: true,
+            randomize: false,
+            maxSimulationTime: 1500
+        }).run();
         curNodes = [root];
     }
     graphStop = false;
-    while (!graphStop && curNodes.length > 0) {
+    let f = () => setTimeout(() => {
+        if (graphStop || curNodes.length === 0) {
+            return;
+        }
         let t = curNodes.shift();
         if (t.depth >= (graphDepth === undefined ? 20 : graphDepth))
-            break;
+            return;
         let ret = t.visit();
         if (ret === null)
-            continue;
+            f();
         let ans = [];
         for (let n of ret.nodes) {
             ans.push({ group: "nodes", data: { id: "" + n.id, label: n.toString(), classes: (n.isNormalForm ? "goal" : "") } });
             curNodes.push(n);
         }
         for (let e of ret.edges) {
-            ans.push({ group: "edges", data: { source: e.from, target: e.to } });
+            ans.push({ group: "edges", data: { source: e.from.id.toString(), target: e.to.id.toString() } });
         }
         cy.add(ans);
-    }
-    console.log(cy.$("*"));
+        cy.elements().makeLayout({
+            name: "dagre",
+            nodeSpacing: 5,
+            animate: true,
+            randomize: false,
+            maxSimulationTime: 1500
+        }).run();
+        console.log(cy.$("*"));
+        f();
+    }, 1);
+    f();
 };
 stopGraph.onclick = function () {
     graphStop = true;
@@ -2606,51 +2670,10 @@ function showContinueBtn() {
 function graphClear() {
     cy.remove("*");
 }
-// { group: "edges", data: { id: "e0", source: "n0", target: "n1" } }
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
-window.onload = function () {
-    cy = cytoscape({
-        container: document.getElementById('graph'),
-        boxSelectionEnabled: false,
-        autounselectify: true,
-        layout: {
-            name: 'dagre'
-        },
-        style: [
-            {
-                selector: 'node',
-                style: {
-                    // 'content': 'data(id)',  /* must be specified if you want to display the node text */
-                    /**
-                    'text-opacity': 0.5,
-                    'text-valign': 'center',
-                    'text-halign': 'right',
-                    */
-                    "label": "data(label)",
-                    'background-color': '#11479e'
-                }
-            },
-            {
-                selector: 'edge',
-                style: {
-                    'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier',
-                    'target-arrow-color': '#9dbaea',
-                    'width': 4,
-                    'line-color': '#9dbaea',
-                }
-            }
-        ],
-        elements: {
-            "nodes": [],
-            "edges": []
-        }
-    });
-    console.log(cy);
-};
 
 },{"./graph":3,"./lambda-friends":4,"micromodal":7}],7:[function(require,module,exports){
 (function (global, factory) {

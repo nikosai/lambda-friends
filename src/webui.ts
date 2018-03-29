@@ -2,7 +2,38 @@ import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
 declare let require: any;
 declare let cytoscape: any;
-let cy;
+let cy = cytoscape({
+  container: document.getElementById('graph'),
+
+  boxSelectionEnabled: false,
+  autounselectify: true,
+
+  style: [
+    {
+      selector: 'node',
+      style: {
+        // 'content': 'data(label)',  /* must be specified if you want to display the node text */
+        /**
+        'text-opacity': 0.5,
+        'text-valign': 'center',
+        'text-halign': 'right',
+        */
+        "label": "data(label)",
+        'background-color': '#11479e'
+      }
+    },
+    {
+      selector: 'edge',
+      style: {
+        'target-arrow-shape': 'triangle',
+        'curve-style': 'bezier',
+        'target-arrow-color': '#9dbaea',
+        'width': 3,
+        'line-color': '#9dbaea',
+      }
+    }
+  ]
+});
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
@@ -35,6 +66,7 @@ let graphDiv = document.getElementById("graph");
 let startGraph = document.getElementById("startGraph");
 let stopGraph = document.getElementById("stopGraph");
 let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
+let tabDbtn = document.getElementById("tabDbtn");
 
 fileInput.addEventListener("change",function (ev){
   let target:any = ev.target;
@@ -217,6 +249,7 @@ let curNodes:ReductionNode[] = [];
 let graphStop:boolean = false;
 let graphDepth:number;
 startGraph.onclick = function(){
+  cy.resize();
   let line = input.value;
   if (line!==""){
     history.unshift(line);
@@ -228,36 +261,54 @@ startGraph.onclick = function(){
     input.value = "";
     let root:ReductionNode;
     try{
-      let ret = LambdaFriends.parseMacroDef(line,typed);
-      if (ret===null) {
-        graphClear();
-        ReductionNode.init(typed,etaAllowed);
-        root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
-      }
+      if (LambdaFriends.parseMacroDef(line,typed)!==null) return;
+      graphClear();
+      ReductionNode.init(typed,etaAllowed);
+      root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
     }catch(e){
       alert(e.toString());
       console.log(e);
       return;
     }
+    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString(), classes:(root.isNormalForm?"goal":"")}})
+    cy.elements().makeLayout({
+      name: "dagre",
+      nodeSpacing: 5,
+      animate: true,
+      randomize: false,
+      maxSimulationTime: 1500
+    }).run();
     curNodes = [root];
   }
   graphStop = false;
-  while (!graphStop && curNodes.length>0){
+  let f = () => setTimeout(()=>{
+    if (graphStop || curNodes.length===0){
+      return;
+    }
     let t = curNodes.shift();
-    if (t.depth>=(graphDepth===undefined?20:graphDepth)) break;
+    if (t.depth>=(graphDepth===undefined?20:graphDepth)) return;
     let ret = t.visit();
-    if (ret===null) continue;
+    if (ret===null) f();
     let ans:any[] = [];
     for (let n of ret.nodes){
       ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString(), classes:(n.isNormalForm?"goal":"")}});
       curNodes.push(n);
     }
     for (let e of ret.edges){
-      ans.push({group: "edges", data: {source:e.from,target:e.to}});
+      ans.push({group: "edges", data: {source:e.from.id.toString(),target:e.to.id.toString()}});
     }
     cy.add(ans);
-  }
-  console.log(cy.$("*"));
+    cy.elements().makeLayout({
+      name: "dagre",
+      nodeSpacing: 5,
+      animate: true,
+      randomize: false,
+      maxSimulationTime: 1500
+    }).run();
+    console.log(cy.$("*"));
+    f();
+  },1);
+  f();
 }
 stopGraph.onclick = function(){
   graphStop = true;
@@ -402,53 +453,8 @@ function showContinueBtn(){
 function graphClear(){
   cy.remove("*");
 }
-// { group: "edges", data: { id: "e0", source: "n0", target: "n1" } }
 
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
-
-window.onload = function(){
-cy = cytoscape({
-  container: document.getElementById('graph'),
-
-  boxSelectionEnabled: false,
-  autounselectify: true,
-
-  layout: {
-    name: 'dagre'
-  },
-  style: [
-    {
-      selector: 'node',
-      style: {
-        // 'content': 'data(id)',  /* must be specified if you want to display the node text */
-        /**
-        'text-opacity': 0.5,
-        'text-valign': 'center',
-        'text-halign': 'right',
-        */
-        "label": "data(label)",
-        'background-color': '#11479e'
-      }
-    },
-    {
-      selector: 'edge',
-      style: {
-        'target-arrow-shape': 'triangle',
-        'curve-style': 'bezier',
-        'target-arrow-color': '#9dbaea',
-        'width': 4,
-        'line-color': '#9dbaea',
-      }
-    }
-  ],
-
-  elements: {
-    "nodes": [],
-    "edges": []
-  }
-});
-console.log(cy);
-};
