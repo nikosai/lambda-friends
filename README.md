@@ -13,7 +13,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 * マクロ定義ができる
   + 「マクロ」タブで定義済みマクロの一覧を表示する
 * マクロ定義を書き並べたファイルを読み込める
-  + [Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)との後方互換性あり。*.lm.txtを読み込める。
+  + [Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)との後方互換性あり。*.lm.txt（の形式のプレーンテキスト）を読み込める。
 * LaTeX形式で出力ができる（「TeX」タブ）
   + 型推論の証明木（bussproofs形式、型付きのみ）
   + 簡約の途中経過
@@ -21,6 +21,10 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + Linuxのターミナルのように、上キーを押すと履歴を表示する。
   + 静的javascriptなので、セッションを超えて遡ることはできない。
 * チャーチ数とチャーチ真理値の判定が出来る
+  + 簡約後の形がチャーチ数・チャーチ真理値の場合、そのように表示
+* 簡約グラフの表示ができる
+  + 「グラフ」タブで簡約グラフを表示
+  + [Cytoscape.js](http://js.cytoscape.org/)を利用
 
 ## 基本的な入力形式
 * 「\」「¥」「λ」はすべて「λ」として解釈される
@@ -58,10 +62,6 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + `[case] M [of] [nil] -> M | x::x -> M`
 
 ## これからやるべきこと
-### WebUI周り
-* β簡約グラフ《型なし》
-  + cytoscape.jsを使いたい
-
 ### 全体
 * リファクタリング
   + TypeVariable.maxIdの管理方法を見直す？

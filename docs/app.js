@@ -2290,7 +2290,7 @@ let cy = cytoscape({
             }
         },
         {
-            selector: 'node.goal',
+            selector: '.goal',
             style: {
                 'background-color': '#B3424A'
             }
@@ -2503,6 +2503,7 @@ let graphStop = false;
 let graphDepth;
 startGraph.onclick = function () {
     cy.resize();
+    makeLayout();
     let line = input.value;
     if (line !== "") {
         history.unshift(line);
@@ -2526,26 +2527,27 @@ startGraph.onclick = function () {
             return;
         }
         cy.add({ group: "nodes", data: { id: "" + root.id, label: root.toString(), classes: (root.isNormalForm ? "goal" : "") } });
-        cy.elements().makeLayout({
-            name: "dagre",
-            nodeSpacing: 5,
-            animate: true,
-            randomize: false,
-            maxSimulationTime: 1500
-        }).run();
+        makeLayout();
         curNodes = [root];
     }
     graphStop = false;
     let f = () => setTimeout(() => {
         if (graphStop || curNodes.length === 0) {
+            makeLayout();
             return;
         }
         let t = curNodes.shift();
-        if (t.depth >= (graphDepth === undefined ? 10 : graphDepth))
+        if (t.depth >= (graphDepth === undefined ? 10 : graphDepth)) {
+            curNodes.push(t);
+            makeLayout();
             return;
+        }
         let ret = t.visit();
-        if (ret === null)
+        if (ret === null) {
             f();
+            makeLayout();
+            return;
+        }
         let ans = [];
         for (let n of ret.nodes) {
             ans.push({ group: "nodes", data: { id: "" + n.id, label: n.toString(), classes: (n.isNormalForm ? "goal" : "") } });
@@ -2554,16 +2556,10 @@ startGraph.onclick = function () {
         for (let e of ret.edges) {
             ans.push({ group: "edges", data: { source: e.from.id.toString(), target: e.to.id.toString() } });
         }
+        makeLayout();
         cy.add(ans);
-        cy.elements().makeLayout({
-            name: "dagre",
-            nodeSpacing: 5,
-            animate: true,
-            randomize: false,
-            maxSimulationTime: 1500
-        }).run();
-        console.log(cy.$("*"));
         f();
+        makeLayout();
     }, 1);
     f();
 };
@@ -2630,13 +2626,15 @@ function refreshTex() {
     tabC.textContent = null;
     let proc = "";
     let proof = "";
-    if (curlf !== undefined)
+    if (curlf !== undefined) {
         proc = curlf.getProcessTex();
-    tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+        tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
+    }
     if (typed) {
-        if (curlf !== undefined)
+        if (curlf !== undefined) {
             proof = curlf.getProofTree();
-        tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+            tabC.appendChild(makeTexDiv("型付けの証明木", proof));
+        }
     }
 }
 function makeTexDiv(title, content) {
@@ -2710,6 +2708,15 @@ function showContinueBtn() {
 }
 function graphClear() {
     cy.remove("*");
+}
+function makeLayout() {
+    cy.elements().makeLayout({
+        name: "dagre",
+        nodeSpacing: 5,
+        animate: true,
+        randomize: false,
+        maxSimulationTime: 1500
+    }).run();
 }
 // ===== initialize =====
 untypedButton.onclick(null);
