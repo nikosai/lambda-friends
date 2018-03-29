@@ -95,7 +95,9 @@
               </div>
             </div>
           </div>
-          <div id="graph"></div>
+          <div id="canvasWrapper">
+            <canvas id="mainCanvas"></canvas>
+          </div>
         </div>
       </div>
     </div>
@@ -120,13 +122,9 @@
     </div>
   </div>
 </div>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
-
-  <!-- for 'layout: "dagre"' -->
-  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-  <script src="app.js"></script>
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js" charset="UTF-8"></script>
+  <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js" charset="UTF-8"></script>
+  <script type="text/javascript" src="mgcanvas.min.js" charset="UTF-8"></script>
+  <script type="text/javascript" src="app.js" charset="UTF-8"></script>
 </body>
 </html>

@@ -1,46 +1,26 @@
 import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
 declare let require: any;
-declare let cytoscape: any;
-let cy = cytoscape({
-  container: document.getElementById('graph'),
-
-  boxSelectionEnabled: false,
-  autounselectify: true,
-
-  style: [
-    {
-      selector: 'node',
-      style: {
-        // 'content': 'data(label)',  /* must be specified if you want to display the node text */
-        /**
-        'text-opacity': 0.5,
-        'text-valign': 'center',
-        'text-halign': 'right',
-        */
-        "label": "data(label)",
-        'background-color': '#11479e'
-      }
-    },
-    {
-      selector: 'edge',
-      style: {
-        'target-arrow-shape': 'triangle',
-        'curve-style': 'bezier',
-        'target-arrow-color': '#9dbaea',
-        'width': 3,
-        'line-color': '#9dbaea',
-      }
-    }
-  ]
-});
+declare let MGDatabase: any;
+declare let MGCanvas: any;
+declare let UUID: any;
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
-  openTrigger: 'data-custom-open',
   disableScroll: false,
   awaitCloseAnimation: true
 });
+
+// About MGCanvas
+let mgdb = new MGDatabase();
+let mgc = new MGCanvas(mgdb, document.getElementById("mainCanvas"), true);
+let canvasWrapper = document.getElementById("canvasWrapper");
+let resizef = () => {
+  mgc.resizeTo(canvasWrapper.clientWidth,canvasWrapper.clientHeight);
+  console.log(canvasWrapper.clientWidth);
+  console.log(canvasWrapper.clientHeight);
+}
+window.addEventListener("resize", resizef);
 
 let steps:number = undefined;
 let typed = true;
@@ -245,11 +225,12 @@ document.getElementById("input").onkeydown = function(e){
     e.preventDefault();
   }
 }
+let graphIDTable:{[key:string]:string} = {}; // graph ID -> UUID
 let curNodes:ReductionNode[] = [];
 let graphStop:boolean = false;
 let graphDepth:number;
 startGraph.onclick = function(){
-  cy.resize();
+  resizef();
   let line = input.value;
   if (line!==""){
     history.unshift(line);
@@ -262,7 +243,6 @@ startGraph.onclick = function(){
     let root:ReductionNode;
     try{
       if (LambdaFriends.parseMacroDef(line,typed)!==null) return;
-      graphClear();
       ReductionNode.init(typed,etaAllowed);
       root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
     }catch(e){
@@ -270,14 +250,7 @@ startGraph.onclick = function(){
       console.log(e);
       return;
     }
-    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString(), classes:(root.isNormalForm?"goal":"")}})
-    cy.elements().makeLayout({
-      name: "dagre",
-      nodeSpacing: 5,
-      animate: true,
-      randomize: false,
-      maxSimulationTime: 1500
-    }).run();
+    makeGraph(root);
     curNodes = [root];
   }
   graphStop = false;
@@ -291,21 +264,12 @@ startGraph.onclick = function(){
     if (ret===null) f();
     let ans:any[] = [];
     for (let n of ret.nodes){
-      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString(), classes:(n.isNormalForm?"goal":"")}});
+      addNode(n);
       curNodes.push(n);
     }
     for (let e of ret.edges){
-      ans.push({group: "edges", data: {source:e.from.id.toString(),target:e.to.id.toString()}});
+      addRelation(e.from,e.to);
     }
-    cy.add(ans);
-    cy.elements().makeLayout({
-      name: "dagre",
-      nodeSpacing: 5,
-      animate: true,
-      randomize: false,
-      maxSimulationTime: 1500
-    }).run();
-    console.log(cy.$("*"));
     f();
   },1);
   f();
@@ -450,11 +414,22 @@ function showContinueBtn(){
     div.appendChild(b);
   }
 }
-function graphClear(){
-  cy.remove("*");
+function makeGraph(root:ReductionNode){
+  mgdb.resetDB();
+  addNode(root);
+}
+function addNode(n:ReductionNode){
+  graphIDTable[n.id] = mgdb.addAtom(n.toString());
+  graphIDTable[n.id];
+}
+function addRelation(from:ReductionNode, to:ReductionNode){
+  let f = graphIDTable[from.id];
+  let t = graphIDTable[to.id];
+  mgdb.addRelation(UUID.nullUUID,[f,t]);
 }
 
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
+resizef();

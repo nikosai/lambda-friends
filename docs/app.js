@@ -2226,43 +2226,22 @@ exports.TypeUntyped = TypeUntyped;
 Object.defineProperty(exports, "__esModule", { value: true });
 const lambda_friends_1 = require("./lambda-friends");
 const graph_1 = require("./graph");
-let cy = cytoscape({
-    container: document.getElementById('graph'),
-    boxSelectionEnabled: false,
-    autounselectify: true,
-    style: [
-        {
-            selector: 'node',
-            style: {
-                // 'content': 'data(label)',  /* must be specified if you want to display the node text */
-                /**
-                'text-opacity': 0.5,
-                'text-valign': 'center',
-                'text-halign': 'right',
-                */
-                "label": "data(label)",
-                'background-color': '#11479e'
-            }
-        },
-        {
-            selector: 'edge',
-            style: {
-                'target-arrow-shape': 'triangle',
-                'curve-style': 'bezier',
-                'target-arrow-color': '#9dbaea',
-                'width': 3,
-                'line-color': '#9dbaea',
-            }
-        }
-    ]
-});
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
-    openTrigger: 'data-custom-open',
     disableScroll: false,
     awaitCloseAnimation: true
 });
+// About MGCanvas
+let mgdb = new MGDatabase();
+let mgc = new MGCanvas(mgdb, document.getElementById("mainCanvas"), true);
+let canvasWrapper = document.getElementById("canvasWrapper");
+let resizef = () => {
+    mgc.resizeTo(canvasWrapper.clientWidth, canvasWrapper.clientHeight);
+    console.log(canvasWrapper.clientWidth);
+    console.log(canvasWrapper.clientHeight);
+};
+window.addEventListener("resize", resizef);
 let steps = undefined;
 let typed = true;
 let etaAllowed = false;
@@ -2457,11 +2436,12 @@ document.getElementById("input").onkeydown = function (e) {
         e.preventDefault();
     }
 };
+let graphIDTable = {}; // graph ID -> UUID
 let curNodes = [];
 let graphStop = false;
 let graphDepth;
 startGraph.onclick = function () {
-    cy.resize();
+    resizef();
     let line = input.value;
     if (line !== "") {
         history.unshift(line);
@@ -2475,7 +2455,6 @@ startGraph.onclick = function () {
         try {
             if (lambda_friends_1.LambdaFriends.parseMacroDef(line, typed) !== null)
                 return;
-            graphClear();
             graph_1.ReductionNode.init(typed, etaAllowed);
             root = new graph_1.ReductionNode(new lambda_friends_1.LambdaFriends(line, typed, etaAllowed).expr, null);
         }
@@ -2484,14 +2463,7 @@ startGraph.onclick = function () {
             console.log(e);
             return;
         }
-        cy.add({ group: "nodes", data: { id: "" + root.id, label: root.toString(), classes: (root.isNormalForm ? "goal" : "") } });
-        cy.elements().makeLayout({
-            name: "dagre",
-            nodeSpacing: 5,
-            animate: true,
-            randomize: false,
-            maxSimulationTime: 1500
-        }).run();
+        makeGraph(root);
         curNodes = [root];
     }
     graphStop = false;
@@ -2507,21 +2479,12 @@ startGraph.onclick = function () {
             f();
         let ans = [];
         for (let n of ret.nodes) {
-            ans.push({ group: "nodes", data: { id: "" + n.id, label: n.toString(), classes: (n.isNormalForm ? "goal" : "") } });
+            addNode(n);
             curNodes.push(n);
         }
         for (let e of ret.edges) {
-            ans.push({ group: "edges", data: { source: e.from.id.toString(), target: e.to.id.toString() } });
+            addRelation(e.from, e.to);
         }
-        cy.add(ans);
-        cy.elements().makeLayout({
-            name: "dagre",
-            nodeSpacing: 5,
-            animate: true,
-            randomize: false,
-            maxSimulationTime: 1500
-        }).run();
-        console.log(cy.$("*"));
         f();
     }, 1);
     f();
@@ -2667,13 +2630,24 @@ function showContinueBtn() {
         div.appendChild(b);
     }
 }
-function graphClear() {
-    cy.remove("*");
+function makeGraph(root) {
+    mgdb.resetDB();
+    addNode(root);
+}
+function addNode(n) {
+    graphIDTable[n.id] = mgdb.addAtom(n.toString());
+    graphIDTable[n.id];
+}
+function addRelation(from, to) {
+    let f = graphIDTable[from.id];
+    let t = graphIDTable[to.id];
+    mgdb.addRelation(UUID.nullUUID, [f, t]);
 }
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
+resizef();
 
 },{"./graph":3,"./lambda-friends":4,"micromodal":7}],7:[function(require,module,exports){
 (function (global, factory) {
@@ -2708,57 +2682,18 @@ var createClass = function () {
   };
 }();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 var toConsumableArray = function (arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
 
     return arr2;
   } else {
-    return Array.from(arr);
+    return [];
   }
 };
 
 var MicroModal = function () {
+
   var FOCUSABLE_ELEMENTS = ['a[href]', 'area[href]', 'input:not([disabled]):not([type="hidden"]):not([aria-hidden])', 'select:not([disabled]):not([aria-hidden])', 'textarea:not([disabled]):not([aria-hidden])', 'button:not([disabled]):not([aria-hidden])', 'iframe', 'object', 'embed', '[contenteditable]', '[tabindex]:not([tabindex^="-"])'];
 
   var Modal = function () {

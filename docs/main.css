@@ -184,9 +184,10 @@ body {
   align-items: center;
 }
 
-#graph {
+#canvasWrapper {
   width:100%;
   height:330px;
+  overflow: hidden;
 }
 
 .modal {
