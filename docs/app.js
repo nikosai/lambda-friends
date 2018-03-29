@@ -402,7 +402,7 @@ class EtaRedex extends Redex {
         return this.texLeft + "\\underline{\\strut " + this.content.toTexString() + "}" + this.texRight;
     }
     toHTMLString() {
-        return htmlEscape(this.left) + '<span class="lf-eta">(\\' + htmlEscape(this.content.toString()) + ')</span>' + htmlEscape(this.right);
+        return htmlEscape(this.left) + '<span class="lf-eta">(' + htmlEscape(this.content.toString()) + ')</span>' + htmlEscape(this.right);
     }
     getTexRule() {
         return "\\eta";
@@ -414,7 +414,6 @@ class MacroRedex extends Redex {
         super("macro");
         this.content = e;
         this.next = e.expr;
-        this.next.isTopLevel = false;
         this.rule = "macro";
     }
     toString() {
@@ -540,6 +539,9 @@ class Symbol extends Expression {
     resetTopLevel() {
         this.isTopLevel = false;
     }
+    extractMacros() {
+        throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
+    }
 }
 // 変数 x
 class Variable extends Symbol {
@@ -621,6 +623,9 @@ class Variable extends Symbol {
     getRedexes(typed, etaAllowed, noParen) {
         return [];
     }
+    extractMacros() {
+        return this;
+    }
 }
 // 定数 c
 class Const extends Symbol {
@@ -651,6 +656,9 @@ class Const extends Symbol {
         else {
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         }
+    }
+    extractMacros() {
+        return this;
     }
 }
 // int型定数 c^{int}
@@ -786,6 +794,9 @@ class Nil extends Symbol {
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         }
     }
+    extractMacros() {
+        return this;
+    }
 }
 // マクロ定義
 class Macro extends Symbol {
@@ -870,6 +881,12 @@ class Macro extends Symbol {
         this.isTopLevel = false;
         if (this.expr !== undefined)
             this.expr.resetTopLevel();
+    }
+    extractMacros() {
+        if (this.expr === undefined)
+            return this;
+        else
+            return this.expr;
     }
 }
 Macro.map = {};
@@ -1034,6 +1051,9 @@ class LambdaAbstraction extends Expression {
         this.boundval.resetTopLevel();
         this.expr.resetTopLevel();
     }
+    extractMacros() {
+        return new LambdaAbstraction(this.boundval, this.expr.extractMacros());
+    }
 }
 // 関数適用 MN
 class Application extends Expression {
@@ -1173,6 +1193,9 @@ class Application extends Expression {
         this.left.resetTopLevel();
         this.right.resetTopLevel();
     }
+    extractMacros() {
+        return new Application(this.left.extractMacros(), this.right.extractMacros());
+    }
 }
 // リスト M::M
 class List extends Expression {
@@ -1223,6 +1246,9 @@ class List extends Expression {
         this.isTopLevel = false;
         this.head.resetTopLevel();
         this.tail.resetTopLevel();
+    }
+    extractMacros() {
+        return new List(this.head.extractMacros(), this.tail.extractMacros());
     }
 }
 // if
@@ -1333,6 +1359,9 @@ class If extends Expression {
         this.ifTrue.resetTopLevel();
         this.ifFalse.resetTopLevel();
     }
+    extractMacros() {
+        return new If(this.state.extractMacros(), this.ifTrue.extractMacros(), this.ifFalse.extractMacros());
+    }
 }
 // let in
 class Let extends Expression {
@@ -1440,6 +1469,9 @@ class Let extends Expression {
         this.boundVal.resetTopLevel();
         this.left.resetTopLevel();
         this.right.resetTopLevel();
+    }
+    extractMacros() {
+        return new Let(this.boundVal, this.left.extractMacros(), this.right.extractMacros());
     }
 }
 // case文 [case] M [of] [nil] -> M | x::x -> M
@@ -1607,6 +1639,9 @@ class Case extends Expression {
         let ifElseExpr = parseSymbols(tokens, typed);
         return new Case(stateExpr, ifNilExpr, head, tail, ifElseExpr);
     }
+    extractMacros() {
+        return new Case(this.state.extractMacros(), this.ifNil.extractMacros(), this.head, this.tail, this.ifElse.extractMacros());
+    }
 }
 
 },{"./error":1,"./type":5}],3:[function(require,module,exports){
@@ -1616,8 +1651,8 @@ const expression_1 = require("./expression");
 class ReductionNode {
     constructor(expr, parent) {
         this.children = [];
-        this.expr = expr;
-        this.expr.isTopLevel = true;
+        this.expr = expr.extractMacros();
+        this.expr.setRoot();
         this.parent = parent;
         this.id = ReductionNode.nextId;
         if (parent === null)
@@ -1626,7 +1661,7 @@ class ReductionNode {
             this.depth = parent.depth + 1;
         ReductionNode.nextId++;
         ReductionNode.nodes.push(this);
-        this.isNormalForm = expr.isNormalForm(ReductionNode.typed, ReductionNode.etaAllowed);
+        this.isNormalForm = this.expr.isNormalForm(ReductionNode.typed, ReductionNode.etaAllowed);
     }
     static init(typed, etaAllowed) {
         ReductionNode.typed = typed;
@@ -2253,6 +2288,12 @@ let cy = cytoscape({
                 'width': 3,
                 'line-color': '#9dbaea',
             }
+        },
+        {
+            selector: 'node.goal',
+            style: {
+                'background-color': '#B3424A'
+            }
         }
     ]
 });
@@ -2500,7 +2541,7 @@ startGraph.onclick = function () {
             return;
         }
         let t = curNodes.shift();
-        if (t.depth >= (graphDepth === undefined ? 20 : graphDepth))
+        if (t.depth >= (graphDepth === undefined ? 10 : graphDepth))
             return;
         let ret = t.visit();
         if (ret === null)
@@ -2708,46 +2749,6 @@ var createClass = function () {
   };
 }();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 var toConsumableArray = function (arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
@@ -2759,6 +2760,7 @@ var toConsumableArray = function (arr) {
 };
 
 var MicroModal = function () {
+
   var FOCUSABLE_ELEMENTS = ['a[href]', 'area[href]', 'input:not([disabled]):not([type="hidden"]):not([aria-hidden])', 'select:not([disabled]):not([aria-hidden])', 'textarea:not([disabled]):not([aria-hidden])', 'button:not([disabled]):not([aria-hidden])', 'iframe', 'object', 'embed', '[contenteditable]', '[tabindex]:not([tabindex^="-"])'];
 
   var Modal = function () {

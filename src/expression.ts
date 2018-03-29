@@ -332,7 +332,7 @@ class EtaRedex extends Redex{
     return this.texLeft+"\\underline{\\strut "+this.content.toTexString()+"}"+this.texRight;
   }
   public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-eta">(\\'+htmlEscape(this.content.toString())+')</span>'+htmlEscape(this.right);
+    return htmlEscape(this.left)+'<span class="lf-eta">('+htmlEscape(this.content.toString())+')</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\eta";
@@ -348,7 +348,6 @@ class MacroRedex extends Redex{
     super("macro");
     this.content = e;
     this.next = e.expr;
-    this.next.isTopLevel = false;
     this.rule = "macro";
   }
   public toString():string{
@@ -449,6 +448,7 @@ export abstract class Expression{
   public abstract getEquations(gamma:Variable[], type:Type):TypeResult;
   public abstract getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[];
   public abstract resetTopLevel();
+  public abstract extractMacros():Expression;
 }
 
 // 終端記号（未解析）
@@ -486,6 +486,9 @@ class Symbol extends Expression{
   }
   public resetTopLevel(){
     this.isTopLevel = false;
+  }
+  public extractMacros():Expression{
+    throw new ReductionError("Symbols must not appear in parsed Expression")
   }
 }
 
@@ -573,6 +576,9 @@ class Variable extends Symbol{
   public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
     return [];
   }
+  public extractMacros():Expression{
+    return this;
+  }
 }
 
 // 定数 c
@@ -605,6 +611,9 @@ abstract class Const extends Symbol {
     } else {
       throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
     }
+  }
+  public extractMacros():Expression{
+    return this;
   }
 }
 
@@ -743,6 +752,9 @@ class Nil extends Symbol{
       throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
     }
   }
+  public extractMacros():Expression{
+    return this;
+  }
 }
 
 // マクロ定義
@@ -824,6 +836,10 @@ export class Macro extends Symbol{
   public resetTopLevel(){
     this.isTopLevel = false;
     if (this.expr !== undefined) this.expr.resetTopLevel();
+  }
+  public extractMacros(){
+    if (this.expr === undefined) return this;
+    else return this.expr;
   }
 }
 
@@ -981,6 +997,9 @@ class LambdaAbstraction extends Expression{
     this.isTopLevel = false;
     this.boundval.resetTopLevel();
     this.expr.resetTopLevel();
+  }
+  public extractMacros():Expression{
+    return new LambdaAbstraction(this.boundval,this.expr.extractMacros());
   }
 }
 
@@ -1149,6 +1168,9 @@ class Application extends Expression{
     this.left.resetTopLevel();
     this.right.resetTopLevel();
   }
+  public extractMacros():Expression{
+    return new Application(this.left.extractMacros(),this.right.extractMacros());
+  }
 }
 
 // リスト M::M
@@ -1205,6 +1227,9 @@ class List extends Expression{
     this.isTopLevel = false;
     this.head.resetTopLevel();
     this.tail.resetTopLevel();
+  }
+  public extractMacros():Expression{
+    return new List(this.head.extractMacros(),this.tail.extractMacros());
   }
 }
 
@@ -1319,6 +1344,9 @@ class If extends Expression{
     this.ifTrue.resetTopLevel();
     this.ifFalse.resetTopLevel();
   }
+  public extractMacros():Expression{
+    return new If(this.state.extractMacros(),this.ifTrue.extractMacros(),this.ifFalse.extractMacros());
+  }
 }
 
 // let in
@@ -1420,6 +1448,9 @@ class Let extends Expression{
     this.boundVal.resetTopLevel();
     this.left.resetTopLevel();
     this.right.resetTopLevel();
+  }
+  public extractMacros():Expression{
+    return new Let(this.boundVal,this.left.extractMacros(),this.right.extractMacros());
   }
 }
 
@@ -1581,5 +1612,8 @@ class Case extends Expression{
       throw new LambdaParseError("Unexpected token: '"+t+"'");
     let ifElseExpr = parseSymbols(tokens,typed);
     return new Case(stateExpr,ifNilExpr,head,tail,ifElseExpr);
+  }
+  public extractMacros():Expression{
+    return new Case(this.state.extractMacros(),this.ifNil.extractMacros(),this.head,this.tail,this.ifElse.extractMacros());
   }
 }

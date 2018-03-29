@@ -184,6 +184,11 @@ body {
   align-items: center;
 }
 
+#graphSettings>* {
+  margin:0;
+  margin-right: 5px;
+}
+
 #graph {
   width:100%;
   height:330px;

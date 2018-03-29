@@ -13,15 +13,15 @@ export class ReductionNode{
   static etaAllowed:boolean;
   static nextId:number;
   constructor(expr:Expression, parent:ReductionNode){
-    this.expr = expr;
-    this.expr.isTopLevel = true;
+    this.expr = expr.extractMacros();
+    this.expr.setRoot();
     this.parent = parent;
     this.id = ReductionNode.nextId;
     if (parent===null) this.depth = 0;
     else this.depth = parent.depth + 1;
     ReductionNode.nextId++;
     ReductionNode.nodes.push(this);
-    this.isNormalForm = expr.isNormalForm(ReductionNode.typed,ReductionNode.etaAllowed);
+    this.isNormalForm = this.expr.isNormalForm(ReductionNode.typed,ReductionNode.etaAllowed);
   }
 
   static init(typed:boolean,etaAllowed:boolean){

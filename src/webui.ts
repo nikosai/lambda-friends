@@ -31,6 +31,12 @@ let cy = cytoscape({
         'width': 3,
         'line-color': '#9dbaea',
       }
+    },
+    {
+      selector: 'node.goal',
+      style: {
+        'background-color': '#B3424A'
+      }
     }
   ]
 });
@@ -286,7 +292,7 @@ startGraph.onclick = function(){
       return;
     }
     let t = curNodes.shift();
-    if (t.depth>=(graphDepth===undefined?20:graphDepth)) return;
+    if (t.depth>=(graphDepth===undefined?10:graphDepth)) return;
     let ret = t.visit();
     if (ret===null) f();
     let ans:any[] = [];
