@@ -46,10 +46,10 @@ function tokenize(str:string, typed:boolean):Symbol[]{
           result = new Symbol(content);
           break;
         default:
-          if (str.match(/^\d+$|^-\d+$/)!==null){
-            result = new ConstInt(parseInt(str));
+          if (content.match(/^\d+$|^-\d+$/)!==null){
+            result = new ConstInt(parseInt(content));
           } else {
-            result = new ConstOp(str); // fail -> null
+            result = new ConstOp(content); // fail -> null
           }
       }
       if (result===null)
