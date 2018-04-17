@@ -35,15 +35,14 @@ let cy = cytoscape({
     {
       selector: '.goal',
       style: {
-        'background-color': '#B3424A'
+        'background-color': '#b3424a'
       }
-    }
+    },
   ]
 });
 let MicroModal = require('micromodal');
 // Initial config for setting up modals
 MicroModal.init({
-  openTrigger: 'data-custom-open',
   disableScroll: false,
   awaitCloseAnimation: true
 });
@@ -277,7 +276,7 @@ startGraph.onclick = function(){
       console.log(e);
       return;
     }
-    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString(), classes:(root.isNormalForm?"goal":"")}})
+    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString()}, classes:(root.isNormalForm?"goal":"")});
     makeLayout();
     curNodes = [root];
   }
@@ -301,7 +300,7 @@ startGraph.onclick = function(){
     }
     let ans:any[] = [];
     for (let n of ret.nodes){
-      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString(), classes:(n.isNormalForm?"goal":"")}});
+      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString()}, classes:(n.isNormalForm?"goal":"")});
       curNodes.push(n);
     }
     for (let e of ret.edges){
