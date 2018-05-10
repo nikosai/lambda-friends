@@ -43,6 +43,7 @@ function tokenize(str:string, typed:boolean):Symbol[]{
         case "in":
         case "case":
         case "of":
+        case "fix":
           result = new Symbol(content);
           break;
         default:
@@ -113,6 +114,10 @@ function parseSymbols(tokens: Symbol[], typed:boolean):Expression{
             case "case": {
               // case statement: [case] M [of] [nil] -> M | x::x -> M
               return Case.parse(tokens,typed);
+            }
+            case "fix": {
+              // fixed-point: [fix] x.M
+              return Fix.parse(tokens,typed);
             }
             case ":": {
               // list
@@ -1359,12 +1364,12 @@ class If extends Expression{
 
 // let in
 class Let extends Expression{
-  boundVal:Variable;
+  boundval:Variable;
   left:Expression;
   right:Expression;
-  constructor(boundVal:Variable, left:Expression, right:Expression){
+  constructor(boundval:Variable, left:Expression, right:Expression){
     super("Let");
-    this.boundVal = boundVal;
+    this.boundval = boundval;
     this.left = left;
     this.right = right;
   }
@@ -1372,68 +1377,68 @@ class Let extends Expression{
     if (this.freevals!==undefined) return this.freevals;
     let ret:Variable[] = [];
     for (let fv of this.right.getFV()){
-      if (!fv.equals(this.boundVal)){
+      if (!fv.equals(this.boundval)){
         ret.push(fv);
       }
     }
     return this.freevals = Variable.union(ret, this.left.getFV());
   }
   public toString():string{
-    return "([let]"+this.boundVal+"[=]"+this.left+"[in]"+this.right+")";
+    return "([let]"+this.boundval+"[=]"+this.left+"[in]"+this.right+")";
   }
   public substitute(y:Variable, expr:Expression):Expression{
     let left = this.left.substitute(y,expr);
-    if (this.boundVal.equals(y)){
-      return new Let(this.boundVal,left,this.right);
-    } else if (!Variable.contains(expr.getFV(),this.boundVal)){
-      return new Let(this.boundVal,left,this.right.substitute(y,expr));
+    if (this.boundval.equals(y)){
+      return new Let(this.boundval,left,this.right);
+    } else if (!Variable.contains(expr.getFV(),this.boundval)){
+      return new Let(this.boundval,left,this.right.substitute(y,expr));
     } else {
       let uniFV = Variable.union(this.right.getFV(),expr.getFV());
       let z = Variable.getNew(uniFV);
       if (z.equals(y)){
-        return new Let(z,left,this.right.substitute(this.boundVal,z));
+        return new Let(z,left,this.right.substitute(this.boundval,z));
       } else {
-        return new Let(z,left,this.right.substitute(this.boundVal,z).substitute(y,expr));
+        return new Let(z,left,this.right.substitute(this.boundval,z).substitute(y,expr));
       }
     }
   }
   public equals(expr:Expression):boolean{
-    return (expr instanceof Let) && (expr.boundVal.equals(this.boundVal)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
+    return (expr instanceof Let) && (expr.boundval.equals(this.boundval)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
   }
   public equalsAlpha(expr:Expression):boolean{
     if (!(expr instanceof Let)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundVal;
+    let x = this.boundval;
     let m = this.right;
-    let y = expr.boundVal;
+    let y = expr.boundval;
     let n = expr.right;
     return (!Variable.contains(m.getFV(),y) && n.equalsAlpha(m.substitute(x,y)));
   }
   public getEquations(gamma:Variable[],type:Type):TypeResult{
     // (let)
     let t1 = TypeVariable.getNew();
-    this.boundVal.type = t1;
+    this.boundval.type = t1;
     let nextL = this.left.getEquations(gamma,t1);
-    let nextR = this.right.getEquations(gamma.concat(this.boundVal),type);
+    let nextR = this.right.getEquations(gamma.concat(this.boundval),type);
     let str = nextL.proofTree+nextR.proofTree;
     str += "\\RightLabel{\\scriptsize(let)}\n";
     str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
     return new TypeResult(nextL.eqs.concat(nextR.eqs),str);
   }
   public toTexString():string{
-    return "({\\bf let}~"+this.boundVal.toTexString()+" = "+this.left.toTexString()+"~{\\bf in}~"+this.right.toTexString()+")";
+    return "({\\bf let}~"+this.boundval.toTexString()+" = "+this.left.toTexString()+"~{\\bf in}~"+this.right.toTexString()+")";
   }
   public getRedexes(typed:boolean,etaAllowed:boolean,noParen:boolean):Redex[]{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
 
     // (let)
-    return [new TypedRedex(this,this.right.substitute(this.boundVal,this.left),"let")];
+    return [new TypedRedex(this,this.right.substitute(this.boundval,this.left),"let")];
   }
   public static parse(tokens:Symbol[], typed:boolean):Let{
     let t = tokens.shift();
     if (t.name.match(/^[A-Za-z]$/)===null)
       throw new LambdaParseError("Unexpected token: '"+t+"'");
-    let boundVal = new Variable(t.name);
+    let boundval = new Variable(t.name);
     if (tokens.shift().name!=="=")
       throw new LambdaParseError("'=' is expected");
     let content:Symbol[] = [];
@@ -1449,16 +1454,16 @@ class Let extends Expression{
     }
     let contentExpr:Expression = parseSymbols(content,typed);
     let restExpr:Expression = parseSymbols(tokens,typed);
-    return new Let(boundVal,contentExpr,restExpr);
+    return new Let(boundval,contentExpr,restExpr);
   }
   public resetTopLevel(){
     this.isTopLevel = false;
-    this.boundVal.resetTopLevel();
+    this.boundval.resetTopLevel();
     this.left.resetTopLevel();
     this.right.resetTopLevel();
   }
   public extractMacros():Expression{
-    return new Let(this.boundVal,this.left.extractMacros(),this.right.extractMacros());
+    return new Let(this.boundval,this.left.extractMacros(),this.right.extractMacros());
   }
 }
 
@@ -1623,5 +1628,93 @@ class Case extends Expression{
   }
   public extractMacros():Expression{
     return new Case(this.state.extractMacros(),this.ifNil.extractMacros(),this.head,this.tail,this.ifElse.extractMacros());
+  }
+}
+
+// 不動点演算子 [fix] x.M
+class Fix extends Expression{
+  boundval:Variable;
+  expr:Expression;
+  constructor(boundval:Variable, expr:Expression){
+    super("Fix");
+    this.boundval = boundval;
+    this.expr = expr;
+  }
+  public getFV():Variable[]{
+    if (this.freevals!==undefined) return this.freevals;
+    let ret:Variable[] = [];
+    for (let fv of this.expr.getFV()){
+      if (!fv.equals(this.boundval)){
+        ret.push(fv);
+      }
+    }
+    return this.freevals = ret;
+  }
+  public toString():string{
+    return "([fix]"+this.boundval+"."+this.expr+")";
+  }
+  public substitute(y:Variable, expr:Expression):Expression{
+    if (this.boundval.equals(y)){
+      return this;
+    } else if (!Variable.contains(expr.getFV(),this.boundval)){
+      return new Fix(this.boundval,this.expr.substitute(y,expr));
+    } else {
+      let uniFV = Variable.union(this.expr.getFV(),expr.getFV());
+      let z = Variable.getNew(uniFV);
+      return new Fix(z,this.expr.substitute(this.boundval,z)).substitute(y,expr);
+    }
+  }
+  public equals(expr:Expression):boolean{
+    return (expr instanceof Fix) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
+  }
+  public equalsAlpha(expr:Expression):boolean{
+    if (!(expr instanceof Fix)) return false;
+    if (this.equals(expr)) return true;
+    let x = this.boundval;
+    let m = this.expr;
+    let y = expr.boundval;
+    let n = expr.expr;
+    if (Variable.contains(m.getFV(),y)){
+      return n.equalsAlpha(m);
+    } else {
+      return n.equalsAlpha(m.substitute(x,y));
+    }
+  }
+  public getEquations(gamma:Variable[],type:Type):TypeResult{
+    // (fix)
+    this.boundval.type = type;
+    let next = this.expr.getEquations(gamma.concat(this.boundval),type);
+    let str = next.proofTree;
+    str += "\\RightLabel{\\scriptsize(fix)}\n";
+    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    return new TypeResult(next.eqs,str);
+  }
+  public toTexString():string{
+    return "({\\bf fix}~"+this.boundval.toTexString()+"."+this.expr.toTexString()+")";
+  }
+  public getRedexes(typed:boolean,etaAllowed:boolean,noParen:boolean):Redex[]{
+    if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+
+    // (fix)
+    return [new TypedRedex(this,this.expr.substitute(this.boundval, new Fix(new Variable(this.boundval.name),this.expr)),"fix")];
+  }
+  public static parse(tokens:Symbol[], typed:boolean):Fix{
+    let t = tokens.shift();
+    if (t.name.match(/^[A-Za-z]$/)===null)
+      throw new LambdaParseError("Unexpected token: '"+t+"'");
+    let boundval = new Variable(t.name);
+    if (tokens.shift().name!==".")
+      throw new LambdaParseError("'.' is expected");
+
+    let contentExpr:Expression = parseSymbols(tokens,typed);
+    return new Fix(boundval,contentExpr);
+  }
+  public resetTopLevel(){
+    this.isTopLevel = false;
+    this.boundval.resetTopLevel();
+    this.expr.resetTopLevel();
+  }
+  public extractMacros():Expression{
+    return new Fix(this.boundval,this.expr.extractMacros());
   }
 }
