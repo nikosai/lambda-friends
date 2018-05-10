@@ -118,6 +118,7 @@ function tokenize(str, typed) {
                 case "in":
                 case "case":
                 case "of":
+                case "fix":
                     result = new Symbol(content);
                     break;
                 default:
@@ -199,6 +200,10 @@ function parseSymbols(tokens, typed) {
                             // case statement: [case] M [of] [nil] -> M | x::x -> M
                             return Case.parse(tokens, typed);
                         }
+                        case "fix": {
+                            // fixed-point: [fix] x.M
+                            return Fix.parse(tokens, typed);
+                        }
                         case ":": {
                             // list
                             let t = tokens.shift();
@@ -229,6 +234,15 @@ function makeAST(str, typed) {
     return t;
 }
 exports.makeAST = makeAST;
+// チャーチ数を表すExpressionの生成
+function makeChurchNum(n, typed) {
+    let str = "\\sz.";
+    let content = (n === 0 ? "z" : "sz");
+    for (let i = 1; i < n; i++) {
+        content = "s(" + content + ")";
+    }
+    return makeAST(str + content, typed);
+}
 function htmlEscape(str) {
     return str.replace(/[&'`"<>]/g, function (match) {
         return {
@@ -281,25 +295,12 @@ class Redex {
     }
     // aの方が優先度高い → 負, 同等 → 0, bの方が優先度高い → 正
     static compare(a, b) {
-        let map = {
-            "beta": 0,
-            "eta": 1,
-            "typed": 2,
-            "macro": 3
-        };
-        let ac = map[a.type];
-        let bc = map[b.type];
-        if (ac === bc) {
-            let ap = a.getPos();
-            let bp = b.getPos();
-            if (ap === bp)
-                return 0;
-            else
-                return ap - bp;
-        }
-        else {
-            return ac - bc;
-        }
+        let ap = a.getPos();
+        let bp = b.getPos();
+        if (ap === bp)
+            return 0;
+        else
+            return ap - bp;
     }
 }
 exports.Redex = Redex;
@@ -413,7 +414,7 @@ class MacroRedex extends Redex {
     constructor(e) {
         super("macro");
         this.content = e;
-        this.next = e.expr;
+        this.next = e.expr.copy();
         this.rule = "macro";
     }
     toString() {
@@ -542,6 +543,9 @@ class Symbol extends Expression {
     extractMacros() {
         throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
     }
+    copy() {
+        return new Symbol(this.name, this.className);
+    }
 }
 // 変数 x
 class Variable extends Symbol {
@@ -626,6 +630,9 @@ class Variable extends Symbol {
     extractMacros() {
         return this;
     }
+    copy() {
+        return new Variable(this.name);
+    }
 }
 // 定数 c
 class Const extends Symbol {
@@ -668,6 +675,9 @@ class ConstInt extends Const {
         this.value = value;
         this.type = new type_1.TypeInt();
     }
+    copy() {
+        return new ConstInt(this.value);
+    }
 }
 // bool型定数 c^{bool}
 class ConstBool extends Const {
@@ -675,6 +685,9 @@ class ConstBool extends Const {
         super(value.toString(), "ConstBool");
         this.value = value;
         this.type = new type_1.TypeBool();
+    }
+    copy() {
+        return new ConstBool(this.value);
     }
 }
 // 関数型定数 c^{op} （前置記法・2項演算）
@@ -764,6 +777,9 @@ class ConstOp extends Const {
                 throw new error_1.LambdaParseError("Undefined function: " + funcName);
         }
     }
+    copy() {
+        return new ConstOp(this.name);
+    }
 }
 // 空リスト nil
 class Nil extends Symbol {
@@ -797,6 +813,9 @@ class Nil extends Symbol {
     extractMacros() {
         return this;
     }
+    copy() {
+        return new Nil();
+    }
 }
 // マクロ定義
 class Macro extends Symbol {
@@ -816,8 +835,8 @@ class Macro extends Symbol {
         if (expr.getFV().length !== 0) {
             throw new error_1.MacroError("<" + name + "> contains free variables: " + expr.getFV());
         }
+        expr.isTopLevel = true;
         let m = new Macro(name, expr, typed, lf.type);
-        m.isTopLevel = true;
         map[name] = m;
         return map[name];
     }
@@ -838,6 +857,16 @@ class Macro extends Symbol {
             ret = Macro.mapUntyped[name];
         }
         if (ret === undefined) {
+            // 組み込みマクロ。typeがundefでいいかは疑問の余地あり
+            if (name.match(/^\d+$/) !== null) {
+                return new Macro(name, makeChurchNum(parseInt(name), typed), typed, undefined);
+            }
+            else if (name == "true") {
+                return new Macro(name, makeAST("\\xy.x", typed), typed, undefined);
+            }
+            else if (name == "false") {
+                return new Macro(name, makeAST("\\xy.y", typed), typed, undefined);
+            }
             // 発展の余地あり。typeを指定したundefマクロを許す？
             return new Macro(name, undefined, typed, undefined);
         }
@@ -872,21 +901,28 @@ class Macro extends Symbol {
         return "\\,\\overline{\\bf " + this.name + "}\\,";
     }
     getRedexes(typed, etaAllowed, noParen) {
-        if (this.expr === undefined)
+        let next = Macro.get(this.name, typed);
+        if (next.expr === undefined)
             return [];
         else
-            return [new MacroRedex(this)];
+            return [new MacroRedex(next)];
     }
     resetTopLevel() {
         this.isTopLevel = false;
         if (this.expr !== undefined)
-            this.expr.resetTopLevel();
+            this.expr.setRoot();
     }
     extractMacros() {
         if (this.expr === undefined)
             return this;
         else
-            return this.expr;
+            return this.expr.extractMacros().copy();
+    }
+    copy() {
+        if (this.expr === undefined)
+            return new Macro(this.name, undefined, this.typed, this.type);
+        else
+            return new Macro(this.name, this.expr.copy(), this.typed, this.type);
     }
 }
 Macro.map = {};
@@ -1036,7 +1072,15 @@ class LambdaAbstraction extends Expression {
             lParen = "(";
             rParen = ")";
         }
-        let ret = Redex.makeNext(this.expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvals.join("") + ".", rParen, lParen + "\\lambda{" + boundvals.join("") + "}.", rParen, (prev) => (new LambdaAbstraction(this.boundval, prev)));
+        let ret = Redex.makeNext(expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvals.join("") + ".", rParen, lParen + "\\lambda{" + boundvals.join("") + "}.", rParen, (prev) => {
+            let bvs = [].concat(boundvals);
+            let ret = prev;
+            while (bvs.length > 0) {
+                let t = bvs.pop();
+                ret = new LambdaAbstraction(t, ret);
+            }
+            return ret;
+        });
         if (etaAllowed === undefined) {
             console.error("etaAllowed is undefined.");
             etaAllowed = false;
@@ -1053,6 +1097,9 @@ class LambdaAbstraction extends Expression {
     }
     extractMacros() {
         return new LambdaAbstraction(this.boundval, this.expr.extractMacros());
+    }
+    copy() {
+        return new LambdaAbstraction(this.boundval.copy(), this.expr.copy());
     }
 }
 // 関数適用 MN
@@ -1196,6 +1243,9 @@ class Application extends Expression {
     extractMacros() {
         return new Application(this.left.extractMacros(), this.right.extractMacros());
     }
+    copy() {
+        return new Application(this.left.copy(), this.right.copy());
+    }
 }
 // リスト M::M
 class List extends Expression {
@@ -1249,6 +1299,9 @@ class List extends Expression {
     }
     extractMacros() {
         return new List(this.head.extractMacros(), this.tail.extractMacros());
+    }
+    copy() {
+        return new List(this.head.copy(), this.tail.copy());
     }
 }
 // if
@@ -1362,12 +1415,15 @@ class If extends Expression {
     extractMacros() {
         return new If(this.state.extractMacros(), this.ifTrue.extractMacros(), this.ifFalse.extractMacros());
     }
+    copy() {
+        return new If(this.state.copy(), this.ifTrue.copy(), this.ifFalse.copy());
+    }
 }
 // let in
 class Let extends Expression {
-    constructor(boundVal, left, right) {
+    constructor(boundval, left, right) {
         super("Let");
-        this.boundVal = boundVal;
+        this.boundval = boundval;
         this.left = left;
         this.right = right;
     }
@@ -1376,73 +1432,73 @@ class Let extends Expression {
             return this.freevals;
         let ret = [];
         for (let fv of this.right.getFV()) {
-            if (!fv.equals(this.boundVal)) {
+            if (!fv.equals(this.boundval)) {
                 ret.push(fv);
             }
         }
         return this.freevals = Variable.union(ret, this.left.getFV());
     }
     toString() {
-        return "([let]" + this.boundVal + "[=]" + this.left + "[in]" + this.right + ")";
+        return "([let]" + this.boundval + "[=]" + this.left + "[in]" + this.right + ")";
     }
     substitute(y, expr) {
         let left = this.left.substitute(y, expr);
-        if (this.boundVal.equals(y)) {
-            return new Let(this.boundVal, left, this.right);
+        if (this.boundval.equals(y)) {
+            return new Let(this.boundval, left, this.right);
         }
-        else if (!Variable.contains(expr.getFV(), this.boundVal)) {
-            return new Let(this.boundVal, left, this.right.substitute(y, expr));
+        else if (!Variable.contains(expr.getFV(), this.boundval)) {
+            return new Let(this.boundval, left, this.right.substitute(y, expr));
         }
         else {
             let uniFV = Variable.union(this.right.getFV(), expr.getFV());
             let z = Variable.getNew(uniFV);
             if (z.equals(y)) {
-                return new Let(z, left, this.right.substitute(this.boundVal, z));
+                return new Let(z, left, this.right.substitute(this.boundval, z));
             }
             else {
-                return new Let(z, left, this.right.substitute(this.boundVal, z).substitute(y, expr));
+                return new Let(z, left, this.right.substitute(this.boundval, z).substitute(y, expr));
             }
         }
     }
     equals(expr) {
-        return (expr instanceof Let) && (expr.boundVal.equals(this.boundVal)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
+        return (expr instanceof Let) && (expr.boundval.equals(this.boundval)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
     }
     equalsAlpha(expr) {
         if (!(expr instanceof Let))
             return false;
         if (this.equals(expr))
             return true;
-        let x = this.boundVal;
+        let x = this.boundval;
         let m = this.right;
-        let y = expr.boundVal;
+        let y = expr.boundval;
         let n = expr.right;
         return (!Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y)));
     }
     getEquations(gamma, type) {
         // (let)
         let t1 = type_1.TypeVariable.getNew();
-        this.boundVal.type = t1;
+        this.boundval.type = t1;
         let nextL = this.left.getEquations(gamma, t1);
-        let nextR = this.right.getEquations(gamma.concat(this.boundVal), type);
+        let nextR = this.right.getEquations(gamma.concat(this.boundval), type);
         let str = nextL.proofTree + nextR.proofTree;
         str += "\\RightLabel{\\scriptsize(let)}\n";
         str += "\\TrinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
         return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
     }
     toTexString() {
-        return "({\\bf let}~" + this.boundVal.toTexString() + " = " + this.left.toTexString() + "~{\\bf in}~" + this.right.toTexString() + ")";
+        return "({\\bf let}~" + this.boundval.toTexString() + " = " + this.left.toTexString() + "~{\\bf in}~" + this.right.toTexString() + ")";
     }
     getRedexes(typed, etaAllowed, noParen) {
         if (!typed)
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         // (let)
-        return [new TypedRedex(this, this.right.substitute(this.boundVal, this.left), "let")];
+        return [new TypedRedex(this, this.right.substitute(this.boundval, this.left), "let")];
     }
     static parse(tokens, typed) {
         let t = tokens.shift();
         if (t.name.match(/^[A-Za-z]$/) === null)
             throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-        let boundVal = new Variable(t.name);
+        let boundval = new Variable(t.name);
         if (tokens.shift().name !== "=")
             throw new error_1.LambdaParseError("'=' is expected");
         let content = [];
@@ -1462,16 +1518,19 @@ class Let extends Expression {
         }
         let contentExpr = parseSymbols(content, typed);
         let restExpr = parseSymbols(tokens, typed);
-        return new Let(boundVal, contentExpr, restExpr);
+        return new Let(boundval, contentExpr, restExpr);
     }
     resetTopLevel() {
         this.isTopLevel = false;
-        this.boundVal.resetTopLevel();
+        this.boundval.resetTopLevel();
         this.left.resetTopLevel();
         this.right.resetTopLevel();
     }
     extractMacros() {
-        return new Let(this.boundVal, this.left.extractMacros(), this.right.extractMacros());
+        return new Let(this.boundval, this.left.extractMacros(), this.right.extractMacros());
+    }
+    copy() {
+        return new Let(this.boundval.copy(), this.left.copy(), this.right.copy());
     }
 }
 // case文 [case] M [of] [nil] -> M | x::x -> M
@@ -1641,6 +1700,102 @@ class Case extends Expression {
     }
     extractMacros() {
         return new Case(this.state.extractMacros(), this.ifNil.extractMacros(), this.head, this.tail, this.ifElse.extractMacros());
+    }
+    copy() {
+        return new Case(this.state.copy(), this.ifNil.copy(), this.head.copy(), this.tail.copy(), this.ifElse.copy());
+    }
+}
+// 不動点演算子 [fix] x.M
+class Fix extends Expression {
+    constructor(boundval, expr) {
+        super("Fix");
+        this.boundval = boundval;
+        this.expr = expr;
+    }
+    getFV() {
+        if (this.freevals !== undefined)
+            return this.freevals;
+        let ret = [];
+        for (let fv of this.expr.getFV()) {
+            if (!fv.equals(this.boundval)) {
+                ret.push(fv);
+            }
+        }
+        return this.freevals = ret;
+    }
+    toString() {
+        return "([fix]" + this.boundval + "." + this.expr + ")";
+    }
+    substitute(y, expr) {
+        if (this.boundval.equals(y)) {
+            return this;
+        }
+        else if (!Variable.contains(expr.getFV(), this.boundval)) {
+            return new Fix(this.boundval, this.expr.substitute(y, expr));
+        }
+        else {
+            let uniFV = Variable.union(this.expr.getFV(), expr.getFV());
+            let z = Variable.getNew(uniFV);
+            return new Fix(z, this.expr.substitute(this.boundval, z)).substitute(y, expr);
+        }
+    }
+    equals(expr) {
+        return (expr instanceof Fix) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
+    }
+    equalsAlpha(expr) {
+        if (!(expr instanceof Fix))
+            return false;
+        if (this.equals(expr))
+            return true;
+        let x = this.boundval;
+        let m = this.expr;
+        let y = expr.boundval;
+        let n = expr.expr;
+        if (Variable.contains(m.getFV(), y)) {
+            return n.equalsAlpha(m);
+        }
+        else {
+            return n.equalsAlpha(m.substitute(x, y));
+        }
+    }
+    getEquations(gamma, type) {
+        // (fix)
+        this.boundval.type = type;
+        let next = this.expr.getEquations(gamma.concat(this.boundval), type);
+        let str = next.proofTree;
+        str += "\\RightLabel{\\scriptsize(fix)}\n";
+        str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString() + " : " + type.toTexString() + " $}\n";
+        return new TypeResult(next.eqs, str);
+    }
+    toTexString() {
+        return "({\\bf fix}~" + this.boundval.toTexString() + "." + this.expr.toTexString() + ")";
+    }
+    getRedexes(typed, etaAllowed, noParen) {
+        if (!typed)
+            throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
+        // (fix)
+        return [new TypedRedex(this, this.expr.substitute(this.boundval, new Fix(new Variable(this.boundval.name), this.expr)), "fix")];
+    }
+    static parse(tokens, typed) {
+        let t = tokens.shift();
+        if (t.name.match(/^[A-Za-z]$/) === null)
+            throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
+        let boundval = new Variable(t.name);
+        if (tokens.shift().name !== ".")
+            throw new error_1.LambdaParseError("'.' is expected");
+        let contentExpr = parseSymbols(tokens, typed);
+        return new Fix(boundval, contentExpr);
+    }
+    resetTopLevel() {
+        this.isTopLevel = false;
+        this.boundval.resetTopLevel();
+        this.expr.resetTopLevel();
+    }
+    extractMacros() {
+        return new Fix(this.boundval, this.expr.extractMacros());
+    }
+    copy() {
+        return new Fix(this.boundval.copy(), this.expr.copy());
     }
 }
 
