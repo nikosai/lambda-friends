@@ -234,6 +234,15 @@ function makeAST(str, typed) {
     return t;
 }
 exports.makeAST = makeAST;
+// チャーチ数を表すExpressionの生成
+function makeChurchNum(n, typed) {
+    let str = "\\sz.";
+    let content = (n === 0 ? "z" : "sz");
+    for (let i = 1; i < n; i++) {
+        content = "s(" + content + ")";
+    }
+    return makeAST(str + content, typed);
+}
 function htmlEscape(str) {
     return str.replace(/[&'`"<>]/g, function (match) {
         return {
@@ -286,25 +295,12 @@ class Redex {
     }
     // aの方が優先度高い → 負, 同等 → 0, bの方が優先度高い → 正
     static compare(a, b) {
-        let map = {
-            "beta": 0,
-            "eta": 1,
-            "typed": 2,
-            "macro": 3
-        };
-        let ac = map[a.type];
-        let bc = map[b.type];
-        if (ac === bc) {
-            let ap = a.getPos();
-            let bp = b.getPos();
-            if (ap === bp)
-                return 0;
-            else
-                return ap - bp;
-        }
-        else {
-            return ac - bc;
-        }
+        let ap = a.getPos();
+        let bp = b.getPos();
+        if (ap === bp)
+            return 0;
+        else
+            return ap - bp;
     }
 }
 exports.Redex = Redex;
@@ -418,7 +414,7 @@ class MacroRedex extends Redex {
     constructor(e) {
         super("macro");
         this.content = e;
-        this.next = e.expr;
+        this.next = e.expr.copy();
         this.rule = "macro";
     }
     toString() {
@@ -547,6 +543,9 @@ class Symbol extends Expression {
     extractMacros() {
         throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
     }
+    copy() {
+        return new Symbol(this.name, this.className);
+    }
 }
 // 変数 x
 class Variable extends Symbol {
@@ -631,6 +630,9 @@ class Variable extends Symbol {
     extractMacros() {
         return this;
     }
+    copy() {
+        return new Variable(this.name);
+    }
 }
 // 定数 c
 class Const extends Symbol {
@@ -673,6 +675,9 @@ class ConstInt extends Const {
         this.value = value;
         this.type = new type_1.TypeInt();
     }
+    copy() {
+        return new ConstInt(this.value);
+    }
 }
 // bool型定数 c^{bool}
 class ConstBool extends Const {
@@ -680,6 +685,9 @@ class ConstBool extends Const {
         super(value.toString(), "ConstBool");
         this.value = value;
         this.type = new type_1.TypeBool();
+    }
+    copy() {
+        return new ConstBool(this.value);
     }
 }
 // 関数型定数 c^{op} （前置記法・2項演算）
@@ -769,6 +777,9 @@ class ConstOp extends Const {
                 throw new error_1.LambdaParseError("Undefined function: " + funcName);
         }
     }
+    copy() {
+        return new ConstOp(this.name);
+    }
 }
 // 空リスト nil
 class Nil extends Symbol {
@@ -802,6 +813,9 @@ class Nil extends Symbol {
     extractMacros() {
         return this;
     }
+    copy() {
+        return new Nil();
+    }
 }
 // マクロ定義
 class Macro extends Symbol {
@@ -821,8 +835,8 @@ class Macro extends Symbol {
         if (expr.getFV().length !== 0) {
             throw new error_1.MacroError("<" + name + "> contains free variables: " + expr.getFV());
         }
+        expr.isTopLevel = true;
         let m = new Macro(name, expr, typed, lf.type);
-        m.isTopLevel = true;
         map[name] = m;
         return map[name];
     }
@@ -843,6 +857,16 @@ class Macro extends Symbol {
             ret = Macro.mapUntyped[name];
         }
         if (ret === undefined) {
+            // 組み込みマクロ。typeがundefでいいかは疑問の余地あり
+            if (name.match(/^\d+$/) !== null) {
+                return new Macro(name, makeChurchNum(parseInt(name), typed), typed, undefined);
+            }
+            else if (name == "true") {
+                return new Macro(name, makeAST("\\xy.x", typed), typed, undefined);
+            }
+            else if (name == "false") {
+                return new Macro(name, makeAST("\\xy.y", typed), typed, undefined);
+            }
             // 発展の余地あり。typeを指定したundefマクロを許す？
             return new Macro(name, undefined, typed, undefined);
         }
@@ -877,21 +901,28 @@ class Macro extends Symbol {
         return "\\,\\overline{\\bf " + this.name + "}\\,";
     }
     getRedexes(typed, etaAllowed, noParen) {
-        if (this.expr === undefined)
+        let next = Macro.get(this.name, typed);
+        if (next.expr === undefined)
             return [];
         else
-            return [new MacroRedex(this)];
+            return [new MacroRedex(next)];
     }
     resetTopLevel() {
         this.isTopLevel = false;
         if (this.expr !== undefined)
-            this.expr.resetTopLevel();
+            this.expr.setRoot();
     }
     extractMacros() {
         if (this.expr === undefined)
             return this;
         else
-            return this.expr;
+            return this.expr.extractMacros().copy();
+    }
+    copy() {
+        if (this.expr === undefined)
+            return new Macro(this.name, undefined, this.typed, this.type);
+        else
+            return new Macro(this.name, this.expr.copy(), this.typed, this.type);
     }
 }
 Macro.map = {};
@@ -1067,6 +1098,9 @@ class LambdaAbstraction extends Expression {
     extractMacros() {
         return new LambdaAbstraction(this.boundval, this.expr.extractMacros());
     }
+    copy() {
+        return new LambdaAbstraction(this.boundval.copy(), this.expr.copy());
+    }
 }
 // 関数適用 MN
 class Application extends Expression {
@@ -1209,6 +1243,9 @@ class Application extends Expression {
     extractMacros() {
         return new Application(this.left.extractMacros(), this.right.extractMacros());
     }
+    copy() {
+        return new Application(this.left.copy(), this.right.copy());
+    }
 }
 // リスト M::M
 class List extends Expression {
@@ -1262,6 +1299,9 @@ class List extends Expression {
     }
     extractMacros() {
         return new List(this.head.extractMacros(), this.tail.extractMacros());
+    }
+    copy() {
+        return new List(this.head.copy(), this.tail.copy());
     }
 }
 // if
@@ -1375,6 +1415,9 @@ class If extends Expression {
     extractMacros() {
         return new If(this.state.extractMacros(), this.ifTrue.extractMacros(), this.ifFalse.extractMacros());
     }
+    copy() {
+        return new If(this.state.copy(), this.ifTrue.copy(), this.ifFalse.copy());
+    }
 }
 // let in
 class Let extends Expression {
@@ -1485,6 +1528,9 @@ class Let extends Expression {
     }
     extractMacros() {
         return new Let(this.boundval, this.left.extractMacros(), this.right.extractMacros());
+    }
+    copy() {
+        return new Let(this.boundval.copy(), this.left.copy(), this.right.copy());
     }
 }
 // case文 [case] M [of] [nil] -> M | x::x -> M
@@ -1655,6 +1701,9 @@ class Case extends Expression {
     extractMacros() {
         return new Case(this.state.extractMacros(), this.ifNil.extractMacros(), this.head, this.tail, this.ifElse.extractMacros());
     }
+    copy() {
+        return new Case(this.state.copy(), this.ifNil.copy(), this.head.copy(), this.tail.copy(), this.ifElse.copy());
+    }
 }
 // 不動点演算子 [fix] x.M
 class Fix extends Expression {
@@ -1744,6 +1793,9 @@ class Fix extends Expression {
     }
     extractMacros() {
         return new Fix(this.boundval, this.expr.extractMacros());
+    }
+    copy() {
+        return new Fix(this.boundval.copy(), this.expr.copy());
     }
 }
 
