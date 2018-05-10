@@ -124,6 +124,10 @@ body {
   margin-top: 5px;
 }
 
+#outputBtns .list-group-item>* {
+  vertical-align: baseline;
+}
+
 #outputBtns .list-group-item>span {
   border-radius: 5px;
 }
