@@ -1036,7 +1036,15 @@ class LambdaAbstraction extends Expression {
             lParen = "(";
             rParen = ")";
         }
-        let ret = Redex.makeNext(this.expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvals.join("") + ".", rParen, lParen + "\\lambda{" + boundvals.join("") + "}.", rParen, (prev) => (new LambdaAbstraction(this.boundval, prev)));
+        let ret = Redex.makeNext(expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvals.join("") + ".", rParen, lParen + "\\lambda{" + boundvals.join("") + "}.", rParen, (prev) => {
+            let bvs = [].concat(boundvals);
+            let ret = prev;
+            while (bvs.length > 0) {
+                let t = bvs.pop();
+                ret = new LambdaAbstraction(t, ret);
+            }
+            return ret;
+        });
         if (etaAllowed === undefined) {
             console.error("etaAllowed is undefined.");
             etaAllowed = false;
