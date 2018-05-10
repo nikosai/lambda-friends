@@ -60,13 +60,13 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + `[if] M [then] M [else] M`
   + `[let] x=M [in] M`
   + `[case] M [of] [nil] -> M | x::x -> M`
+* 不動点演算子 `[fix]`
 
 ## これからやるべきこと
 ### 全体
 * リファクタリング
   + TypeVariable.maxIdの管理方法を見直す？
   + toStringのやり方見直し（isTopLevelの廃止）
-* 不動点演算子の追加《型付き》
 
 ## CUIモードの動かし方（一応非推奨）
 ```
