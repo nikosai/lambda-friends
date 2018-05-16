@@ -249,19 +249,7 @@ class BetaRedex extends Redex{
       boundvals.push(expr.boundval.toString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toString(false);
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toString(false)+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toString(false) + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toString(false);
-    }
+    let str = boundvals.join("")+"."+expr.toString(true);
     return this.left+"(\\["+this.la.boundval.toString(false)+"]"+str+")["+this.arg.toString(false)+"]"+this.right;
   }
   public toTexString():string{
@@ -271,19 +259,7 @@ class BetaRedex extends Redex{
       boundvals.push(expr.boundval.toTexString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toTexString(false);
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toTexString(false)+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toTexString(false) + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toTexString(false);
-    }
+    let str = boundvals.join("")+"."+expr.toTexString(true);
     return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundval.toTexString(false)+"}}"+str+")\\underline{\\strut "+this.arg.toTexString(false)+"}"+this.texRight;
   }
   public toHTMLString():string{
@@ -293,19 +269,7 @@ class BetaRedex extends Redex{
       boundvals.push(expr.boundval.toString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toString(false);
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toString(false)+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toString(false) + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toString(false);
-    }
+    let str = boundvals.join("")+"."+expr.toString(true);
     return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundval">'+htmlEscape(this.la.boundval.toString(false))+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString(false))+'</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
@@ -348,7 +312,7 @@ class MacroRedex extends Redex{
   constructor(e:Macro){
     super("macro");
     this.content = e;
-    this.next = e.expr.copy();
+    this.next = e.expr;
     this.rule = "macro";
   }
   public toString():string{
@@ -864,7 +828,7 @@ export class Macro extends Symbol{
   }
   public extractMacros(){
     if (this.expr === undefined) return this;
-    else return this.expr.extractMacros().copy();
+    else return this.expr.extractMacros();
   }
   public copy():Macro{
     if (this.expr === undefined) return new Macro(this.name,undefined,this.typed,this.type);
