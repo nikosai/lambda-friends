@@ -885,7 +885,8 @@ export class Macro extends Symbol{
     else return new Macro(this.name,this.expr.copy(),this.typed,this.type);
   }
   public toLMNtal():string{
-    return this.expr.toLMNtal();
+    if (this.expr === undefined) return "fv("+this.name+")";
+    else return this.expr.toLMNtal();
   }
 }
 

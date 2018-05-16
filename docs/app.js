@@ -932,7 +932,10 @@ class Macro extends Symbol {
             return new Macro(this.name, this.expr.copy(), this.typed, this.type);
     }
     toLMNtal() {
-        return this.expr.toLMNtal();
+        if (this.expr === undefined)
+            return "fv(" + this.name + ")";
+        else
+            return this.expr.toLMNtal();
     }
 }
 Macro.map = {};
