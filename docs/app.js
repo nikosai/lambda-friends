@@ -931,6 +931,9 @@ class Macro extends Symbol {
         else
             return new Macro(this.name, this.expr.copy(), this.typed, this.type);
     }
+    toLMNtal() {
+        return this.expr.toLMNtal();
+    }
 }
 Macro.map = {};
 Macro.mapUntyped = {};

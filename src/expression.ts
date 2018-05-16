@@ -884,6 +884,9 @@ export class Macro extends Symbol{
     if (this.expr === undefined) return new Macro(this.name,undefined,this.typed,this.type);
     else return new Macro(this.name,this.expr.copy(),this.typed,this.type);
   }
+  public toLMNtal():string{
+    return this.expr.toLMNtal();
+  }
 }
 
 // ラムダ抽象 \x.M
