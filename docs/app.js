@@ -70,6 +70,7 @@ exports.TexError = TexError;
 Object.defineProperty(exports, "__esModule", { value: true });
 const type_1 = require("./type");
 const error_1 = require("./error");
+const lambda_friends_1 = require("./lambda-friends");
 // 字句解析
 function tokenize(str, typed) {
     let strs = str.split(/\s*/).join("").split("");
@@ -502,6 +503,9 @@ class Expression {
         else
             return null;
     }
+    toLMNtal() {
+        throw new error_1.TypeError("Expression '" + this + "' cannot be converted into LMNtal (untyped only).");
+    }
 }
 exports.Expression = Expression;
 // 終端記号（未解析）
@@ -632,6 +636,9 @@ class Variable extends Symbol {
     }
     copy() {
         return new Variable(this.name);
+    }
+    toLMNtal() {
+        return "fv(" + this.name + ")";
     }
 }
 // 定数 c
@@ -1101,6 +1108,31 @@ class LambdaAbstraction extends Expression {
     copy() {
         return new LambdaAbstraction(this.boundval.copy(), this.expr.copy());
     }
+    toLMNtal() {
+        let ret = this.expr.toLMNtal().split("fv(" + this.boundval.name + ")");
+        let str = ret[0];
+        let links = [];
+        for (let i = 1; i < ret.length; i++) {
+            let r = lambda_friends_1.LambdaFriends.getNewLink();
+            links.push(r);
+            str += r + ret[i];
+        }
+        function connect(links) {
+            switch (links.length) {
+                case 0:
+                    return "rm";
+                case 1:
+                    return links[0];
+                case 2:
+                    return "cp(" + links[0] + "," + links[1] + ")";
+                default: {
+                    let r = links.shift();
+                    return "cp(" + r + "," + connect(links) + ")";
+                }
+            }
+        }
+        return "lambda(" + connect(links) + "," + str + ")";
+    }
 }
 // 関数適用 MN
 class Application extends Expression {
@@ -1245,6 +1277,9 @@ class Application extends Expression {
     }
     copy() {
         return new Application(this.left.copy(), this.right.copy());
+    }
+    toLMNtal() {
+        return "apply(" + this.left.toLMNtal() + "," + this.right.toLMNtal() + ")";
     }
 }
 // リスト M::M
@@ -1799,7 +1834,7 @@ class Fix extends Expression {
     }
 }
 
-},{"./error":1,"./type":5}],3:[function(require,module,exports){
+},{"./error":1,"./lambda-friends":4,"./type":5}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
@@ -2035,6 +2070,14 @@ class LambdaFriends {
     static clearMacro(typed) {
         return expression_1.Macro.clear(typed);
     }
+    // typedだったらとりあえずnullを返すことにする
+    toLMNtal() {
+        LambdaFriends.nextLinkID = 0;
+        if (this.typed)
+            return null;
+        else
+            return "Result=" + this.original.toLMNtal();
+    }
     toString() {
         let ret = this.expr + " : " + this.type;
         if (!this.hasNext()) {
@@ -2057,6 +2100,9 @@ class LambdaFriends {
     }
     parseChurchBool() {
         return this.expr.parseChurchBool();
+    }
+    static getNewLink() {
+        return "R" + (LambdaFriends.nextLinkID++);
     }
 }
 exports.LambdaFriends = LambdaFriends;
@@ -2778,18 +2824,13 @@ function htmlEscape(str) {
 }
 function refreshTex() {
     tabC.textContent = null;
-    let proc = "";
-    let proof = "";
-    if (curlf !== undefined) {
-        proc = curlf.getProcessTex();
-        tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
-    }
-    if (typed) {
-        if (curlf !== undefined) {
-            proof = curlf.getProofTree();
-            tabC.appendChild(makeTexDiv("型付けの証明木", proof));
-        }
-    }
+    if (curlf === undefined)
+        return;
+    tabC.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
+    if (typed)
+        tabC.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
+    else
+        tabC.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
 }
 function makeTexDiv(title, content) {
     let p = document.createElement("p");
