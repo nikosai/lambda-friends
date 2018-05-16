@@ -357,7 +357,7 @@ function refreshMacroList(){
   let ret = LambdaFriends.getMacroListAsObject(typed);
   for (let r in ret){
     let m = ret[r];
-    tbody.innerHTML += "<tr><th>"+htmlEscape(m.name)+"</th><td>"+htmlEscape(m.expr.toString())+"</td><td>"+htmlEscape(m.type.toString())+"</td></tr>";
+    tbody.innerHTML += "<tr><th>"+htmlEscape(m.name)+"</th><td>"+htmlEscape(m.expr.toString(true))+"</td><td>"+htmlEscape(m.type.toString())+"</td></tr>";
   }
 }
 function htmlEscape(str:string):string{
