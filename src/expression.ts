@@ -442,6 +442,10 @@ export abstract class Expression{
     else return null;
   }
 
+  public toLMNtal():string{
+    throw new TypeError("Expression '"+this+"' cannot be converted into LMNtal (untyped only).");
+  }
+
   public abstract toString():string;
   public abstract toTexString():string;
   public abstract getFV():Variable[];
@@ -588,6 +592,9 @@ class Variable extends Symbol{
   }
   public copy():Variable{
     return new Variable(this.name);
+  }
+  public toLMNtal():string{
+    return "fv("+this.name+")";
   }
 }
 
@@ -1048,6 +1055,33 @@ class LambdaAbstraction extends Expression{
   public copy():LambdaAbstraction{
     return new LambdaAbstraction(this.boundval.copy(),this.expr.copy());
   }
+  public toLMNtal():string{
+    let ret = this.expr.toLMNtal().split("fv("+this.boundval.name+")");
+    let str = ret[0];
+    let links:string[] = [];
+    for (let i=1; i<ret.length; i++){
+      let r = LambdaFriends.getNewLink();
+      links.push(r);
+      str += r + ret[i];
+    }
+
+    function connect(links:string[]):string{
+      switch (links.length){
+        case 0:
+          return "rm";
+        case 1:
+          return links[0];
+        case 2:
+          return "cp("+links[0]+","+links[1]+")";
+        default:{
+          let r = links.shift();
+          return "cp("+r+","+connect(links)+")";
+        }
+      }
+    }
+
+    return "lambda("+connect(links)+","+str+")";
+  }
 }
 
 // 関数適用 MN
@@ -1220,6 +1254,9 @@ class Application extends Expression{
   }
   public copy():Application{
     return new Application(this.left.copy(),this.right.copy());
+  }
+  public toLMNtal():string{
+    return "apply("+this.left.toLMNtal()+","+this.right.toLMNtal()+")";
   }
 }
 

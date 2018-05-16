@@ -10,6 +10,7 @@ export class LambdaFriends{
   processTex:string;
   original:Expression;
   etaAllowed:boolean;
+  static nextLinkID:number;
   constructor(str:string,typed:boolean,etaAllowed:boolean){
     let l = str.split("#")[0].trim();
     let names = [];
@@ -177,6 +178,13 @@ export class LambdaFriends{
   public static clearMacro(typed:boolean){
     return Macro.clear(typed);
   }
+
+  // typedだったらとりあえずnullを返すことにする
+  public toLMNtal():string{
+    LambdaFriends.nextLinkID = 0;
+    if (this.typed) return null;
+    else return "Result="+this.expr.toLMNtal();
+  }
   
   public toString():string{
     let ret = this.expr+" : "+this.type;
@@ -201,5 +209,9 @@ export class LambdaFriends{
 
   public parseChurchBool():boolean{
     return this.expr.parseChurchBool();
+  }
+
+  public static getNewLink():string{
+    return "R"+(LambdaFriends.nextLinkID++)
   }
 }
