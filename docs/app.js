@@ -2463,7 +2463,7 @@ fileReader.addEventListener("load", function () {
             let ret = "<" + name + ">";
             while (names.length > 0) {
                 let name = names.shift();
-                ret += " and <" + name + ">";
+                ret += " = <" + name + ">";
             }
             li.innerText = ret + " is defined as " + t.expr + " : " + t.type;
             list1.appendChild(li);
@@ -2562,7 +2562,7 @@ let submitInput = function () {
             let str = "<" + name + ">";
             while (names.length > 0) {
                 let name = names.shift();
-                str += " and <" + name + ">";
+                str += " = <" + name + ">";
             }
             str += " is defined as " + ret.expr + " : " + ret.type;
             outputLine(str);
