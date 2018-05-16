@@ -2082,7 +2082,7 @@ class LambdaFriends {
         if (this.typed)
             return null;
         else
-            return "Result=" + this.original.toLMNtal();
+            return "root=" + this.original.toLMNtal() + ".";
     }
     toString() {
         let ret = this.expr + " : " + this.type;
