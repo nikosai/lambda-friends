@@ -142,9 +142,7 @@ function parseSymbols(tokens: Symbol[], typed:boolean):Expression{
 
 // 字句解析と構文解析 return: root node
 export function makeAST(str:string, typed:boolean):Expression{
-  let t = parseSymbols(tokenize(str,typed),typed);
-  t.setRoot();
-  return t;
+  return parseSymbols(tokenize(str,typed),typed);
 }
 
 // チャーチ数を表すExpressionの生成
@@ -245,70 +243,34 @@ class BetaRedex extends Redex{
     this.rule = "beta";
   }
   public toString():string{
-    let boundvals = [];
+    let boundvals:string[] = [];
     let expr = this.la.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval);
+      boundvals.push(expr.boundval.toString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toString();
-      while (expr1 instanceof Application){
-        str1 = expr1.right+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1 + str1;
-      str = str+str1;
-    } else {
-      str = str+expr;
-    }
-    return this.left+"(\\["+this.la.boundval+"]"+str+")["+this.arg+"]"+this.right;
+    let str = boundvals.join("")+"."+expr.toString(true);
+    return this.left+"(\\["+this.la.boundval.toString(false)+"]"+str+")["+this.arg.toString(false)+"]"+this.right;
   }
   public toTexString():string{
     let boundvals:string[] = [];
     let expr = this.la.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toTexString());
+      boundvals.push(expr.boundval.toTexString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toTexString();
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toTexString()+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toTexString() + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toTexString();
-    }
-    return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundval.toTexString()+"}}"+str+")\\underline{\\strut "+this.arg.toTexString()+"}"+this.texRight;
+    let str = boundvals.join("")+"."+expr.toTexString(true);
+    return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundval.toTexString(false)+"}}"+str+")\\underline{\\strut "+this.arg.toTexString(false)+"}"+this.texRight;
   }
   public toHTMLString():string{
     let boundvals:string[] = [];
     let expr = this.la.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toString());
+      boundvals.push(expr.boundval.toString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toString();
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toString()+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toString() + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toString();
-    }
-    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundval">'+htmlEscape(this.la.boundval.toString())+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString())+'</span>'+htmlEscape(this.right);
+    let str = boundvals.join("")+"."+expr.toString(true);
+    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundval">'+htmlEscape(this.la.boundval.toString(false))+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString(false))+'</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\beta";
@@ -332,10 +294,10 @@ class EtaRedex extends Redex{
     return this.left+"["+this.content+"]"+this.right;
   }
   public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.content.toTexString()+"}"+this.texRight;
+    return this.texLeft+"\\underline{\\strut "+this.content.toTexString(this.left+this.right==="")+"}"+this.texRight;
   }
   public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-eta">('+htmlEscape(this.content.toString())+')</span>'+htmlEscape(this.right);
+    return htmlEscape(this.left)+'<span class="lf-eta">('+htmlEscape(this.content.toString(this.left+this.right===""))+')</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\eta";
@@ -350,14 +312,14 @@ class MacroRedex extends Redex{
   constructor(e:Macro){
     super("macro");
     this.content = e;
-    this.next = e.expr.copy();
+    this.next = e.expr;
     this.rule = "macro";
   }
   public toString():string{
     return this.left+"[<"+this.content.name+">]"+this.right;
   }
   public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.content.toTexString()+"}"+this.texRight;
+    return this.texLeft+"\\underline{\\strut "+this.content.toTexString(false)+"}"+this.texRight;
   }
   public toHTMLString():string{
     return htmlEscape(this.left)+'<span class="lf-macro">&lt;'+htmlEscape(this.content.name)+'&gt;</span>'+htmlEscape(this.right);
@@ -379,13 +341,13 @@ class TypedRedex extends Redex{
     this.rule = rule;
   }
   public toString():string{
-    return this.left+"["+this.content.toString()+"]"+this.right;
+    return this.left+"["+this.content.toString(this.left+this.right==="")+"]"+this.right;
   }
   public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.content.toTexString()+"}"+this.texRight;
+    return this.texLeft+"\\underline{\\strut "+this.content.toTexString(false)+"}"+this.texRight;
   }
   public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-typed">'+htmlEscape(this.content.toString())+'</span>'+htmlEscape(this.right);
+    return htmlEscape(this.left)+'<span class="lf-typed">'+htmlEscape(this.content.toString(this.left+this.right===""))+'</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "{\\rm ("+this.rule+")}";
@@ -401,7 +363,6 @@ class TypeResult{
 export abstract class Expression{
   className: string;
   freevals: Variable[];
-  public isTopLevel:boolean; 
   // type: Type;
 
   constructor(className:string){
@@ -410,11 +371,6 @@ export abstract class Expression{
 
   public isNormalForm(type:boolean,etaAllowed:boolean):boolean{
     return this.getRedexes(type,etaAllowed,true).length===0;
-  }
-
-  public setRoot(){
-    this.resetTopLevel();
-    this.isTopLevel = true;
   }
 
   public parseChurchNum():number{
@@ -446,15 +402,14 @@ export abstract class Expression{
     throw new TypeError("Expression '"+this+"' cannot be converted into LMNtal (untyped only).");
   }
 
-  public abstract toString():string;
-  public abstract toTexString():string;
+  public abstract toString(noParens:boolean):string;
+  public abstract toTexString(noParens:boolean):string;
   public abstract getFV():Variable[];
   public abstract substitute(x:Variable, expr:Expression):Expression;
   public abstract equals(expr:Expression):boolean;
   public abstract equalsAlpha(expr:Expression):boolean;
-  public abstract getEquations(gamma:Variable[], type:Type):TypeResult;
-  public abstract getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[];
-  public abstract resetTopLevel();
+  public abstract getEquations(gamma:Variable[], type:Type, noParens:boolean):TypeResult;
+  public abstract getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[];
   public abstract extractMacros():Expression;
   public abstract copy():Expression;
 }
@@ -474,10 +429,10 @@ class Symbol extends Expression{
   equalsAlpha(expr: Expression):boolean{
     return (expr instanceof Symbol) &&(expr.className===this.className) && (expr.name===this.name);
   }
-  public toString():string{
+  public toString(noParens:boolean):string{
     return this.name;
   }
-  public toTexString():string{
+  public toTexString(noParens:boolean):string{
     throw new TexError("class Symbol does not have tex string");
   }
   public getFV():Variable[]{
@@ -486,14 +441,11 @@ class Symbol extends Expression{
   public substitute(x:Variable, expr:Expression):Expression{
     throw new SubstitutionError("Undefined Substitution");
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     throw new TypeError("Undefined Type");
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     throw new ReductionError("Symbols must not appear in parsed Expression")
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
   }
   public extractMacros():Expression{
     throw new ReductionError("Symbols must not appear in parsed Expression")
@@ -516,7 +468,7 @@ class Variable extends Symbol{
     else return this;
   }
 
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     for (let g of gamma){
       if (g.equals(this)){
         // (var)
@@ -529,7 +481,7 @@ class Variable extends Symbol{
     throw new TypeError("free variable is not allowed: "+this);
   }
 
-  public toTexString():string{
+  public toTexString(noParens:boolean):string{
     return this.name;
   }
 
@@ -584,7 +536,7 @@ class Variable extends Symbol{
     }
     throw new SubstitutionError("No more Variables available");
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     return [];
   }
   public extractMacros():Expression{
@@ -609,20 +561,20 @@ abstract class Const extends Symbol {
   public substitute(x:Variable, expr:Expression):Expression{
     return this;
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (con)
     let str = "\\AxiomC{}\n";
     str += "\\RightLabel{\\scriptsize(con)}\n";
-    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult([new TypeEquation(this.type,type)], str);
   }
-  public toString():string{
+  public toString(noParens:boolean):string{
     return "["+this.name+"]";
   }
-  public toTexString():string{
+  public toTexString(noParens:boolean):string{
     return this.name+"^{"+this.type.toTexString()+"}";
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     if (typed){
       return [];
     } else {
@@ -759,7 +711,7 @@ class Nil extends Symbol{
     super("nil","Nil");
     this.freevals=[];
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (nil)
     let t = TypeVariable.getNew();
     let nType = new TypeList(t);
@@ -768,10 +720,13 @@ class Nil extends Symbol{
     str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.name+" : "+nType.toTexString()+" $}\n";
     return new TypeResult([new TypeEquation(type,nType)],str);
   }
-  public toTexString():string{
+  public toString(noParens:boolean):string{
+    return "["+this.name+"]";
+  }
+  public toTexString(noParens:boolean):string{
     return "{\\rm "+this.name+"}";
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     if (typed){
       return [];
     } else {
@@ -809,7 +764,6 @@ export class Macro extends Symbol{
     if (expr.getFV().length !== 0){
       throw new MacroError("<"+name+"> contains free variables: "+expr.getFV());
     }
-    expr.isTopLevel = true;
     let m = new Macro(name, expr, typed, lf.type);
     map[name] = m;
     return map[name];
@@ -851,7 +805,7 @@ export class Macro extends Symbol{
     return this;
   }
 
-  public toString():string{
+  public toString(noParens:boolean):string{
     return "<"+this.name+">";
   }
   public equalsAlpha(expr:Expression):boolean{
@@ -859,26 +813,22 @@ export class Macro extends Symbol{
     if (this.expr === undefined) return this.equals(expr);
     else return this.expr.equalsAlpha(expr);
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // ????
     if (this.expr === undefined) throw new TypeError(this+" is undefined.")
-    else return this.expr.getEquations(gamma,type);
+    else return this.expr.getEquations(gamma,type,noParens);
   }
-  public toTexString():string{
+  public toTexString(noParens:boolean):string{
     return "\\,\\overline{\\bf "+this.name+"}\\,";
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     let next = Macro.get(this.name,typed);
     if (next.expr === undefined) return [];
     else return [new MacroRedex(next)];
   }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    if (this.expr !== undefined) this.expr.setRoot();
-  }
   public extractMacros(){
     if (this.expr === undefined) return this;
-    else return this.expr.extractMacros().copy();
+    else return this.expr.extractMacros();
   }
   public copy():Macro{
     if (this.expr === undefined) return new Macro(this.name,undefined,this.typed,this.type);
@@ -919,27 +869,15 @@ class LambdaAbstraction extends Expression{
     }
     throw new LambdaParseError("'.' is needed");
   }
-  public toString():string{
+  public toString(noParens:boolean):string{
     let boundvals = [this.boundval];
     let expr = this.expr;
     while(expr instanceof LambdaAbstraction){
       boundvals.push(expr.boundval);
       expr = expr.expr;
     }
-    let str = "\\"+boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toString();
-      while (expr1 instanceof Application){
-        str1 = expr1.right+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1 + str1;
-      str = str+str1;
-    } else {
-      str = str+expr;
-    }
-    if (!this.isTopLevel) str = "("+str+")";
+    let str = "\\"+boundvals.join("")+"."+expr.toString(true);
+    if (!noParens) str = "("+str+")";
     return str;
   }
   public getFV():Variable[]{
@@ -974,44 +912,32 @@ class LambdaAbstraction extends Expression{
       return n.equalsAlpha(m.substitute(x,y));
     }
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (abs)
     let t0 = TypeVariable.getNew();
     let t1 = TypeVariable.getNew();
     this.boundval.type = t1;
-    let next = this.expr.getEquations(gamma.concat(this.boundval),t0);
+    let next = this.expr.getEquations(gamma.concat(this.boundval),t0,true);
     let str = next.proofTree;
     str += "\\RightLabel{\\scriptsize(abs)}\n";
-    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(next.eqs.concat(new TypeEquation(type,new TypeFunc(t1,t0))),str);
   }
-  public toTexString():string{
-    let boundvals = [this.boundval.toTexString()];
+  public toTexString(noParens:boolean):string{
+    let boundvals = [this.boundval.toTexString(false)];
     let expr = this.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toTexString());
+      boundvals.push(expr.boundval.toTexString(false));
       expr = expr.expr;
     }
-    let str = "\\lambda "+boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toTexString();
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toTexString()+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toTexString() + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toTexString();
-    }
-    if (!this.isTopLevel) str = "("+str+")";
+    let str = "\\lambda "+boundvals.join("")+"."+expr.toTexString(true);
+    if (!noParens) str = "("+str+")";
     return str;
   }
   public isEtaRedex():boolean{
     return (this.expr instanceof Application) && (this.expr.right.equals(this.boundval)) && (!Variable.contains(this.expr.left.getFV(),this.boundval));
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     if (typed) return [];
     let boundvals = [this.boundval];
     let expr = this.expr;
@@ -1020,7 +946,7 @@ class LambdaAbstraction extends Expression{
       expr = expr.expr;
     }
     let lParen = "", rParen = "";
-    if (!this.isTopLevel && !noParen){
+    if (!noParens){
       lParen = "(";
       rParen = ")";
     }
@@ -1047,11 +973,6 @@ class LambdaAbstraction extends Expression{
       ret.push(new EtaRedex(this));
     }
     return ret;
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.boundval.resetTopLevel();
-    this.expr.resetTopLevel();
   }
   public extractMacros():Expression{
     return new LambdaAbstraction(this.boundval,this.expr.extractMacros());
@@ -1103,15 +1024,9 @@ class Application extends Expression{
     return (this.left instanceof LambdaAbstraction);
   }
 
-  public toString():string{
-    let expr = this.left;
-    let str = this.right.toString();
-    while (expr instanceof Application){
-      str = expr.right+str;
-      expr = expr.left;
-    }
-    str = expr+str;
-    if (!this.isTopLevel) str = "("+str+")";
+  public toString(noParens:boolean):string{
+    let str = this.left.toString(true)+this.right.toString(false);
+    if (!noParens) str = "("+str+")";
     return str;
   }
 
@@ -1131,32 +1046,26 @@ class Application extends Expression{
   public equalsAlpha(expr:Expression):boolean{
     return (expr instanceof Application) && (expr.left.equalsAlpha(this.left)) && (expr.right.equalsAlpha(this.right));
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (app)
     let t1 = TypeVariable.getNew();
-    let nextL = this.left.getEquations(gamma,new TypeFunc(t1,type));
-    let nextR = this.right.getEquations(gamma,t1);
+    let nextL = this.left.getEquations(gamma,new TypeFunc(t1,type),false);
+    let nextR = this.right.getEquations(gamma,t1,false);
     let str = nextL.proofTree + nextR.proofTree;
     str += "\\RightLabel{\\scriptsize(app)}\n";
-    str += "\\BinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\BinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(nextL.eqs.concat(nextR.eqs),str);
   }
-  public toTexString():string{
-    let expr = this.left;
-    let str = this.right.toTexString();
-    while (expr instanceof Application){
-      str = expr.right.toTexString()+str;
-      expr = expr.left;
-    }
-    str = expr.toTexString()+str;
-    if (!this.isTopLevel) str = "("+str+")";
+  public toTexString(noParens:boolean):string{
+    let str = this.left.toTexString(true)+this.right.toTexString(false);
+    if (!noParens) str = "("+str+")";
     return str;
   }
-  public getRedexes(typed:boolean, etaAllowed:boolean, noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     if (typed){
       // typed
-      let lParen = (this.isTopLevel ? "" : "(");
-      let rParen = (this.isTopLevel ? "" : ")");
+      let lParen = (noParens ? "" : "(");
+      let rParen = (noParens ? "" : ")");
       if (this.left instanceof LambdaAbstraction){
         // (app2)
         return [new TypedRedex(this, this.left.expr.substitute(this.left.boundval,this.right),"app2")];
@@ -1177,9 +1086,9 @@ class Application extends Expression{
           // (app4)
           return Redex.makeNext(
             right.getRedexes(true,false,false),
-            lParen+op.toString()+left.toString(),
+            lParen+op.toString(false)+left.toString(false),
             rParen,
-            lParen+op.toTexString()+left.toTexString(),
+            lParen+op.toTexString(false)+left.toTexString(false),
             rParen,
             (prev)=>(new Application(new Application(op,left),prev)));
         }
@@ -1187,9 +1096,9 @@ class Application extends Expression{
         // (app3)
         return Redex.makeNext(
           this.right.getRedexes(true,false,false),
-          lParen+this.left.toString(),
+          lParen+this.left.toString(false),
           rParen,
-          lParen+this.left.toTexString(),
+          lParen+this.left.toTexString(false),
           rParen,
           (prev)=>(new Application(this.left,prev)));
       } else {
@@ -1197,9 +1106,9 @@ class Application extends Expression{
         return Redex.makeNext(
           this.left.getRedexes(true,false,false),
           lParen,
-          rParen+this.right.toString(),
+          rParen+this.right.toString(false),
           lParen,
-          rParen+this.right.toTexString(),
+          rParen+this.right.toTexString(false),
           (prev)=>(new Application(prev,this.right)));
       }
     } else {
@@ -1209,8 +1118,8 @@ class Application extends Expression{
       let texRight:string[] = [""];
       while (true){
         let t = apps[apps.length-1];
-        right.push(t.right.toString()+right[right.length-1]);
-        texRight.push(t.right.toTexString()+right[texRight.length-1]);
+        right.push(t.right.toString(false)+right[right.length-1]);
+        texRight.push(t.right.toTexString(false)+right[texRight.length-1]);
         if (!(t.left instanceof Application)) break;
         apps.push(t.left);
       }
@@ -1222,17 +1131,17 @@ class Application extends Expression{
         let ret1 = Redex.makeNext(
           ret,
           "",
-          t.right.toString(),
+          t.right.toString(false),
           "",
-          t.right.toTexString(),
+          t.right.toTexString(false),
           (prev) => (new Application(prev,t.right)));
-        let lstr = t.left.toString();
+        let lstr = t.left.toString(false);
         if (t.left instanceof Application) lstr = lstr.slice(1,-1);
         let ret2 = Redex.makeNext(
           t.right.getRedexes(false,etaAllowed,false),
           lstr,
           "",
-          t.left.toTexString(),
+          t.left.toTexString(false),
           "",
           (prev) => (new Application(t.left,prev)));
         ret = ret1.concat(ret2);
@@ -1242,16 +1151,11 @@ class Application extends Expression{
           ret.push(new BetaRedex(t));
         }
       }
-      if (!this.isTopLevel && !noParen){
+      if (!noParens){
         ret = Redex.makeNext(ret,"(",")","(",")",(prev)=>(prev));
       }
       return ret;
     }
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.left.resetTopLevel();
-    this.right.resetTopLevel();
   }
   public extractMacros():Expression{
     return new Application(this.left.extractMacros(),this.right.extractMacros());
@@ -1275,8 +1179,10 @@ class List extends Expression{
     this.tail = tail;
   }
 
-  public toString():string{
-    return this.head+"::"+this.tail;
+  public toString(noParens:boolean):string{
+    let ret = this.head.toString(false)+"::"+this.tail.toString(true);
+    if (!noParens) ret = "("+ret+")"
+    return ret;
   }
 
   public getFV():Variable[]{
@@ -1295,29 +1201,26 @@ class List extends Expression{
   public equalsAlpha(expr:Expression):boolean{
     return (expr instanceof List) && (expr.head.equalsAlpha(this.head)) && (expr.tail.equalsAlpha(this.tail));
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (list) 再検討の余地あり？ 新しい型変数要る？
     let t = TypeVariable.getNew();
     let lt = new TypeList(t);
-    let nextH = this.head.getEquations(gamma,t);
-    let nextT = this.tail.getEquations(gamma,lt);
+    let nextH = this.head.getEquations(gamma,t,false);
+    let nextT = this.tail.getEquations(gamma,lt,false);
     let str = nextH.proofTree + nextT.proofTree;
     str += "\\RightLabel{\\scriptsize(list)}\n";
-    str += "\\BinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+lt.toTexString()+" $}\n";
+    str += "\\BinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+lt.toTexString()+" $}\n";
     return new TypeResult(nextH.eqs.concat(nextT.eqs, new TypeEquation(lt,type)),str);
   }
-  public toTexString():string{
-    return this.head.toTexString()+"::"+this.tail.toTexString();
+  public toTexString(noParens:boolean):string{
+    let ret = this.head.toTexString(false)+"::"+this.tail.toTexString(true);
+    if (!noParens) ret = "("+ret+")"
+    return ret;
   }
 
-  public getRedexes(typed:boolean,etaAllowed:boolean,noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex[]{
     if (typed) return [];
     else throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.head.resetTopLevel();
-    this.tail.resetTopLevel();
   }
   public extractMacros():Expression{
     return new List(this.head.extractMacros(),this.tail.extractMacros());
@@ -1341,8 +1244,10 @@ class If extends Expression{
   public getFV():Variable[]{
     return this.freevals = Variable.union(this.state.getFV(),this.ifTrue.getFV(),this.ifFalse.getFV());
   }
-  public toString():string{
-    return "([if]"+this.state+"[then]"+this.ifTrue+"[else]"+this.ifFalse+")";
+  public toString(noParens:boolean):string{
+    let ret = "[if]"+this.state.toString(true)+"[then]"+this.ifTrue.toString(true)+"[else]"+this.ifFalse.toString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
   public substitute(y:Variable, expr:Expression):Expression{
     return new If(this.state.substitute(y,expr),this.ifTrue.substitute(y,expr),this.ifFalse.substitute(y,expr));
@@ -1353,20 +1258,22 @@ class If extends Expression{
   public equalsAlpha(expr:Expression):boolean{
     return (expr instanceof If) && (expr.state.equalsAlpha(this.state)) && (expr.ifTrue.equalsAlpha(this.ifTrue)) && (expr.ifFalse.equalsAlpha(this.ifFalse));
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (if)
-    let nextS = this.state.getEquations(gamma,new TypeBool());
-    let nextT = this.ifTrue.getEquations(gamma,type);
-    let nextF = this.ifFalse.getEquations(gamma,type);
+    let nextS = this.state.getEquations(gamma,new TypeBool(),true);
+    let nextT = this.ifTrue.getEquations(gamma,type,true);
+    let nextF = this.ifFalse.getEquations(gamma,type,true);
     let str = nextS.proofTree+nextT.proofTree+nextF.proofTree;
     str += "\\RightLabel{\\scriptsize(if)}\n";
-    str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(nextS.eqs.concat(nextT.eqs,nextF.eqs),str);
   }
-  public toTexString():string{
-    return "({\\bf if}~"+this.state.toTexString()+"~{\\bf then}~"+this.ifTrue.toTexString()+"~{\\bf else}~"+this.ifFalse.toTexString()+")";
+  public toTexString(noParens:boolean):string{
+    let ret = "{\\bf if}~"+this.state.toTexString(true)+"~{\\bf then}~"+this.ifTrue.toTexString(true)+"~{\\bf else}~"+this.ifFalse.toTexString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
-  public getRedexes(typed:boolean,etaAllowed:boolean,noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex[]{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
 
     if (this.state instanceof ConstBool){
@@ -1382,9 +1289,9 @@ class If extends Expression{
       return Redex.makeNext(
         this.state.getRedexes(true,false,false),
         "([if]",
-        "[then]"+this.ifTrue+"[else]"+this.ifFalse+")",
+        "[then]"+this.ifTrue.toString(true)+"[else]"+this.ifFalse.toString(true)+")",
         "({\\bf if}~",
-        "~{\\bf then}~"+this.ifTrue.toTexString()+"~{\\bf else}~"+this.ifFalse.toTexString()+")",
+        "~{\\bf then}~"+this.ifTrue.toTexString(true)+"~{\\bf else}~"+this.ifFalse.toTexString(true)+")",
         (prev)=>(new If(prev,this.ifTrue,this.ifFalse)));
     }
   }
@@ -1432,12 +1339,6 @@ class If extends Expression{
     let ifFalseExpr = parseSymbols(tokens,typed);
     return new If(stateExpr,ifTrueExpr,ifFalseExpr);
   }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.state.resetTopLevel();
-    this.ifTrue.resetTopLevel();
-    this.ifFalse.resetTopLevel();
-  }
   public extractMacros():Expression{
     return new If(this.state.extractMacros(),this.ifTrue.extractMacros(),this.ifFalse.extractMacros());
   }
@@ -1467,8 +1368,10 @@ class Let extends Expression{
     }
     return this.freevals = Variable.union(ret, this.left.getFV());
   }
-  public toString():string{
-    return "([let]"+this.boundval+"[=]"+this.left+"[in]"+this.right+")";
+  public toString(noParens:boolean):string{
+    let ret = "[let]"+this.boundval.toString(true)+"="+this.left.toString(true)+"[in]"+this.right.toString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
   public substitute(y:Variable, expr:Expression):Expression{
     let left = this.left.substitute(y,expr);
@@ -1498,21 +1401,23 @@ class Let extends Expression{
     let n = expr.right;
     return (!Variable.contains(m.getFV(),y) && n.equalsAlpha(m.substitute(x,y)));
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (let)
     let t1 = TypeVariable.getNew();
     this.boundval.type = t1;
-    let nextL = this.left.getEquations(gamma,t1);
-    let nextR = this.right.getEquations(gamma.concat(this.boundval),type);
+    let nextL = this.left.getEquations(gamma,t1,true);
+    let nextR = this.right.getEquations(gamma.concat(this.boundval),type,true);
     let str = nextL.proofTree+nextR.proofTree;
     str += "\\RightLabel{\\scriptsize(let)}\n";
-    str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(nextL.eqs.concat(nextR.eqs),str);
   }
-  public toTexString():string{
-    return "({\\bf let}~"+this.boundval.toTexString()+" = "+this.left.toTexString()+"~{\\bf in}~"+this.right.toTexString()+")";
+  public toTexString(noParens:boolean):string{
+    let ret = "{\\bf let}~"+this.boundval.toTexString(false)+" = "+this.left.toTexString(true)+"~{\\bf in}~"+this.right.toTexString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
-  public getRedexes(typed:boolean,etaAllowed:boolean,noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex[]{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
 
     // (let)
@@ -1539,12 +1444,6 @@ class Let extends Expression{
     let contentExpr:Expression = parseSymbols(content,typed);
     let restExpr:Expression = parseSymbols(tokens,typed);
     return new Let(boundval,contentExpr,restExpr);
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.boundval.resetTopLevel();
-    this.left.resetTopLevel();
-    this.right.resetTopLevel();
   }
   public extractMacros():Expression{
     return new Let(this.boundval,this.left.extractMacros(),this.right.extractMacros());
@@ -1573,8 +1472,10 @@ class Case extends Expression{
     if (this.freevals!==undefined) return this.freevals;
     else return Variable.union(this.state.getFV(),this.ifNil.getFV(),Variable.dif(this.ifElse.getFV(),[this.head,this.tail]));
   }
-  public toString():string{
-    return "([case]"+this.state+"[of][nil]->"+this.ifNil+" | "+this.head+"::"+this.tail+"->"+this.ifElse+")";
+  public toString(noParens:boolean):string{
+    let ret = "[case]"+this.state.toString(true)+"[of][nil]->"+this.ifNil.toString(true)+"|"+this.head.toString(true)+"::"+this.tail.toString(true)+"->"+this.ifElse.toString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
   public substitute(y:Variable, expr:Expression):Expression{
     let state = this.state.substitute(y,expr);
@@ -1616,22 +1517,24 @@ class Case extends Expression{
   public equalsAlpha(expr:Expression):boolean{
     return (expr instanceof Case) && (expr.state.equalsAlpha(this.state)) && (expr.ifNil.equalsAlpha(this.ifNil)) && (expr.head.equalsAlpha(this.head)) && (expr.tail.equalsAlpha(this.tail)) && (expr.ifElse.equalsAlpha(this.ifElse));
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (case)
     let t1 = TypeVariable.getNew();
     let lt1 = new TypeList(t1);
     this.head.type = t1;
     this.tail.type = lt1;
-    let nextS = this.state.getEquations(gamma,lt1);
-    let nextN = this.ifNil.getEquations(gamma,type);
-    let nextE = this.ifElse.getEquations(gamma.concat(this.head,this.tail),type);
+    let nextS = this.state.getEquations(gamma,lt1,true);
+    let nextN = this.ifNil.getEquations(gamma,type,true);
+    let nextE = this.ifElse.getEquations(gamma.concat(this.head,this.tail),type,true);
     let str = nextS.proofTree+nextN.proofTree+nextE.proofTree;
     str += "\\RightLabel{\\scriptsize(case)}\n";
-    str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(nextS.eqs.concat(nextN.eqs,nextE.eqs),str);
   }
-  public toTexString():string{
-    return "({\\bf case} "+this.state+" {\\bf of} {\\rm nil} \\Rightarrow "+this.ifNil.toTexString()+" | "+this.head.toTexString()+"::"+this.tail.toTexString()+" \\Rightarrow "+this.ifElse.toTexString()+")";
+  public toTexString(noParens:boolean):string{
+    let ret = "{\\bf case} "+this.state.toTexString(true)+" {\\bf of} {\\rm nil} \\Rightarrow "+this.ifNil.toTexString(true)+" | "+this.head.toTexString(true)+"::"+this.tail.toTexString(true)+" \\Rightarrow "+this.ifElse.toTexString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
   public getRedexes(typed:boolean,etaAllowed?:boolean):Redex[]{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
@@ -1644,21 +1547,13 @@ class Case extends Expression{
     } else {
       // (case1)
       return Redex.makeNext(
-        this.state.getRedexes(true,false,false),
+        this.state.getRedexes(true,false,true),
         "([case]",
         "[of][nil]->"+this.ifNil+" | "+this.head+"::"+this.tail+"->"+this.ifElse+")",
         "({\\bf case} ",
-        " {\\bf of} {\\rm nil} \\Rightarrow "+this.ifNil.toTexString()+" | "+this.head.toTexString()+"::"+this.tail.toTexString()+" \\Rightarrow "+this.ifElse.toTexString()+")",
+        " {\\bf of} {\\rm nil} \\Rightarrow "+this.ifNil.toTexString(true)+" | "+this.head.toTexString(true)+"::"+this.tail.toTexString(true)+" \\Rightarrow "+this.ifElse.toTexString(true)+")",
         (prev)=>(new Case(prev,this.ifNil,this.head,this.tail,this.ifElse)));
     }
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.state.resetTopLevel();
-    this.ifNil.resetTopLevel();
-    this.head.resetTopLevel();
-    this.tail.resetTopLevel();
-    this.ifElse.resetTopLevel();
   }
   public static parse(tokens:Symbol[],typed:boolean):Case{
     let state:Symbol[] = [];
@@ -1740,8 +1635,10 @@ class Fix extends Expression{
     }
     return this.freevals = ret;
   }
-  public toString():string{
-    return "([fix]"+this.boundval+"."+this.expr+")";
+  public toString(noParens:boolean):string{
+    let ret = "[fix]"+this.boundval.toString(false)+"."+this.expr.toString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
   public substitute(y:Variable, expr:Expression):Expression{
     if (this.boundval.equals(y)){
@@ -1770,19 +1667,21 @@ class Fix extends Expression{
       return n.equalsAlpha(m.substitute(x,y));
     }
   }
-  public getEquations(gamma:Variable[],type:Type):TypeResult{
+  public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (fix)
     this.boundval.type = type;
-    let next = this.expr.getEquations(gamma.concat(this.boundval),type);
+    let next = this.expr.getEquations(gamma.concat(this.boundval),type,true);
     let str = next.proofTree;
     str += "\\RightLabel{\\scriptsize(fix)}\n";
-    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString()+" : "+type.toTexString()+" $}\n";
+    str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(next.eqs,str);
   }
-  public toTexString():string{
-    return "({\\bf fix}~"+this.boundval.toTexString()+"."+this.expr.toTexString()+")";
+  public toTexString(noParens:boolean):string{
+    let ret = "{\\bf fix}~"+this.boundval.toTexString(true)+"."+this.expr.toTexString(true);
+    if (!noParens) ret = "("+ret+")";
+    return ret;
   }
-  public getRedexes(typed:boolean,etaAllowed:boolean,noParen:boolean):Redex[]{
+  public getRedexes(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex[]{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
 
     // (fix)
@@ -1798,11 +1697,6 @@ class Fix extends Expression{
 
     let contentExpr:Expression = parseSymbols(tokens,typed);
     return new Fix(boundval,contentExpr);
-  }
-  public resetTopLevel(){
-    this.isTopLevel = false;
-    this.boundval.resetTopLevel();
-    this.expr.resetTopLevel();
   }
   public extractMacros():Expression{
     return new Fix(this.boundval,this.expr.extractMacros());

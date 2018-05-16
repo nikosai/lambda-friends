@@ -47,10 +47,9 @@ export class LambdaFriends{
       redex = rs[0];
     }
     this.expr = redex.next;
-    this.expr.setRoot();
     this.curStep++;
     this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
-    let ret = this.curStep+": ("+redex.rule+") --> " + this.expr.toString();
+    let ret = this.curStep+": ("+redex.rule+") --> " + this.expr.toString(true);
     if (!this.hasNext()){
       ret += "    (normal form)\n";
       let n = this.parseChurchNum();
@@ -83,14 +82,14 @@ export class LambdaFriends{
   }
 
   public getProcessTex(){
-    return this.processTex+this.expr.toTexString()+(this.hasNext()?"":"\\not\\longrightarrow")+"\n\\end{eqnarray*}";
+    return this.processTex+this.expr.toTexString(true)+(this.hasNext()?"":"\\not\\longrightarrow")+"\n\\end{eqnarray*}";
   }
 
   public getType(typed:boolean):Type{
     if (!typed) return new TypeUntyped();
     TypeVariable.maxId=undefined;
     let target = TypeVariable.getNew();
-    let typeResult = this.expr.getEquations([],target);
+    let typeResult = this.expr.getEquations([],target,true);
     let eqs = typeResult.eqs;
     this.proofTree = typeResult.proofTree;
     let ret = TypeEquation.get(target, TypeEquation.solve(eqs));
@@ -132,7 +131,7 @@ export class LambdaFriends{
     //   ret += " and <"+name+">";
     // }
     // ret += " is defined as "+lf.expr+" : "+lf.type;
-    return {names:names,expr:lf.expr.toString(),type:lf.type.toString()};
+    return {names:names,expr:lf.expr.toString(true),type:lf.type.toString()};
   }
 
   // return: file input log
@@ -166,7 +165,7 @@ export class LambdaFriends{
     let map = Macro.getMap(typed);
     for (let key in map){
       let e = map[key];
-      str += "<"+e.name+"> is defined as "+e.expr+" : "+e.type+"\n";
+      str += "<"+e.name+"> is defined as "+e.expr.toString(true)+" : "+e.type+"\n";
     }
     return str;
   }
@@ -187,7 +186,7 @@ export class LambdaFriends{
   }
   
   public toString():string{
-    let ret = this.expr+" : "+this.type;
+    let ret = this.expr.toString(true)+" : "+this.type;
     if (!this.hasNext()){
       ret += "    (normal form)\n";
       let n = this.parseChurchNum();

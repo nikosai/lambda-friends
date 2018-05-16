@@ -14,7 +14,6 @@ export class ReductionNode{
   static nextId:number;
   constructor(expr:Expression, parent:ReductionNode){
     this.expr = expr.extractMacros();
-    this.expr.setRoot();
     this.parent = parent;
     this.id = ReductionNode.nextId;
     if (parent===null) this.depth = 0;
@@ -56,7 +55,7 @@ export class ReductionNode{
   }
 
   public toString():string{
-    return this.expr.toString();
+    return this.expr.toString(true);
   }
 
   static find(expr:Expression):ReductionNode{
