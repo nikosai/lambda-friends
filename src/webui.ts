@@ -376,18 +376,11 @@ function htmlEscape(str:string):string{
 }
 function refreshTex(){
   tabC.textContent = null;
-  let proc = "";
-  let proof = "";
-  if (curlf !== undefined) {
-    proc = curlf.getProcessTex();
-    tabC.appendChild(makeTexDiv("これまでの簡約過程", proc));
-  }
-  if (typed){
-    if (curlf !== undefined) {
-      proof = curlf.getProofTree();
-      tabC.appendChild(makeTexDiv("型付けの証明木", proof));
-    }
-  }
+  if (curlf === undefined) return;
+
+  tabC.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
+  if (typed) tabC.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
+  else tabC.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
 }
 function makeTexDiv(title:string, content:string){
   let p = document.createElement("p");

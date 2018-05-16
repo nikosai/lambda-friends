@@ -183,7 +183,7 @@ export class LambdaFriends{
   public toLMNtal():string{
     LambdaFriends.nextLinkID = 0;
     if (this.typed) return null;
-    else return "Result="+this.expr.toLMNtal();
+    else return "Result="+this.original.toLMNtal();
   }
   
   public toString():string{
