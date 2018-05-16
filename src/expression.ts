@@ -930,19 +930,7 @@ class LambdaAbstraction extends Expression{
       boundvals.push(expr.boundval.toTexString(false));
       expr = expr.expr;
     }
-    let str = "\\lambda "+boundvals.join("")+".";
-    if (expr instanceof Application){
-      let expr1 = expr.left;
-      let str1 = expr.right.toTexString(false);
-      while (expr1 instanceof Application){
-        str1 = expr1.right.toTexString(false)+str1;
-        expr1 = expr1.left;
-      }
-      str1 = expr1.toTexString(false) + str1;
-      str = str+str1;
-    } else {
-      str = str+expr.toTexString(false);
-    }
+    let str = "\\lambda "+boundvals.join("")+"."+expr.toTexString(true);
     if (!noParens) str = "("+str+")";
     return str;
   }
@@ -1037,13 +1025,7 @@ class Application extends Expression{
   }
 
   public toString(noParens:boolean):string{
-    let expr = this.left;
-    let str = this.right.toString(false);
-    while (expr instanceof Application){
-      str = expr.right+str;
-      expr = expr.left;
-    }
-    str = expr+str;
+    let str = this.left.toString(true)+this.right.toString(false);
     if (!noParens) str = "("+str+")";
     return str;
   }
@@ -1075,13 +1057,7 @@ class Application extends Expression{
     return new TypeResult(nextL.eqs.concat(nextR.eqs),str);
   }
   public toTexString(noParens:boolean):string{
-    let expr = this.left;
-    let str = this.right.toTexString(false);
-    while (expr instanceof Application){
-      str = expr.right.toTexString(false)+str;
-      expr = expr.left;
-    }
-    str = expr.toTexString(false)+str;
+    let str = this.left.toTexString(true)+this.right.toTexString(false);
     if (!noParens) str = "("+str+")";
     return str;
   }
@@ -1204,7 +1180,9 @@ class List extends Expression{
   }
 
   public toString(noParens:boolean):string{
-    return this.head.toString(false)+"::"+this.tail.toString(false);
+    let ret = this.head.toString(false)+"::"+this.tail.toString(true);
+    if (!noParens) ret = "("+ret+")"
+    return ret;
   }
 
   public getFV():Variable[]{
@@ -1235,7 +1213,9 @@ class List extends Expression{
     return new TypeResult(nextH.eqs.concat(nextT.eqs, new TypeEquation(lt,type)),str);
   }
   public toTexString(noParens:boolean):string{
-    return this.head.toTexString(false)+"::"+this.tail.toTexString(false);
+    let ret = this.head.toTexString(false)+"::"+this.tail.toTexString(true);
+    if (!noParens) ret = "("+ret+")"
+    return ret;
   }
 
   public getRedexes(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex[]{
@@ -1389,7 +1369,7 @@ class Let extends Expression{
     return this.freevals = Variable.union(ret, this.left.getFV());
   }
   public toString(noParens:boolean):string{
-    let ret = "[let]"+this.boundval.toString(true)+"[=]"+this.left.toString(true)+"[in]"+this.right.toString(true);
+    let ret = "[let]"+this.boundval.toString(true)+"="+this.left.toString(true)+"[in]"+this.right.toString(true);
     if (!noParens) ret = "("+ret+")";
     return ret;
   }
@@ -1493,7 +1473,7 @@ class Case extends Expression{
     else return Variable.union(this.state.getFV(),this.ifNil.getFV(),Variable.dif(this.ifElse.getFV(),[this.head,this.tail]));
   }
   public toString(noParens:boolean):string{
-    let ret = "[case]"+this.state.toString(true)+"[of][nil]->"+this.ifNil.toString(true)+" | "+this.head.toString(true)+"::"+this.tail.toString(true)+"->"+this.ifElse.toString(true);
+    let ret = "[case]"+this.state.toString(true)+"[of][nil]->"+this.ifNil.toString(true)+"|"+this.head.toString(true)+"::"+this.tail.toString(true)+"->"+this.ifElse.toString(true);
     if (!noParens) ret = "("+ret+")";
     return ret;
   }
