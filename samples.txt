@@ -1,0 +1,44 @@
+# This is a sample macro definition file of LambdaFriends.
+# Lines which start with '#' are regarded as comments.
+# These macros are designed for untyped lambda-calculus,
+# so some work correctly in typed mode, while others don't.
+
+# Note: Church numerals/booleans are supported as built-in macros.
+
+# Logical operators on Church booleans
+not    = \p.p<false><true>
+and    = \xy.xy<false>
+or     = \xy.x<true>y
+if     = \ctf.ctf
+
+# Arithmetic operators on Church numerals
+succ   = \n.\sz.s(nsz)
+add    = \mn.\sz.ms(nsz)
+sub    = \mn.n<pre>m
+mul    = \mn.\sz.m(ns)z
+exp    = \mn.nm
+is0    = \n.n(\x.<false>)<true>
+prefn  = \f.\p.<pair>(f(<fst>p))(<fst>p)
+pre    = \nfx.<snd>(n(<prefn>f)(<pair>xx))
+pre2   = \nfx.n(\p.\y.y(f(p(\tf.t)))(p(\tf.t)))(\p.pxx)(\tf.f)
+pre3   = \nfx.n(\g.\h.h(gf))(\u.x)(\u.u)
+eq     = <Y>(\f.\nm.(<or>(<is0>n)(<is0>m))(<and>(<is0>n)(<is0>m))(f(<pre>n)(<pre>m)))
+one?   = \n.n(\x.\p.p(\tf.f)(x(\tf.t)))(\p.p(\tf.t)(\tf.t))(\tf.f)
+
+# Pairs
+pair   = \xy.\p.pxy
+head   = <true>
+tail   = <false>
+fst    = \p.p<true>
+snd    = \p.p<false>
+
+# Combinators
+S      = \xyz.(xz)(yz)
+K      = \xy.x
+I      = \x.x
+Y      = \f.(\x.f(xx))(\x.f(xx)) # this is a kind of fixed-point combinator
+
+# Sample of recursion using Y combinator
+fact   = <Y>(\g.\n.<if>(<is0> n) <1> (<mul>n(g(<pre>n))))
+lt2 = \n.<or> (<is0> n) (<is0> (<pre> n))
+fib = <Y>(\g.\n.<if>(<lt2> n)n(<add>(g(<sub>n<1>))(g(<sub>n<2>))))
