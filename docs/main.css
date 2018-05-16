@@ -163,6 +163,24 @@ body {
   margin-top: 5px;
 }
 
+#tabC>p {
+  margin-bottom: 15px;
+  word-wrap: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+#tabC>h5 {
+  margin-top: 30px;
+}
+
+#tabC>p>sup {
+  vertical-align: super;
+  top: 0em;
+  font-size: 60%;
+  color: #00449e;
+}
+
 #tabC div.code {
   overflow-y: scroll;
   height: 100px;

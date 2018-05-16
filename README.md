@@ -14,7 +14,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + 「マクロ」タブで定義済みマクロの一覧を表示する
 * マクロ定義を書き並べたファイルを読み込める
   + [Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)との後方互換性あり。*.lm.txt（の形式のプレーンテキスト）を読み込める。
-* LaTeX形式で出力ができる（「TeX」タブ）
+* LaTeX形式で出力ができる（「変換」タブ）
   + 型推論の証明木（bussproofs形式、型付きのみ）
   + 簡約の途中経過
 * 入力履歴を補完できる
@@ -25,6 +25,10 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 * 簡約グラフの表示ができる
   + 「グラフ」タブで簡約グラフを表示
   + [Cytoscape.js](http://js.cytoscape.org/)を利用
+* LMNtalグラフに変換できる
+  + 「変換」タブ
+  + エンコーディング方式は[後述](#LMNtalコードへの変換について)
+  + 型なしのみ
 
 ## 基本的な入力形式
 * 「\」「¥」「λ」はすべて「λ」として解釈される
@@ -67,13 +71,18 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + `[case] M [of] [nil] -> M | x::x -> M`
 * 不動点演算子 `[fix]`
 
+## LMNtalコードへの変換について
+型なしモードで入力されたラムダ式を、[階層グラフ書き換え言語 LMNtal](http://www.ueda.info.waseda.ac.jp/lmntal/)の式に自動的に変換する。エンコーディング方式は以下の論文のものを採用。
+
+1. 上田和紀, 純粋λ計算の階層グラフ書換えへのエンコーディング, 第9回プログラミングおよびプログラミング言語ワークショップ論文集, 2007.
+
 ## これからやるべきこと
 ### 全体
 * リファクタリング
   + TypeVariable.maxIdの管理方法を見直す？
   + toStringのやり方見直し（isTopLevelの廃止）
 
-## CUIモードの動かし方（一応非推奨）
+## CUIモードの動かし方（deprecated）
 ```
 $ git clone https://github.com/nikosai/lambda-friends.git
 $ npm install
