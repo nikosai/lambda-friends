@@ -27,7 +27,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + [Cytoscape.js](http://js.cytoscape.org/)を利用
 * LMNtalグラフに変換できる
   + 「変換」タブ
-  + エンコーディング方式は後述
+  + エンコーディング方式は[後述](#LMNtalコードへの変換について)
   + 型なしのみ
 
 ## 基本的な入力形式
