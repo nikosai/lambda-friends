@@ -1069,7 +1069,7 @@ class Application extends Expression {
         return (this.left instanceof LambdaAbstraction);
     }
     toString(noParens) {
-        let str = this.left.toString(true) + this.right.toString(false);
+        let str = this.left.toString(this.left instanceof Application) + this.right.toString(false);
         if (!noParens)
             str = "(" + str + ")";
         return str;
@@ -1100,7 +1100,7 @@ class Application extends Expression {
         return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
     }
     toTexString(noParens) {
-        let str = this.left.toTexString(true) + this.right.toTexString(false);
+        let str = this.left.toTexString(this.left instanceof Application) + this.right.toTexString(false);
         if (!noParens)
             str = "(" + str + ")";
         return str;
@@ -1860,19 +1860,17 @@ class LambdaFriends {
         }
         return ret;
     }
-    // 連続nステップ最左簡約
-    continualReduction(step) {
-        if (step === undefined)
-            step = 100;
-        let strs = [];
-        for (let i = 0; i < step; i++) {
-            let result = this.reduction();
-            if (result === null)
-                break;
-            strs.push(result);
-        }
-        return strs.join("\n");
-    }
+    // 連続nステップ最左簡約(deprecated)
+    // public continualReduction(step?:number):string{
+    //   if (step === undefined) step = 100;
+    //   let strs:string[] = [];
+    //   for (let i=0; i<step; i++){
+    //     let result = this.reduction();
+    //     if (result === null) break;
+    //     strs.push(result);
+    //   }
+    //   return strs.join("\n");
+    // }
     hasNext() {
         return !this.expr.isNormalForm(this.typed, this.etaAllowed);
     }
@@ -2423,6 +2421,7 @@ let fileInput = document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = document.getElementById("clearMacroBtn");
 let tabC = document.getElementById("tabC");
+let tabA = document.getElementById("tabA");
 // let macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
 // let macroInput = <HTMLInputElement>document.getElementById("macroInput");
 // let submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
@@ -2553,7 +2552,7 @@ let submitInput = function () {
             curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed);
             outputLine(curlf.toString());
             if (typed)
-                outputNextLine(curlf.continualReduction(steps));
+                doContinual();
             showContinueBtn();
         }
         else {
@@ -2767,9 +2766,21 @@ function makeTexDiv(title, content) {
     return div;
 }
 function doContinual() {
-    outputNextLine(curlf.continualReduction(steps));
-    showContinueBtn();
-    refreshTex();
+    outputButtons.textContent = null;
+    let f = (n) => setTimeout(() => {
+        if (n === 0 || !curlf.hasNext()) {
+            showContinueBtn();
+            tabA.scrollTop = tabA.scrollHeight;
+            return;
+        }
+        let res = curlf.reduction();
+        outputNextLine(res);
+        tabA.scrollTop = tabA.scrollHeight;
+        refreshTex();
+        console.log(n);
+        f(n - 1);
+    }, 1);
+    f(steps === undefined ? 100 : steps);
 }
 function showContinueBtn() {
     // 「さらに続ける」ボタンを表示

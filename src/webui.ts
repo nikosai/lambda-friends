@@ -62,6 +62,7 @@ let fileInput = <HTMLInputElement>document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = <HTMLButtonElement>document.getElementById("clearMacroBtn");
 let tabC = document.getElementById("tabC");
+let tabA = document.getElementById("tabA");
 // let macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
 // let macroInput = <HTMLInputElement>document.getElementById("macroInput");
 // let submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
@@ -202,8 +203,7 @@ let submitInput = function(){
     if (ret===null) {
       curlf = new LambdaFriends(line,typed,etaAllowed);
       outputLine(curlf.toString());
-      if (typed)
-        outputNextLine(curlf.continualReduction(steps));
+      if (typed) doContinual();
       showContinueBtn();
     } else {
       let names = [].concat(ret.names);
@@ -412,9 +412,21 @@ function makeTexDiv(title:string, content:string){
   return div;
 }
 function doContinual(){
-  outputNextLine(curlf.continualReduction(steps));
-  showContinueBtn();
-  refreshTex();
+  outputButtons.textContent = null;
+  let f = (n:number)=>setTimeout(() => {
+    if (n===0 || !curlf.hasNext()) {
+      showContinueBtn();
+      tabA.scrollTop = tabA.scrollHeight;
+      return;
+    }
+    let res = curlf.reduction();
+    outputNextLine(res);
+    tabA.scrollTop = tabA.scrollHeight;
+    refreshTex();
+    console.log(n);
+    f(n-1);
+  }, 1);
+  f(steps===undefined?100:steps);
 }
 function showContinueBtn(){
   // 「さらに続ける」ボタンを表示
