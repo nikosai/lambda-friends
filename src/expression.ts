@@ -1025,7 +1025,7 @@ class Application extends Expression{
   }
 
   public toString(noParens:boolean):string{
-    let str = this.left.toString(true)+this.right.toString(false);
+    let str = this.left.toString(this.left instanceof Application)+this.right.toString(false);
     if (!noParens) str = "("+str+")";
     return str;
   }
@@ -1057,7 +1057,7 @@ class Application extends Expression{
     return new TypeResult(nextL.eqs.concat(nextR.eqs),str);
   }
   public toTexString(noParens:boolean):string{
-    let str = this.left.toTexString(true)+this.right.toTexString(false);
+    let str = this.left.toTexString(this.left instanceof Application)+this.right.toTexString(false);
     if (!noParens) str = "("+str+")";
     return str;
   }

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
-declare var require: any;
+declare let require: any;
 
 export class CUI{
   mainFunc: Function;
@@ -32,7 +32,11 @@ export class CUI{
           return;
         }
         try{
-          console.log(this.lf.continualReduction(this.steps));
+          for (let i=0; i<this.steps; i++){
+            let res = this.lf.reduction();
+            if (res === null) break;
+            console.log(res);
+          }
           if (!this.lf.hasNext()) this.lf = undefined;
           else {
             process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
@@ -45,7 +49,7 @@ export class CUI{
       }
       if (line===""){}
       else if (line.startsWith(":")){
-        var cmds = line.replace(":","").trim().split(/\s+/g);
+        let cmds = line.replace(":","").trim().split(/\s+/g);
         switch (cmds[0]){
           case "q":
             process.exit(0);
@@ -64,14 +68,14 @@ export class CUI{
             console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
             break;
           case "s":
-            var new_s = parseInt(cmds[1]);
+            let new_s = parseInt(cmds[1]);
             if (!isNaN(new_s)){
               this.steps = new_s;
             }
             console.log("Continuation steps: "+this.steps);
             break;
           case "l":
-            var file = cmds[1];
+            let file = cmds[1];
             if (file === undefined){
               console.log("Command Usage = :l <filename>");
               break;
@@ -115,9 +119,13 @@ export class CUI{
         }
       } else {
         try{
-          var lf = new LambdaFriends(line,this.typed,this.etaAllowed);
+          let lf = new LambdaFriends(line,this.typed,this.etaAllowed);
           console.log(lf.toString());
-          console.log(lf.continualReduction(this.steps));
+          for (let i=0; i<this.steps; i++){
+            let res = lf.reduction();
+            if (res === null) break;
+            console.log(res);
+          }
           if (lf.hasNext()){
             this.lf = lf;
             process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
@@ -143,7 +151,7 @@ export class CUI{
     if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
     try{
       fs.statSync(file);
-      var lines = fs.readFileSync(file,"utf8");
+      let lines = fs.readFileSync(file,"utf8");
       console.log(lines);
     }catch(e){
       console.log("File Not Found: "+file);
