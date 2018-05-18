@@ -1860,17 +1860,6 @@ class LambdaFriends {
         }
         return ret;
     }
-    // 連続nステップ最左簡約(deprecated)
-    // public continualReduction(step?:number):string{
-    //   if (step === undefined) step = 100;
-    //   let strs:string[] = [];
-    //   for (let i=0; i<step; i++){
-    //     let result = this.reduction();
-    //     if (result === null) break;
-    //     strs.push(result);
-    //   }
-    //   return strs.join("\n");
-    // }
     hasNext() {
         return !this.expr.isNormalForm(this.typed, this.etaAllowed);
     }
