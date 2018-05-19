@@ -47,9 +47,15 @@ export class LambdaFriends{
       redex = rs[0];
     }
     this.expr = redex.next;
-    this.curStep++;
-    this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
-    let ret = this.curStep+": ("+redex.rule+") --> " + this.expr.toString(true);
+    this.processTex += redex.toTexString();
+    let ret;
+    if (redex.type === "macro"){
+      this.processTex += " \\\\\n&\\equiv& ";
+      ret = "-: (macro) = " + this.expr.toString(true);
+    } else {
+      this.processTex += " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
+      ret = ++this.curStep+": ("+redex.rule+") --> " + this.expr.toString(true);
+    }
     if (!this.hasNext()){
       ret += "    (normal form)\n";
       let n = this.parseChurchNum();
