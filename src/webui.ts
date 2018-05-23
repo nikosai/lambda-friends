@@ -390,12 +390,12 @@ function doContinual(){
   let f = (n:number)=>setTimeout(() => {
     if (n===0 || !curlf.hasNext()) {
       showContinueBtn();
-      tabA.scrollTop = tabA.scrollHeight;
+      tabA.scrollTop = oel.offsetHeight-15;
       return;
     }
     let res = curlf.reduction();
     outputNextLine(res);
-    tabA.scrollTop = tabA.scrollHeight;
+    tabA.scrollTop = oel.offsetHeight-15;
     refreshTex();
     f(n-1);
   }, 1);
@@ -430,6 +430,7 @@ function showContinueBtn(){
     b.onclick = function(){
       outputNextLine(curlf.reduction(r));
       showContinueBtn();
+      tabA.scrollTop = oel.offsetHeight-15;
       refreshTex();
     }
     div.appendChild(b);

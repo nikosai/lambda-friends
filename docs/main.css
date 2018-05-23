@@ -86,6 +86,11 @@ body {
   line-height: 1.6em;
 }
 
+#tabA {
+  overflow-x: scroll;
+  white-space: nowrap;
+}
+
 #output-group li>a {
   background-color: inherit;
 }
@@ -110,6 +115,7 @@ body {
 }
 #outputBtns {
   margin-bottom: 20px;
+  white-space: initial;
 }
 
 #outputBtns *{

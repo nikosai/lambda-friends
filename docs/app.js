@@ -249,21 +249,24 @@ function makeChurchNum(n, typed) {
     }
     return makeAST(str + content, typed);
 }
-function makeTerms(vs, depth) {
-    let ret = [].concat(vs);
-    if (depth === 0)
+function makeTerms(depth) {
+    return sub([new Variable("X")], depth);
+    function sub(vs, depth) {
+        let ret = [].concat(vs);
+        if (depth === 0)
+            return ret;
+        let res = sub(vs, depth - 1);
+        // Application
+        for (let i = 0; i < res.length; i++)
+            for (let j = 0; j < res.length; j++)
+                ret.push(new Application(res[i], res[j]));
+        // Lambda Abstraction
+        let newVar = Variable.getNew(vs);
+        let res1 = sub(vs.concat(newVar), depth - 1);
+        for (let r of res1)
+            ret.push(new LambdaAbstraction(newVar, r));
         return ret;
-    let res = makeTerms(vs, depth - 1);
-    // Application
-    for (let i = 0; i < res.length; i++)
-        for (let j = 0; j < res.length; j++)
-            ret.push(new Application(res[i], res[j]));
-    // Lambda Abstraction
-    let newVar = Variable.getNew(vs);
-    let res1 = makeTerms(vs.concat(newVar), depth - 1);
-    for (let r of res1)
-        ret.push(new LambdaAbstraction(newVar, r));
-    return ret;
+    }
 }
 exports.makeTerms = makeTerms;
 function htmlEscape(str) {
@@ -1768,7 +1771,6 @@ class Fix extends Expression {
 },{"./error":1,"./lambda-friends":4,"./type":5}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const expression_1 = require("./expression");
 const error_1 = require("./error");
 const lambda_friends_1 = require("./lambda-friends");
 class GraphNode {
@@ -1794,27 +1796,31 @@ class GraphNode {
             let cs2 = [].concat(n2.children);
             let ret = true;
             for (let c1 of n1.children) {
-                let flag = false;
-                for (let i = 0; i < cs2.length; i++) {
-                    let c2 = cs2[i];
-                    for (let c of closed) {
-                        if (c.n1.id === c1.id) {
-                            flag = true;
-                            if (!(c.n2.id === c2.id)) {
-                                ret = false;
-                            }
-                            break;
-                        }
-                    }
-                    if (flag)
-                        break;
-                    if (sub(c1, c2, closed)) {
-                        flag = true;
-                        cs2.splice(i, 1);
+                let pair = undefined;
+                for (let c of closed) {
+                    if (c.n1.id === c1.id) {
+                        pair = c;
                         break;
                     }
                 }
-                if (!flag) {
+                let found = false;
+                for (let i = 0; i < cs2.length; i++) {
+                    let c2 = cs2[i];
+                    if (pair === undefined) {
+                        if (sub(c1, c2, closed)) {
+                            cs2.splice(i, 1);
+                            found = true;
+                            break;
+                        }
+                    }
+                    else {
+                        if (pair.n2.id === c2.id) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
                     ret = false;
                     break;
                 }
@@ -1923,7 +1929,7 @@ class ReductionNode extends GraphNode {
     visit() {
         if (this.isNormalForm)
             return { nodes: [], edges: [] };
-        let rs = this.expr.getRedexes(this.info.typed, this.info.etaAllowed, true).sort(expression_1.Redex.compare);
+        let rs = this.expr.getRedexes(this.info.typed, this.info.etaAllowed, true);
         let ans;
         ans = { nodes: [], edges: [] };
         for (let r of rs) {
@@ -1954,7 +1960,7 @@ class ReductionNode extends GraphNode {
 }
 exports.ReductionNode = ReductionNode;
 
-},{"./error":1,"./expression":2,"./lambda-friends":4,"fs":8}],4:[function(require,module,exports){
+},{"./error":1,"./lambda-friends":4,"fs":8}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
@@ -2028,7 +2034,7 @@ class LambdaFriends {
             return null;
         }
         let t = this.curNodes.shift();
-        if (maxDepth && t.depth >= maxDepth) {
+        if (maxDepth !== undefined && t.depth >= maxDepth) {
             // 限界深度に到達
             this.curNodes.push(t);
             return null;
@@ -2916,12 +2922,12 @@ function doContinual() {
     let f = (n) => setTimeout(() => {
         if (n === 0 || !curlf.hasNext()) {
             showContinueBtn();
-            tabA.scrollTop = tabA.scrollHeight;
+            tabA.scrollTop = oel.offsetHeight - 15;
             return;
         }
         let res = curlf.reduction();
         outputNextLine(res);
-        tabA.scrollTop = tabA.scrollHeight;
+        tabA.scrollTop = oel.offsetHeight - 15;
         refreshTex();
         f(n - 1);
     }, 1);
@@ -2957,6 +2963,7 @@ function showContinueBtn() {
         b.onclick = function () {
             outputNextLine(curlf.reduction(r));
             showContinueBtn();
+            tabA.scrollTop = oel.offsetHeight - 15;
             refreshTex();
         };
         div.appendChild(b);
