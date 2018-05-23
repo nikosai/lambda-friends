@@ -51,30 +51,37 @@ export class CUI{
       else if (line.startsWith(":")){
         let cmds = line.replace(":","").trim().split(/\s+/g);
         switch (cmds[0]){
-          case "q":
+          case "q":{
             process.exit(0);
             return;
+          }
           case "?":
+          case "help":
+          case "h":{
             CUI.fileMes("mes/help.txt");
             break;
-          case "t":
+          }
+          case "t":{
             if (cmds[1]==="y") this.typed = true;
             else if (cmds[1]==="n") this.typed = false;
             console.log("Current setting: "+(this.typed?"Typed":"Untyped"));
             break;
-          case "e":
+          }
+          case "e":{
             if (cmds[1]==="y") this.etaAllowed = true;
             else if (cmds[1]==="n") this.etaAllowed = false;
             console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
             break;
-          case "s":
+          }
+          case "s":{
             let new_s = parseInt(cmds[1]);
             if (!isNaN(new_s)){
               this.steps = new_s;
             }
             console.log("Continuation steps: "+this.steps);
             break;
-          case "l":
+          }
+          case "l":{
             let file = cmds[1];
             if (file === undefined){
               console.log("Command Usage = :l <filename>");
@@ -111,11 +118,14 @@ export class CUI{
             }
             console.log();
             break;
-          case "m":
+          }
+          case "m":{
             console.log(LambdaFriends.getMacroList(this.typed));
             break;
-          default:
+          }
+          default:{
             console.log("Undefined command: "+line);
+          }
         }
       } else {
         try{

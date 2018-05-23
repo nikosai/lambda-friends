@@ -1,5 +1,6 @@
-import { Expression, Macro, makeAST, Redex } from "./expression";
+import { Expression, Macro, makeAST, Redex, makeTerms } from "./expression";
 import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
+import { ReductionNode } from "./graph";
 
 export class LambdaFriends{
   expr:Expression;
@@ -10,6 +11,8 @@ export class LambdaFriends{
   processTex:string;
   original:Expression;
   etaAllowed:boolean;
+  root:ReductionNode;
+  curNodes:ReductionNode[];
   static nextLinkID:number;
   constructor(str:string,typed:boolean,etaAllowed:boolean){
     let l = str.split("#")[0].trim();
@@ -33,6 +36,8 @@ export class LambdaFriends{
     this.etaAllowed = etaAllowed;
     this.processTex = "\\begin{eqnarray*}\n&& ";
     this.curStep = 0;
+    this.root = ReductionNode.makeRoot(this.expr,this.typed,this.etaAllowed);
+    this.curNodes = [this.root];
   }
 
   public getRedexes(){
@@ -67,8 +72,32 @@ export class LambdaFriends{
     return ret;
   }
 
+  // グラフのノードを新たに1つ展開する（限界深度を指定してもよい）
+  public deepen(maxDepth?:number):{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]}{
+    if (this.curNodes.length===0){
+      // 展開完了
+      return null;
+    }
+    let t = this.curNodes.shift();
+    if (maxDepth && t.depth>=maxDepth){
+      // 限界深度に到達
+      this.curNodes.push(t);
+      return null;
+    }
+    let ret = t.visit();
+    for (let n of ret.nodes){
+      this.curNodes.push(n);
+    }
+    return ret;
+  }
+
   public hasNext():boolean{
     return !this.expr.isNormalForm(this.typed,this.etaAllowed);
+  }
+
+  // 未展開のノードがまだあるか
+  public hasNodes():boolean{
+    return this.curNodes.length>0;
   }
 
   public getProofTree(){

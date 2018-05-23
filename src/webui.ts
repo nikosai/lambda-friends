@@ -202,6 +202,9 @@ let submitInput = function(){
     let ret = LambdaFriends.parseMacroDef(line,typed);
     if (ret===null) {
       curlf = new LambdaFriends(line,typed,etaAllowed);
+      graphClear();
+      cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
+      makeLayout();
       outputLine(curlf.toString());
       if (typed) doContinual();
       showContinueBtn();
@@ -250,58 +253,25 @@ document.getElementById("input").onkeydown = function(e){
     e.preventDefault();
   }
 }
-let curNodes:ReductionNode[] = [];
 let graphStop:boolean = false;
 let graphDepth:number;
 startGraph.onclick = function(){
-  cy.resize();
   makeLayout();
-  let line = input.value;
-  if (line!==""){
-    history.unshift(line);
-    historyNum = 0;
-    workspace = [].concat(history);
-    workspace.unshift("");
-    line = line.split("#")[0];
-    line = line.trim();
-    input.value = "";
-    let root:ReductionNode;
-    try{
-      if (LambdaFriends.parseMacroDef(line,typed)!==null) return;
-      graphClear();
-      ReductionNode.init(typed,etaAllowed);
-      root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
-    }catch(e){
-      alert(e.toString());
-      console.log(e);
-      return;
-    }
-    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString()}, classes:(root.isNormalForm?"goal":"")});
-    makeLayout();
-    curNodes = [root];
-  }
+  if (curlf === undefined) return;
   graphStop = false;
   let f = () => setTimeout(()=>{
-    if (graphStop || curNodes.length===0){
+    if (graphStop){
       makeLayout();
       return;
     }
-    let t = curNodes.shift();
-    if (t.depth>=(graphDepth===undefined?10:graphDepth)){
-      curNodes.push(t);
-      makeLayout();
-      return;
-    }
-    let ret = t.visit();
+    let ret = curlf.deepen(graphDepth);
     if (ret===null) {
-      f();
       makeLayout();
       return;
     }
     let ans:any[] = [];
     for (let n of ret.nodes){
-      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString()}, classes:(n.isNormalForm?"goal":"")});
-      curNodes.push(n);
+      ans.push({group: "nodes", data: {id: ""+n.id, label:""+n.toString()}, classes:(n.isNormalForm?"goal":"")});
     }
     for (let e of ret.edges){
       ans.push({group: "edges", data: {source:e.from.id.toString(),target:e.to.id.toString()}});
@@ -324,6 +294,10 @@ maxDepth.addEventListener("change",function(){
   } else {
     graphDepth = undefined;
   }
+});
+
+tabDbtn.addEventListener("click",()=>{
+  setTimeout(makeLayout,10);
 });
 
 // let submitMacro = function(){
@@ -423,7 +397,6 @@ function doContinual(){
     outputNextLine(res);
     tabA.scrollTop = tabA.scrollHeight;
     refreshTex();
-    console.log(n);
     f(n-1);
   }, 1);
   f(steps===undefined?100:steps);
@@ -466,6 +439,7 @@ function graphClear(){
   cy.remove("*");
 }
 function makeLayout(){
+  cy.resize();
   cy.elements().makeLayout({
     name: "dagre",
     nodeSpacing: 5,
