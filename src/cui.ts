@@ -49,8 +49,9 @@ export class CUI{
       }
       if (line===""){}
       else if (line.startsWith(":")){
-        let cmds = line.replace(":","").trim().split(/\s+/g);
-        switch (cmds[0]){
+        let cmd = line.replace(":","").split(/\s+/)[0];
+        let arg = line.replace(/^:.+?\s/,"").trim();
+        switch (cmd){
           case "q":{
             process.exit(0);
             return;
@@ -62,19 +63,19 @@ export class CUI{
             break;
           }
           case "t":{
-            if (cmds[1]==="y") this.typed = true;
-            else if (cmds[1]==="n") this.typed = false;
+            if (arg==="y") this.typed = true;
+            else if (arg==="n") this.typed = false;
             console.log("Current setting: "+(this.typed?"Typed":"Untyped"));
             break;
           }
           case "e":{
-            if (cmds[1]==="y") this.etaAllowed = true;
-            else if (cmds[1]==="n") this.etaAllowed = false;
+            if (arg==="y") this.etaAllowed = true;
+            else if (arg==="n") this.etaAllowed = false;
             console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
             break;
           }
           case "s":{
-            let new_s = parseInt(cmds[1]);
+            let new_s = parseInt(arg);
             if (!isNaN(new_s)){
               this.steps = new_s;
             }
@@ -82,7 +83,7 @@ export class CUI{
             break;
           }
           case "l":{
-            let file = cmds[1];
+            let file = arg;
             if (file === undefined){
               console.log("Command Usage = :l <filename>");
               break;
@@ -117,6 +118,16 @@ export class CUI{
               }
             }
             console.log();
+            break;
+          }
+          case "g":{
+            try {
+              let ret = LambdaFriends.graph2LF(arg);
+              if (ret===null) console.log("not found");
+              else console.log("Found: "+ret.expr.toString(true));
+            } catch (e){
+              console.log(e.toString());
+            }
             break;
           }
           case "m":{

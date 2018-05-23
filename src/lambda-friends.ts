@@ -1,6 +1,6 @@
 import { Expression, Macro, makeAST, Redex, makeTerms } from "./expression";
 import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
-import { ReductionNode } from "./graph";
+import { ReductionNode, GraphNode } from "./graph";
 
 export class LambdaFriends{
   expr:Expression;
@@ -79,7 +79,7 @@ export class LambdaFriends{
       return null;
     }
     let t = this.curNodes.shift();
-    if (maxDepth && t.depth>=maxDepth){
+    if (maxDepth!==undefined && t.depth>=maxDepth){
       // 限界深度に到達
       this.curNodes.push(t);
       return null;
@@ -199,6 +199,10 @@ export class LambdaFriends{
 
   public static clearMacro(typed:boolean){
     return Macro.clear(typed);
+  }
+
+  public static graph2LF(str:string){
+    return GraphNode.search(GraphNode.parse(str));
   }
 
   // typedだったらとりあえずnullを返すことにする

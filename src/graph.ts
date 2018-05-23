@@ -1,5 +1,6 @@
 import { Redex, Expression } from "./expression";
-import { LambdaParseError, GraphParseError } from "./error";
+import { GraphParseError } from "./error";
+import { LambdaFriends } from "./lambda-friends";
 
 export class GraphNode{
   info:Info;
@@ -26,29 +27,33 @@ export class GraphNode{
     function sub(n1:GraphNode,n2:GraphNode,closed:{n1:GraphNode,n2:GraphNode}[]):boolean{
       if (n1.children.length !== n2.children.length) return false;
       closed.push({n1:n1,n2:n2});
-      let cs2 = [].concat(n2.children);
+      let cs2:GraphNode[] = [].concat(n2.children);
       let ret = true;
       for (let c1 of n1.children){
-        let flag = false;
-        for (let i=0; i<cs2.length; i++){
-          let c2 = cs2[i];
-          for (let c of closed){
-            if (c.n1.id === c1.id){
-              flag = true;
-              if (!(c.n2.id === c2.id)){
-                ret = false;
-              }
-              break;
-            }
-          }
-          if (flag) break;
-          if (sub(c1,c2,closed)){
-            flag = true;
-            cs2.splice(i,1);
+        let pair:{n1:GraphNode,n2:GraphNode} = undefined;
+        for (let c of closed){
+          if (c.n1.id === c1.id){
+            pair = c;
             break;
           }
         }
-        if (!flag) {
+        let found = false;
+        for (let i=0; i<cs2.length; i++){
+          let c2 = cs2[i];
+          if (pair===undefined){
+            if (sub(c1,c2,closed)){
+              cs2.splice(i,1);
+              found = true;
+              break;
+            }
+          }else{
+            if (pair.n2.id === c2.id){
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found){
           ret = false;
           break;
         }
@@ -104,6 +109,31 @@ export class GraphNode{
       return rets;
     }
   }
+
+  static search(n:GraphNode):LambdaFriends{
+    let filename = "graph_closure.csv";
+    let fs = require("fs");
+    try{
+      fs.statSync(filename);
+    }catch(e){
+      console.log("File Not Found: "+filename);
+      return;
+    }
+    let input:string = fs.readFileSync(filename,"utf8");
+    let lines = input.split("\n");
+    for (let line of lines){
+      let strs = line.split(",");
+      if (parseInt(strs[2])===n.info.nodes.length && parseInt(strs[3])===n.info.edges.length){
+        let lf = new LambdaFriends(strs[0],false,false);
+        // csvに書いてあるものは止まることを保証しておこう
+        while (true) if (lf.deepen()===null) break;
+        if (lf.root.equalsShape(n)){
+          return lf;
+        }
+      }
+    }
+    return null;
+  }
 }
 
 class Info{
@@ -134,7 +164,7 @@ export class ReductionNode extends GraphNode{
   
   visit():{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]}{
     if (this.isNormalForm) return {nodes:[],edges:[]};
-    let rs = this.expr.getRedexes(this.info.typed,this.info.etaAllowed,true).sort(Redex.compare);
+    let rs = this.expr.getRedexes(this.info.typed,this.info.etaAllowed,true);
     let ans:{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]};
     ans = {nodes:[],edges:[]};
     for (let r of rs){

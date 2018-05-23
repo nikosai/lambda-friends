@@ -4,6 +4,21 @@ import { makeTerms } from "./expression";
 import { GraphNode } from "./graph";
 declare let require: any;
 
+// let lf1 = new LambdaFriends("(\\a.aa)(\\a.aa)(\\a.(\\b.a)a)",false,false);
+// let lf2 = new LambdaFriends("(\\a.a)((\\a.aa)(\\a.aa))",false,false);
+
+// for (let i=0; i<50; i++){
+//   if (lf1.deepen()===null) break;
+// }
+// for (let i=0; i<50; i++){
+//   if (lf2.deepen()===null) break;
+// }
+
+// console.log(lf1.root.equalsShape(lf2.root));
+
+outputInfo();
+// for (let i=0; i<6; i++) console.log(i+" : "+makeTerms(i).length)
+
 function graphParseTest(){
   let file = "in.txt";
   if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
@@ -17,34 +32,46 @@ function graphParseTest(){
   console.dir(GraphNode.parse(input));
 
   for (let i=0; i<10; i++){
-    let res = makeTerms([],i);
+    let res = makeTerms(i);
     console.log(i+": "+res.length);
   }
 }
 
 function outputInfo(){
-  let res = makeTerms([],5);
+  let res = makeTerms(4);
   let lfs:LambdaFriends[] = [];
   let timeout_count = 0;
+  let len = res.length;
+  console.error("makeTerms() is done!");
+  console.error("Result Length: "+len);
+  let cnt = 0;
   
   for (let r of res){
+    if (cnt%1000==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
     let lf = new LambdaFriends(r.toString(true),false,false);
-    for (let i=0; i<100; i++){
-      if (lf.deepen(100)===null) break;
+    for (let i=0; i<30; i++){
+      if (lf.deepen()===null) break;
     }
     if (lf.hasNodes()) timeout_count++;
     else lfs.push(lf);
+    cnt++;
   }
   console.log("Timeout: "+timeout_count);
 
   for (let i=0; i<lfs.length; i++){
     let lf = lfs[i];
     let c = 1;
+    let lflen = lf.expr.toString(true).length;
     
     for (let j=i+1; j<lfs.length; j++){
       let lf1 = lfs[j];
       if (lf.root.equalsShape(lf1.root)) {
         // ret.push(lf1.expr.toString(true));
+        let lf1len = lf1.expr.toString(true).length;
+        if (lf1len < lflen){
+          lf = lf1;
+          lflen = lf1len;
+        }
         lfs.splice(j,1);
         j--;
         c++;
@@ -58,7 +85,7 @@ function outputInfo(){
 }
 
 function test(){
-  let res = makeTerms([],5);
+  let res = makeTerms(4);
   let c1 = 0;
   for (let r of res){
     let lf = new LambdaFriends(r.toString(true),false,false);

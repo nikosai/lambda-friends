@@ -155,19 +155,23 @@ function makeChurchNum(n:number,typed:boolean):Expression{
   return makeAST(str+content,typed);
 }
 
-export function makeTerms(vs:Variable[], depth:number):Expression[]{
-  let ret:Expression[] = [].concat(vs);
-  if (depth === 0) return ret;
-  let res = makeTerms(vs,depth-1);
-  // Application
-  for (let i=0; i<res.length; i++)
-    for (let j=0; j<res.length; j++)
-      ret.push(new Application(res[i],res[j]));
-  // Lambda Abstraction
-  let newVar = Variable.getNew(vs);
-  let res1 = makeTerms(vs.concat(newVar),depth-1);
-  for (let r of res1) ret.push(new LambdaAbstraction(newVar,r));
-  return ret;
+
+export function makeTerms(depth:number):Expression[]{
+  return sub([new Variable("X")],depth);
+  function sub(vs:Variable[], depth:number):Expression[]{
+    let ret:Expression[] = [].concat(vs);
+    if (depth === 0) return ret;
+    let res = sub(vs,depth-1);
+    // Application
+    for (let i=0; i<res.length; i++)
+      for (let j=0; j<res.length; j++)
+        ret.push(new Application(res[i],res[j]));
+    // Lambda Abstraction
+    let newVar = Variable.getNew(vs);
+    let res1 = sub(vs.concat(newVar),depth-1);
+    for (let r of res1) ret.push(new LambdaAbstraction(newVar,r));
+    return ret;
+  }
 }
 
 function htmlEscape(str:string):string{

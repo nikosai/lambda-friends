@@ -64,6 +64,13 @@ class TexError extends LambdaFriendsError {
     }
 }
 exports.TexError = TexError;
+// GraphをParseする際の例外
+class GraphParseError extends LambdaFriendsError {
+    constructor(message) {
+        super("GraphParseError", message);
+    }
+}
+exports.GraphParseError = GraphParseError;
 
 },{}],2:[function(require,module,exports){
 "use strict";
@@ -1762,19 +1769,152 @@ class Fix extends Expression {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
-class ReductionNode {
-    constructor(expr, parent, info) {
+const error_1 = require("./error");
+const lambda_friends_1 = require("./lambda-friends");
+class GraphNode {
+    constructor(label, info) {
         this.children = [];
-        this.expr = expr.extractMacros();
-        this.parent = parent;
+        this.label = label;
         this.info = info;
-        this.id = info.nextId;
+        this.id = info.nextId++;
+        info.nodes.push(this);
+    }
+    toString() {
+        return this.label;
+    }
+    equalsShape(n) {
+        if (this.info.nodes.length !== n.info.nodes.length
+            || this.info.edges.length !== n.info.edges.length)
+            return false;
+        return sub(this, n, []);
+        function sub(n1, n2, closed) {
+            if (n1.children.length !== n2.children.length)
+                return false;
+            closed.push({ n1: n1, n2: n2 });
+            let cs2 = [].concat(n2.children);
+            let ret = true;
+            for (let c1 of n1.children) {
+                let flag = false;
+                for (let i = 0; i < cs2.length; i++) {
+                    let c2 = cs2[i];
+                    for (let c of closed) {
+                        if (c.n1.id === c1.id) {
+                            flag = true;
+                            if (!(c.n2.id === c2.id)) {
+                                ret = false;
+                            }
+                            break;
+                        }
+                    }
+                    if (flag)
+                        break;
+                    if (sub(c1, c2, closed)) {
+                        flag = true;
+                        cs2.splice(i, 1);
+                        break;
+                    }
+                }
+                if (!flag) {
+                    ret = false;
+                    break;
+                }
+            }
+            for (let i = 0; i < closed.length; i++) {
+                if (closed[i].n1.id === n1.id) {
+                    closed.splice(i, 1);
+                    return ret;
+                }
+            }
+            throw new Error("Unexpected Error");
+        }
+    }
+    static parse(str) {
+        let stmts = str.split(";");
+        let info = new Info([], [], null, null, 0);
+        let nodes = {};
+        for (let stmt of stmts) {
+            let strs = stmt.split("->");
+            let ps = str2nodes(strs[0]);
+            for (let i = 1; i < strs.length; i++) {
+                let cs = str2nodes(strs[i]);
+                for (let p of ps) {
+                    for (let c of cs) {
+                        info.edges.push({ from: p, to: c });
+                        p.children.push(c);
+                    }
+                }
+                ps = cs;
+            }
+        }
+        if (nodes["root"] === undefined)
+            throw new error_1.GraphParseError("there must be a 'root' node.");
+        return nodes["root"];
+        // input: " a, b, c "
+        function str2nodes(str) {
+            let strs = str.split(",");
+            let rets = [];
+            for (let t of strs) {
+                t = t.trim();
+                if (t === "")
+                    continue;
+                if (!(/^[a-z][a-z0-9]*$/.test(t)))
+                    throw new error_1.GraphParseError("the name '" + t + "' cannot be used as node name, must be [a-z][a-z0-9]*");
+                let n = nodes[t];
+                if (n === undefined) {
+                    n = nodes[t] = new GraphNode(t, info);
+                }
+                rets.push(n);
+            }
+            return rets;
+        }
+    }
+    static search(n) {
+        let filename = "graph_closure.csv";
+        let fs = require("fs");
+        try {
+            fs.statSync(filename);
+        }
+        catch (e) {
+            console.log("File Not Found: " + filename);
+            return;
+        }
+        let input = fs.readFileSync(filename, "utf8");
+        let lines = input.split("\n");
+        for (let line of lines) {
+            let strs = line.split(",");
+            if (parseInt(strs[2]) === n.info.nodes.length && parseInt(strs[3]) === n.info.edges.length) {
+                let lf = new lambda_friends_1.LambdaFriends(strs[0], false, false);
+                // csvに書いてあるものは止まることを保証しておこう
+                while (true)
+                    if (lf.deepen() === null)
+                        break;
+                if (lf.root.equalsShape(n)) {
+                    return lf;
+                }
+            }
+        }
+        return null;
+    }
+}
+exports.GraphNode = GraphNode;
+class Info {
+    constructor(nodes, edges, typed, etaAllowed, nextId) {
+        this.nodes = nodes;
+        this.edges = edges;
+        this.typed = typed;
+        this.etaAllowed = etaAllowed;
+        this.nextId = nextId;
+    }
+}
+class ReductionNode extends GraphNode {
+    constructor(expr, parent, info) {
+        super((expr = expr.extractMacros()).toString(true), info);
+        this.expr = expr;
+        this.parent = parent;
         if (parent === null)
             this.depth = 0;
         else
             this.depth = parent.depth + 1;
-        info.nextId++;
-        info.nodes.push(this);
         this.isNormalForm = this.expr.isNormalForm(info.typed, info.etaAllowed);
     }
     static makeRoot(expr, typed, etaAllowed) {
@@ -1803,9 +1943,6 @@ class ReductionNode {
         }
         return ans;
     }
-    toString() {
-        return this.expr.toString(true);
-    }
     find(expr) {
         for (let n of this.info.nodes) {
             if (n.expr.equalsAlpha(expr)) {
@@ -1814,68 +1951,10 @@ class ReductionNode {
         }
         return null;
     }
-    equals(n) {
-        return this.id === n.id;
-    }
-    equalsShape(n) {
-        if (this.info.nodes.length !== n.info.nodes.length
-            || this.info.edges.length !== n.info.edges.length)
-            return false;
-        return sub(this, n, []);
-        function sub(n1, n2, closed) {
-            if (n1.children.length !== n2.children.length)
-                return false;
-            closed.push({ n1: n1, n2: n2 });
-            let cs2 = [].concat(n2.children);
-            let ret = true;
-            for (let c1 of n1.children) {
-                let flag = false;
-                for (let i = 0; i < cs2.length; i++) {
-                    let c2 = cs2[i];
-                    for (let c of closed) {
-                        if (c.n1.equals(c1)) {
-                            flag = true;
-                            if (!(c.n2.equals(c2))) {
-                                ret = false;
-                            }
-                            break;
-                        }
-                    }
-                    if (flag)
-                        break;
-                    if (sub(c1, c2, closed)) {
-                        flag = true;
-                        cs2.splice(i, 1);
-                        break;
-                    }
-                }
-                if (!flag) {
-                    ret = false;
-                    break;
-                }
-            }
-            for (let i = 0; i < closed.length; i++) {
-                if (closed[i].n1.equals(n1)) {
-                    closed.splice(i, 1);
-                    return ret;
-                }
-            }
-            throw new Error("Unexpected Error");
-        }
-    }
 }
 exports.ReductionNode = ReductionNode;
-class Info {
-    constructor(nodes, edges, typed, etaAllowed, nextId) {
-        this.nodes = nodes;
-        this.edges = edges;
-        this.typed = typed;
-        this.etaAllowed = etaAllowed;
-        this.nextId = nextId;
-    }
-}
 
-},{"./expression":2}],4:[function(require,module,exports){
+},{"./error":1,"./expression":2,"./lambda-friends":4,"fs":8}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const expression_1 = require("./expression");
@@ -1942,14 +2021,14 @@ class LambdaFriends {
         }
         return ret;
     }
-    // グラフのノードを新たに1つ展開する（限界深度を指定）
+    // グラフのノードを新たに1つ展開する（限界深度を指定してもよい）
     deepen(maxDepth) {
         if (this.curNodes.length === 0) {
             // 展開完了
             return null;
         }
         let t = this.curNodes.shift();
-        if (t.depth >= maxDepth) {
+        if (maxDepth && t.depth >= maxDepth) {
             // 限界深度に到達
             this.curNodes.push(t);
             return null;
@@ -2066,6 +2145,9 @@ class LambdaFriends {
     static clearMacro(typed) {
         return expression_1.Macro.clear(typed);
     }
+    static graph2LF(str) {
+        return graph_1.GraphNode.search(graph_1.GraphNode.parse(str));
+    }
     // typedだったらとりあえずnullを返すことにする
     toLMNtal() {
         LambdaFriends.nextLinkID = 0;
@@ -2099,45 +2181,6 @@ class LambdaFriends {
     }
     static getNewLink() {
         return "R" + (LambdaFriends.nextLinkID++);
-    }
-    static test() {
-        let res = expression_1.makeTerms([], 4);
-        let lfs = [];
-        for (let r of res) {
-            let lf = new LambdaFriends(r.toString(true), false, false);
-            for (let i = 0; i < 30; i++) {
-                if (lf.deepen(10) === null)
-                    break;
-            }
-            if (lf.hasNodes())
-                console.log("Timeout: " + r.toString(true));
-            else
-                lfs.push(lf);
-        }
-        for (let i = 0; i < lfs.length; i++) {
-            let lf = lfs[i];
-            // let ret = [lf.expr.toString(true)];
-            console.log(lf.expr.toString(true));
-            for (let j = i + 1; j < lfs.length; j++) {
-                let lf1 = lfs[j];
-                if (lf.root.equalsShape(lf1.root)) {
-                    // ret.push(lf1.expr.toString(true));
-                    lfs.splice(j, 1);
-                    j--;
-                }
-            }
-            // console.log(ret);
-        }
-        // let c1 = 0;
-        // for (let r of res){
-        //   let lf = new LambdaFriends(r.toString(true),false,false);
-        //   for (let i=0; i<30; i++){
-        //     if (lf.deepen(10)===null) break;
-        //   }
-        //   if (lf.hasNodes()) c1++
-        //   else if (!lf.root.equalsShape(lf.root)) console.log(r.toString(true)+" : false");
-        // }
-        // console.log("d>10||s>30 : "+c1);
     }
 }
 exports.LambdaFriends = LambdaFriends;
@@ -2936,7 +2979,6 @@ function makeLayout() {
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 refreshMacroList();
-lambda_friends_1.LambdaFriends.test();
 
 },{"./lambda-friends":4,"micromodal":7}],7:[function(require,module,exports){
 (function (global, factory) {
@@ -3290,5 +3332,7 @@ var MicroModal = function () {
 return MicroModal;
 
 })));
+
+},{}],8:[function(require,module,exports){
 
 },{}]},{},[6]);
