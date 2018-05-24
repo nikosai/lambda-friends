@@ -1,6 +1,7 @@
 =============== Command Help ===============
   :?            - show this command help
   :l <filename> - load macros from textfile
+  :g <graph>    - reverse search from reduction graph
   :s            - show current continuation steps
   :s <number>   - set continuation steps
   :t            - show current Typed/Untyped 
