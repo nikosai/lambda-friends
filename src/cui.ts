@@ -49,8 +49,8 @@ export class CUI{
       }
       if (line===""){}
       else if (line.startsWith(":")){
-        let cmd = line.replace(":","").split(/\s+/)[0];
-        let arg = line.replace(/^:.+?\s/,"").trim();
+        let cmd = line.match(/^:\s*.+?(?=\s)/)[0].replace(/^:\s*/,"");
+        let arg = line.replace(/^:\s*.+?\s/,"").trim();
         switch (cmd){
           case "q":{
             process.exit(0);
@@ -125,6 +125,15 @@ export class CUI{
               let ret = LambdaFriends.graph2LF(arg);
               if (ret===null) console.log("not found");
               else console.log("Found: "+ret.expr.toString(true));
+            } catch (e){
+              console.log(e.toString());
+            }
+            break;
+          }
+          case "lmn":{
+            try {
+              let ret = LambdaFriends.lmntal2LF(arg);
+              console.log("Found: "+ret.expr.toString(true));
             } catch (e){
               console.log(e.toString());
             }

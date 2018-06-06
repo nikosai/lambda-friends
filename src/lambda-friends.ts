@@ -1,4 +1,4 @@
-import { Expression, Macro, makeAST, Redex, makeTerms } from "./expression";
+import { Expression, Macro, makeAST, Redex, makeTerms, parseLMNtal } from "./expression";
 import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 import { ReductionNode, GraphNode } from "./graph";
 
@@ -203,6 +203,10 @@ export class LambdaFriends{
 
   public static graph2LF(str:string){
     return GraphNode.search(GraphNode.parse(str));
+  }
+
+  public static lmntal2LF(str:string){
+    return new LambdaFriends(parseLMNtal(str).toString(true),false,false);
   }
 
   // typedだったらとりあえずnullを返すことにする
