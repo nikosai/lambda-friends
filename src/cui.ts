@@ -49,7 +49,7 @@ export class CUI{
       }
       if (line===""){}
       else if (line.startsWith(":")){
-        let cmd = line.match(/^:\s*.+?(?=\s)/)[0].replace(/^:\s*/,"");
+        let cmd = line.match(/^:\s*.+?(?=\s|$)/)[0].replace(/^:\s*/,"");
         let arg = line.replace(/^:\s*.+?\s/,"").trim();
         switch (cmd){
           case "q":{
