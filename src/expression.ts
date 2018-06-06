@@ -430,7 +430,6 @@ export abstract class Expression{
   public abstract getEquations(gamma:Variable[], type:Type, noParens:boolean):TypeResult;
   public abstract getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[];
   public abstract extractMacros():Expression;
-  public abstract copy():Expression;
 }
 
 // 終端記号（未解析）
@@ -468,9 +467,6 @@ class Symbol extends Expression{
   }
   public extractMacros():Expression{
     throw new ReductionError("Symbols must not appear in parsed Expression")
-  }
-  public copy():Symbol{
-    return new Symbol(this.name,this.className);
   }
 }
 
@@ -561,9 +557,6 @@ class Variable extends Symbol{
   public extractMacros():Expression{
     return this;
   }
-  public copy():Variable{
-    return new Variable(this.name);
-  }
   public toLMNtal():string{
     return "fv("+this.name+")";
   }
@@ -614,9 +607,6 @@ class ConstInt extends Const{
     this.value = value;
     this.type = new TypeInt();
   }
-  public copy():Const{
-    return new ConstInt(this.value);
-  }
 }
 
 // bool型定数 c^{bool}
@@ -627,9 +617,6 @@ class ConstBool extends Const{
     super(value.toString(), "ConstBool");
     this.value = value;
     this.type = new TypeBool();
-  }
-  public copy():ConstBool{
-    return new ConstBool(this.value);
   }
 }
 
@@ -716,9 +703,6 @@ class ConstOp extends Const{
         throw new LambdaParseError("Undefined function: "+funcName);
     }
   }
-  public copy():ConstOp{
-    return new ConstOp(this.name);
-  }
 }
 
 // 空リスト nil
@@ -754,9 +738,6 @@ class Nil extends Symbol{
   }
   public extractMacros():Expression{
     return this;
-  }
-  public copy():Nil{
-    return new Nil();
   }
 }
 
@@ -848,10 +829,6 @@ export class Macro extends Symbol{
   public extractMacros(){
     if (this.expr === undefined) return this;
     else return this.expr.extractMacros();
-  }
-  public copy():Macro{
-    if (this.expr === undefined) return new Macro(this.name,undefined,this.typed,this.type);
-    else return new Macro(this.name,this.expr.copy(),this.typed,this.type);
   }
   public toLMNtal():string{
     if (this.expr === undefined) return "fv("+this.name+")";
@@ -995,9 +972,6 @@ class LambdaAbstraction extends Expression{
   }
   public extractMacros():Expression{
     return new LambdaAbstraction(this.boundval,this.expr.extractMacros());
-  }
-  public copy():LambdaAbstraction{
-    return new LambdaAbstraction(this.boundval.copy(),this.expr.copy());
   }
   public toLMNtal():string{
     let ret = this.expr.toLMNtal().split("fv("+this.boundval.name+")");
@@ -1179,9 +1153,6 @@ class Application extends Expression{
   public extractMacros():Expression{
     return new Application(this.left.extractMacros(),this.right.extractMacros());
   }
-  public copy():Application{
-    return new Application(this.left.copy(),this.right.copy());
-  }
   public toLMNtal():string{
     return "apply("+this.left.toLMNtal()+","+this.right.toLMNtal()+")";
   }
@@ -1243,9 +1214,6 @@ class List extends Expression{
   }
   public extractMacros():Expression{
     return new List(this.head.extractMacros(),this.tail.extractMacros());
-  }
-  public copy():Expression{
-    return new List(this.head.copy(),this.tail.copy());
   }
 }
 
@@ -1361,9 +1329,6 @@ class If extends Expression{
   public extractMacros():Expression{
     return new If(this.state.extractMacros(),this.ifTrue.extractMacros(),this.ifFalse.extractMacros());
   }
-  public copy():Expression{
-    return new If(this.state.copy(),this.ifTrue.copy(),this.ifFalse.copy());
-  }
 }
 
 // let in
@@ -1466,9 +1431,6 @@ class Let extends Expression{
   }
   public extractMacros():Expression{
     return new Let(this.boundval,this.left.extractMacros(),this.right.extractMacros());
-  }
-  public copy():Expression{
-    return new Let(this.boundval.copy(),this.left.copy(),this.right.copy());
   }
 }
 
@@ -1630,9 +1592,6 @@ class Case extends Expression{
   public extractMacros():Expression{
     return new Case(this.state.extractMacros(),this.ifNil.extractMacros(),this.head,this.tail,this.ifElse.extractMacros());
   }
-  public copy():Expression{
-    return new Case(this.state.copy(),this.ifNil.copy(),this.head.copy(),this.tail.copy(),this.ifElse.copy());
-  }
 }
 
 // 不動点演算子 [fix] x.M
@@ -1719,8 +1678,5 @@ class Fix extends Expression{
   }
   public extractMacros():Expression{
     return new Fix(this.boundval,this.expr.extractMacros());
-  }
-  public copy():Expression{
-    return new Fix(this.boundval.copy(),this.expr.copy());
   }
 }
