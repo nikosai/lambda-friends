@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
-import { makeTerms } from "./expression";
+import { makeTerms, parseLMNtal } from "./expression";
 import { GraphNode } from "./graph";
 declare let require: any;
 
@@ -16,7 +16,8 @@ declare let require: any;
 
 // console.log(lf1.root.equalsShape(lf2.root));
 
-outputInfo();
+graphParseTest();
+// outputInfo();
 // for (let i=0; i<6; i++) console.log(i+" : "+makeTerms(i).length)
 
 function graphParseTest(){
@@ -28,13 +29,15 @@ function graphParseTest(){
     console.log("File Not Found: "+file);
     return;
   }
-  let input = fs.readFileSync(file,"utf8");
-  console.dir(GraphNode.parse(input));
+  let lines = fs.readFileSync(file,"utf8").split(/\n+/);
+  // console.dir(GraphNode.parse(input));
 
-  for (let i=0; i<10; i++){
-    let res = makeTerms(i);
-    console.log(i+": "+res.length);
-  }
+  // for (let i=0; i<10; i++){
+  //   let res = makeTerms(i);
+  //   console.log(i+": "+res.length);
+  // }
+  for (let line of lines)
+    console.log(parseLMNtal(line).toString(true))
 }
 
 function outputInfo(){
