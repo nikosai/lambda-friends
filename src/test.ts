@@ -47,9 +47,9 @@ function outputInfo(){
   let cnt = 0;
   
   for (let r of res){
-    if (cnt%1000==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
+    if (cnt%100==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
     let lf = new LambdaFriends(r.toString(true),false,false);
-    for (let i=0; i<30; i++){
+    for (let i=0; i<200; i++){
       if (lf.deepen()===null) break;
     }
     if (lf.hasNodes()) timeout_count++;

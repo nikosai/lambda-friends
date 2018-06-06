@@ -157,7 +157,7 @@ function makeChurchNum(n:number,typed:boolean):Expression{
 
 
 export function makeTerms(depth:number):Expression[]{
-  return sub([new Variable("X")],depth);
+  return sub([],depth);
   function sub(vs:Variable[], depth:number):Expression[]{
     let ret:Expression[] = [].concat(vs);
     if (depth === 0) return ret;
