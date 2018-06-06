@@ -9,3 +9,4 @@
   :e            - show whether eta-reduction is allowed
   :e <y/n>      - enable/disable eta-reduction
   :q            - close this interpreter
+  :lmn <code>   - translate LMNtal code to lambda-friends
