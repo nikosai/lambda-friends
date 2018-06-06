@@ -157,7 +157,7 @@ export function parseLMNtal(str:string):Expression{
     let res = str.match(/^.+?(?=\()/);
     if (res===null){
       let ret = map[str];
-      if (ret === null) throw new LambdaParseError("Malformed LMNtal Lambda Term. Unknown Token: "+str);
+      if (ret === undefined) throw new LambdaParseError("Malformed LMNtal Lambda Term. Unknown Token: "+str);
       return new Variable(ret);
     }
 
