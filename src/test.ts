@@ -36,8 +36,15 @@ function graphParseTest(){
   //   let res = makeTerms(i);
   //   console.log(i+": "+res.length);
   // }
-  for (let line of lines)
-    console.log(parseLMNtal(line).toString(true))
+  for (let line of lines){
+    let lf = new LambdaFriends(line,false,false);
+    console.log("Original: "+lf.expr.toString(true));
+    line = lf.toLMNtal().slice(5,-1);
+    console.log("toLMNtal: "+line);
+    lf = new LambdaFriends(parseLMNtal(line).toString(true),false,false);
+    console.log("ReParsed: "+lf.expr.toString(true));
+    console.log("ReLMNtal: "+lf.toLMNtal().slice(5,-1));
+  }
 }
 
 function outputInfo(){
