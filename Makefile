@@ -24,5 +24,8 @@ web: docs/app.js js/server.js
 test: js/test.js
 	node js/test.js
 
+graph_closure.csv: js/cui.js
+	node js/closure.js > graph_closure.csv
+
 clean:
 	-rm -rf js/*
