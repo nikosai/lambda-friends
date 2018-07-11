@@ -1,11 +1,11 @@
 import { LambdaFriends } from "./lambda-friends";
 import { makeTerms } from "./expression";
 
-outputInfo(4,100);
+outputInfo(5,100);
 
 function outputInfo(termDepth:number, graphDepth:number){
   let res = makeTerms(termDepth);
-  let lfs:LambdaFriends[] = [];
+  // let lfs:LambdaFriends[] = [];
   let timeout_count = 0;
   let len = res.length;
   console.error("====== Running outputInfo() ======");
@@ -15,6 +15,7 @@ function outputInfo(termDepth:number, graphDepth:number){
   console.error("Result Length   : "+len);
   let cnt = 0;
   
+  let results:{lf:LambdaFriends, c:number}[] = [];
   for (let r of res){
     if (cnt%100==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
     let lf = new LambdaFriends(r.toString(true),false,false);
@@ -22,38 +23,30 @@ function outputInfo(termDepth:number, graphDepth:number){
       if (lf.deepen()===null) break;
     }
     if (lf.hasNodes()) timeout_count++;
-    else lfs.push(lf);
+    else {
+      let lflen = lf.expr.toString(true).length;
+      let flag = false;
+      for (let r of results){
+        if (lf.root.equalsShape(r.lf.root)){
+          let rlen = r.lf.expr.toString(true).length;
+          if (rlen > lflen) r.lf = lf;
+          r.c++;
+          flag = true;
+          break;
+        }
+      }
+      if (!flag) results.push({lf:lf,c:1});
+    }
     cnt++;
   }
   console.error("Timeout: "+timeout_count);
-
-  let results:{expr:string, c:number, nodes:number, edges:number}[] = [];
-  for (let i=0; i<lfs.length; i++){
-    let lf = lfs[i];
-    let c = 1;
-    let lflen = lf.expr.toString(true).length;
-    
-    for (let j=i+1; j<lfs.length; j++){
-      let lf1 = lfs[j];
-      if (lf.root.equalsShape(lf1.root)) {
-        // ret.push(lf1.expr.toString(true));
-        let lf1len = lf1.expr.toString(true).length;
-        if (lf1len < lflen){
-          lf = lf1;
-          lflen = lf1len;
-        }
-        lfs.splice(j,1);
-        j--;
-        c++;
-      }
-    }
-    results.push({expr: lf.expr.toString(true), c: c, nodes: lf.root.info.nodes.length, edges: lf.root.info.edges.length});
-  }
   results.sort((a,b)=>{
-    if (a.nodes !== b.nodes) return a.nodes - b.nodes;
-    if (a.edges !== b.edges) return a.edges - b.edges;
+    if (a.lf.root.info.nodes.length !== b.lf.root.info.nodes.length)
+      return a.lf.root.info.nodes.length - b.lf.root.info.nodes.length;
+    if (a.lf.root.info.edges.length !== b.lf.root.info.edges.length)
+      return a.lf.root.info.edges.length - b.lf.root.info.edges.length;
     if (a.c !== b.c) return b.c - a.c;
     return 0;
   });
-  for (let r of results) console.log(r.expr+","+r.c+","+r.nodes+","+r.edges);
+  for (let r of results) console.log(r.lf.expr.toString(true)+","+r.c+","+r.lf.root.info.nodes.length+","+r.lf.root.info.edges.length);
 }
