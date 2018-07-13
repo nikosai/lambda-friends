@@ -7,6 +7,7 @@ export class LambdaFriends{
   typed:boolean;
   curStep: number;
   type:Type;
+  allowMultipleEdges:boolean;
   proofTree:string;
   processTex:string;
   original:Expression;
@@ -14,7 +15,7 @@ export class LambdaFriends{
   root:ReductionNode;
   curNodes:ReductionNode[];
   static nextLinkID:number;
-  constructor(str:string,typed:boolean,etaAllowed:boolean){
+  constructor(str:string,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
     let l = str.split("#")[0].trim();
     let names = [];
     while (true) {
@@ -34,9 +35,10 @@ export class LambdaFriends{
     }
     this.typed = typed;
     this.etaAllowed = etaAllowed;
+    this.allowMultipleEdges = allowMultipleEdges;
     this.processTex = "\\begin{eqnarray*}\n&& ";
     this.curStep = 0;
-    this.root = ReductionNode.makeRoot(this.expr,this.typed,this.etaAllowed);
+    this.root = ReductionNode.makeRoot(this.expr,this.typed,this.etaAllowed,this.allowMultipleEdges);
     this.curNodes = [this.root];
   }
 
@@ -143,7 +145,7 @@ export class LambdaFriends{
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     if (names.length===0) return null;
-    let lf = new LambdaFriends(l,typed,undefined); // ???
+    let lf = new LambdaFriends(l,typed,undefined,false); // ????
     for (let name of names){
       Macro.add(name, lf, typed);
     }
@@ -201,12 +203,12 @@ export class LambdaFriends{
     return Macro.clear(typed);
   }
 
-  public static graph2LF(str:string){
-    return GraphNode.search(GraphNode.parse(str));
+  public static graph2LF(str:string,allowMultipleEdges:boolean){
+    return GraphNode.search(GraphNode.parse(str),allowMultipleEdges);
   }
 
-  public static lmntal2LF(str:string){
-    return new LambdaFriends(parseLMNtal(str).toString(true),false,false);
+  public static lmntal2LF(str:string,allowMultipleEdges:boolean){
+    return new LambdaFriends(parseLMNtal(str).toString(true),false,false,allowMultipleEdges);
   }
 
   // typedだったらとりあえずnullを返すことにする

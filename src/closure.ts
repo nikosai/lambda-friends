@@ -1,9 +1,9 @@
 import { LambdaFriends } from "./lambda-friends";
 import { makeTerms } from "./expression";
 
-outputInfo(5,100);
+outputInfo(5,100,true);
 
-function outputInfo(termDepth:number, graphDepth:number){
+function outputInfo(termDepth:number, graphDepth:number, allowMultiEdges:boolean){
   let res = makeTerms(termDepth);
   // let lfs:LambdaFriends[] = [];
   let timeout_count = 0;
@@ -18,7 +18,7 @@ function outputInfo(termDepth:number, graphDepth:number){
   let results:{lf:LambdaFriends, c:number}[] = [];
   for (let r of res){
     if (cnt%100==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
-    let lf = new LambdaFriends(r.toString(true),false,false);
+    let lf = new LambdaFriends(r.toString(true),false,false,allowMultiEdges);
     for (let i=0; i<graphDepth; i++){
       if (lf.deepen()===null) break;
     }

@@ -22,7 +22,8 @@ export class GraphNode{
   // 簡約グラフの同型性判定
   equalsShape(n:GraphNode):boolean{
     if (this.info.nodes.length !== n.info.nodes.length
-      || this.info.edges.length !== n.info.edges.length) return false;
+      || this.info.edges.length !== n.info.edges.length
+      || this.info.allowMultipleEdges !== n.info.allowMultipleEdges) return false;
     return sub(this,n,[]);
 
     function sub(n1:GraphNode,n2:GraphNode,closed:{n1:GraphNode,n2:GraphNode}[]):boolean{
@@ -63,9 +64,11 @@ export class GraphNode{
     }
   }
 
+  // input: root -> a,b,c -> d; d -> e
+  // 多重辺が入力に存在する場合、自動で多重辺をオンにする
   static parse(str:string):GraphNode{
     let stmts = str.split(";");
-    let info = new Info([],[],null,null,0);
+    let info = new Info([],[],null,null,0,false);
     let nodes:{[key:string]:GraphNode}={};
     for (let stmt of stmts){
       let strs = stmt.split("->");
@@ -74,11 +77,11 @@ export class GraphNode{
         let cs = str2nodes(strs[i]);
         for (let p of ps){
           for (let c of cs){
+            if (info.hasEdge({from:p, to:c})) info.allowMultipleEdges = true;
             info.edges.push({from:p, to:c});
             p.children.push(c);
           }
         }
-          
         ps = cs;
       }
     }
@@ -105,7 +108,7 @@ export class GraphNode{
     }
   }
 
-  static search(n:GraphNode):LambdaFriends{
+  static search(n:GraphNode,allowMultipleEdges:boolean):LambdaFriends{
     let filename = "graph_closure.csv";
     let fs = require("fs");
     try{
@@ -119,7 +122,7 @@ export class GraphNode{
     for (let line of lines){
       let strs = line.split(",");
       if (parseInt(strs[2])===n.info.nodes.length && parseInt(strs[3])===n.info.edges.length){
-        let lf = new LambdaFriends(strs[0],false,false);
+        let lf = new LambdaFriends(strs[0],false,false,allowMultipleEdges);
         // csvに書いてあるものは止まることを保証しておこう
         while (true) if (lf.deepen()===null) break;
         if (lf.root.equalsShape(n)){
@@ -136,7 +139,16 @@ class Info{
   public edges:{from:GraphNode,to:GraphNode}[],
   public typed:boolean,
   public etaAllowed:boolean,
-  public nextId:number){}
+  public nextId:number,
+  public allowMultipleEdges:boolean){}
+  public hasEdge(edge:{from:GraphNode,to:GraphNode}):boolean{
+    for (let e of this.edges){
+      if (e.from.id===edge.from.id && e.to.id===edge.to.id){
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 export class ReductionNode extends GraphNode{
@@ -153,8 +165,8 @@ export class ReductionNode extends GraphNode{
     this.isNormalForm = this.expr.isNormalForm(info.typed,info.etaAllowed);
   }
 
-  static makeRoot(expr:Expression, typed:boolean, etaAllowed:boolean){
-    return new ReductionNode(expr,null,new Info([],[],typed,etaAllowed,0))
+  static makeRoot(expr:Expression, typed:boolean, etaAllowed:boolean,allowMultipleEdges:boolean){
+    return new ReductionNode(expr,null,new Info([],[],typed,etaAllowed,0,allowMultipleEdges));
   }
   
   visit():{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]}{
@@ -168,13 +180,17 @@ export class ReductionNode extends GraphNode{
         let n = new ReductionNode(r.next,this,this.info);
         this.children.push(n);
         ans.nodes.push(n);
-        ans.edges.push({from:this,to:n});
-        this.info.edges.push({from:this,to:n});
+        if (this.info.allowMultipleEdges || !this.info.hasEdge({from:this,to:n})){
+          ans.edges.push({from:this,to:n});
+          this.info.edges.push({from:this,to:n});
+        }
       }
       else {
         this.children.push(ret);
-        ans.edges.push({from:this,to:ret});
-        this.info.edges.push({from:this,to:ret});
+        if (this.info.allowMultipleEdges || !this.info.hasEdge({from:this,to:ret})){
+          ans.edges.push({from:this,to:ret});
+          this.info.edges.push({from:this,to:ret});
+        }
       }
     }
     return ans;

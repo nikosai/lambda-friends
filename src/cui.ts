@@ -9,6 +9,7 @@ export class CUI{
   steps: number;
   typed: boolean;
   etaAllowed: boolean;
+  allowMultipleEdges: boolean;
   lf: LambdaFriends;
 
   constructor(){
@@ -21,6 +22,7 @@ export class CUI{
     this.steps = 100;
     this.typed = false;
     this.etaAllowed = false;
+    this.allowMultipleEdges = false;
     this.mainFunc = (line:string)=>{
       line = line.split("#")[0];
       line = line.trim();
@@ -122,7 +124,7 @@ export class CUI{
           }
           case "g":{
             try {
-              let ret = LambdaFriends.graph2LF(arg);
+              let ret = LambdaFriends.graph2LF(arg,this.allowMultipleEdges);
               if (ret===null) console.log("not found");
               else console.log("Found: "+ret.expr.toString(true));
             } catch (e){
@@ -132,11 +134,17 @@ export class CUI{
           }
           case "lmn":{
             try {
-              let ret = LambdaFriends.lmntal2LF(arg);
+              let ret = LambdaFriends.lmntal2LF(arg,this.allowMultipleEdges);
               console.log("Found: "+ret.expr.toString(true));
             } catch (e){
               console.log(e.toString());
             }
+            break;
+          }
+          case "me":{
+            if (arg==="y") this.allowMultipleEdges = true;
+            else if (arg==="n") this.allowMultipleEdges = false;
+            console.log("Multiple-Edges are now "+(this.allowMultipleEdges?"allowed":"not allowed"));
             break;
           }
           case "m":{
@@ -149,7 +157,7 @@ export class CUI{
         }
       } else {
         try{
-          let lf = new LambdaFriends(line,this.typed,this.etaAllowed);
+          let lf = new LambdaFriends(line,this.typed,this.etaAllowed,this.allowMultipleEdges);
           console.log(lf.toString());
           for (let i=0; i<this.steps; i++){
             let res = lf.reduction();

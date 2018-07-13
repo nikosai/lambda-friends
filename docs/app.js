@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 // 例外の抽象クラス
@@ -80,11 +80,12 @@ const error_1 = require("./error");
 const lambda_friends_1 = require("./lambda-friends");
 // 字句解析
 function tokenize(str, typed) {
-    let strs = str.split(/\s*/).join("").split("");
+    let strs = str.split("");
     let tokens = [];
     while (strs.length > 0) {
-        let c = strs.shift();
-        if (c === "<") {
+        let c = strs.shift().trim();
+        if (c === "") { }
+        else if (c === "<") {
             // <macro>
             let content = "";
             while (true) {
@@ -240,6 +241,115 @@ function makeAST(str, typed) {
     return parseSymbols(tokenize(str, typed), typed);
 }
 exports.makeAST = makeAST;
+// Input : lambda(cp(L0,L1),lambda(L2,apply(apply(L1,L0),L2)))
+// Now   : lambda([L0,L1], lambda([L2],apply()))
+// Output: \xy.xxy
+function parseLMNtal(str) {
+    return parse(str, [], {});
+    function parse(str, usedVars, map) {
+        str = str.trim();
+        let res = str.match(/^.+?(?=\()/);
+        if (res === null) {
+            let ret = map[str];
+            if (ret === undefined)
+                throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. Unknown Token: " + str);
+            return new Variable(ret);
+        }
+        let atom = res[0].trim();
+        let args = parseArg(str.match(/\(.+$/)[0]);
+        switch (atom) {
+            case "lambda": {
+                if (args.length !== 2)
+                    throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. lambda(X,A) should have 2 args.");
+                let v = Variable.getNew(usedVars);
+                let bvs = parseAbsArg(args[0]);
+                for (let bv of bvs)
+                    map[bv] = v.name;
+                return new LambdaAbstraction(v, parse(args[1], usedVars.concat(v), Object.assign({}, map)));
+            }
+            case "apply": {
+                if (args.length !== 2)
+                    throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. apply(A,B) should have 2 args.");
+                return new Application(parse(args[0], [].concat(usedVars), Object.assign({}, map)), parse(args[1], [].concat(usedVars), Object.assign({}, map)));
+            }
+            case "fv": {
+                if (args.length !== 1)
+                    throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. fv(X) should have 1 arg.");
+                return Macro.get(args[0], false);
+            }
+            default:
+                throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: " + atom);
+        }
+    }
+    // Ex1: (L0,cp(L1,L2)) => ["L0","cp(L1,L2)"]
+    // Ex2: (L0) => ["L0"]
+    // Ex3: ( ) => []
+    function parseArg(str) {
+        str = str.trim();
+        if (str[0] !== "(" || str[str.length - 1] !== ")")
+            throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. Invalid Parentheses.");
+        let level = 0;
+        let content = "";
+        let strs = [];
+        for (let i = 1; i < str.length - 1; i++) {
+            let t = str[i];
+            if (t === "(")
+                level++;
+            else if (t === ")")
+                level--;
+            if (level === 0 && t === ",") {
+                strs.push(content);
+                content = "";
+            }
+            else {
+                content += t;
+            }
+        }
+        if (level !== 0)
+            throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. Invalid Parentheses.");
+        strs.push(content);
+        if (strs.length === 1) {
+            let s = strs[0].trim();
+            if (s === "")
+                return [];
+            else
+                return [s];
+        }
+        let ret = [];
+        for (let s of strs)
+            ret.push(s.trim());
+        return ret;
+    }
+    // Ex1: cp(L0,cp(L1,L2)) => [L0,L1,L2]
+    // Ex2: L0 => [L0]
+    // Ex3: rm => []
+    function parseAbsArg(str) {
+        str = str.trim();
+        let res = str.match(/^.+?(?=\()/);
+        if (res === null) {
+            if (str === "rm")
+                return [];
+            else
+                return [str];
+        }
+        let atom = res[0].trim();
+        let args = parseArg(str.match(/\(.+$/)[0]);
+        if (atom === "rm") {
+            if (args.length !== 0)
+                throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. rm() should have 0 args.");
+            return [];
+        }
+        else if (atom === "cp") {
+            if (args.length !== 2)
+                throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. cp(A,B) should have 2 args.");
+            return parseAbsArg(args[0].trim()).concat(parseAbsArg(args[1].trim()));
+        }
+        else {
+            throw new error_1.LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: " + atom);
+        }
+    }
+}
+exports.parseLMNtal = parseLMNtal;
 // チャーチ数を表すExpressionの生成
 function makeChurchNum(n, typed) {
     let str = "\\sz.";
@@ -250,7 +360,7 @@ function makeChurchNum(n, typed) {
     return makeAST(str + content, typed);
 }
 function makeTerms(depth) {
-    return sub([new Variable("X")], depth);
+    return sub([], depth);
     function sub(vs, depth) {
         let ret = [].concat(vs);
         if (depth === 0)
@@ -336,39 +446,39 @@ class BetaRedex extends Redex {
         super("beta");
         this.content = e;
         this.la = e.left;
-        this.next = this.la.expr.substitute(this.la.boundval, e.right);
+        this.next = this.la.expr.substitute(this.la.boundvar, e.right);
         this.arg = e.right;
         this.rule = "beta";
     }
     toString() {
-        let boundvals = [];
+        let boundvars = [];
         let expr = this.la.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval.toString(false));
+            boundvars.push(expr.boundvar.toString(false));
             expr = expr.expr;
         }
-        let str = boundvals.join("") + "." + expr.toString(true);
-        return this.left + "(\\[" + this.la.boundval.toString(false) + "]" + str + ")[" + this.arg.toString(false) + "]" + this.right;
+        let str = boundvars.join("") + "." + expr.toString(true);
+        return this.left + "(\\[" + this.la.boundvar.toString(false) + "]" + str + ")[" + this.arg.toString(false) + "]" + this.right;
     }
     toTexString() {
-        let boundvals = [];
+        let boundvars = [];
         let expr = this.la.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval.toTexString(false));
+            boundvars.push(expr.boundvar.toTexString(false));
             expr = expr.expr;
         }
-        let str = boundvals.join("") + "." + expr.toTexString(true);
-        return this.texLeft + "(\\strut \\lambda{\\underline{" + this.la.boundval.toTexString(false) + "}}" + str + ")\\underline{\\strut " + this.arg.toTexString(false) + "}" + this.texRight;
+        let str = boundvars.join("") + "." + expr.toTexString(true);
+        return this.texLeft + "(\\strut \\lambda{\\underline{" + this.la.boundvar.toTexString(false) + "}}" + str + ")\\underline{\\strut " + this.arg.toTexString(false) + "}" + this.texRight;
     }
     toHTMLString() {
-        let boundvals = [];
+        let boundvars = [];
         let expr = this.la.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval.toString(false));
+            boundvars.push(expr.boundvar.toString(false));
             expr = expr.expr;
         }
-        let str = boundvals.join("") + "." + expr.toString(true);
-        return htmlEscape(this.left) + '(\\<span class="lf-beta lf-boundval">' + htmlEscape(this.la.boundval.toString(false)) + '</span>' + htmlEscape(str) + ')<span class="lf-beta lf-arg">' + htmlEscape(this.arg.toString(false)) + '</span>' + htmlEscape(this.right);
+        let str = boundvars.join("") + "." + expr.toString(true);
+        return htmlEscape(this.left) + '(\\<span class="lf-beta lf-boundvar">' + htmlEscape(this.la.boundvar.toString(false)) + '</span>' + htmlEscape(str) + ')<span class="lf-beta lf-arg">' + htmlEscape(this.arg.toString(false)) + '</span>' + htmlEscape(this.right);
     }
     getTexRule() {
         return "\\beta";
@@ -457,12 +567,12 @@ class Expression {
     parseChurchNum() {
         if (!(this instanceof LambdaAbstraction))
             return null;
-        const f = this.boundval;
+        const f = this.boundvar;
         let e = this.expr;
         let n = 0;
         if (!(e instanceof LambdaAbstraction))
             return null;
-        const x = e.boundval;
+        const x = e.boundvar;
         e = e.expr;
         while (e instanceof Application) {
             n++;
@@ -512,7 +622,7 @@ class Symbol extends Expression {
         throw new error_1.TexError("class Symbol does not have tex string");
     }
     getFV() {
-        return this.freevals;
+        return this.freevars;
     }
     substitute(x, expr) {
         throw new error_1.SubstitutionError("Undefined Substitution");
@@ -526,15 +636,12 @@ class Symbol extends Expression {
     extractMacros() {
         throw new error_1.ReductionError("Symbols must not appear in parsed Expression");
     }
-    copy() {
-        return new Symbol(this.name, this.className);
-    }
 }
 // 変数 x
 class Variable extends Symbol {
     constructor(name) {
         super(name, "Variable");
-        this.freevals = [this];
+        this.freevars = [this];
     }
     substitute(x, expr) {
         if (this.equals(x))
@@ -613,9 +720,6 @@ class Variable extends Symbol {
     extractMacros() {
         return this;
     }
-    copy() {
-        return new Variable(this.name);
-    }
     toLMNtal() {
         return "fv(" + this.name + ")";
     }
@@ -624,7 +728,7 @@ class Variable extends Symbol {
 class Const extends Symbol {
     constructor(name, className) {
         super(name, className);
-        this.freevals = [];
+        this.freevars = [];
     }
     substitute(x, expr) {
         return this;
@@ -661,9 +765,6 @@ class ConstInt extends Const {
         this.value = value;
         this.type = new type_1.TypeInt();
     }
-    copy() {
-        return new ConstInt(this.value);
-    }
 }
 // bool型定数 c^{bool}
 class ConstBool extends Const {
@@ -671,9 +772,6 @@ class ConstBool extends Const {
         super(value.toString(), "ConstBool");
         this.value = value;
         this.type = new type_1.TypeBool();
-    }
-    copy() {
-        return new ConstBool(this.value);
     }
 }
 // 関数型定数 c^{op} （前置記法・2項演算）
@@ -763,9 +861,6 @@ class ConstOp extends Const {
                 throw new error_1.LambdaParseError("Undefined function: " + funcName);
         }
     }
-    copy() {
-        return new ConstOp(this.name);
-    }
 }
 // 空リスト nil
 class Nil extends Symbol {
@@ -774,7 +869,7 @@ class Nil extends Symbol {
     }
     constructor() {
         super("nil", "Nil");
-        this.freevals = [];
+        this.freevars = [];
     }
     getEquations(gamma, type, noParens) {
         // (nil)
@@ -802,15 +897,12 @@ class Nil extends Symbol {
     extractMacros() {
         return this;
     }
-    copy() {
-        return new Nil();
-    }
 }
 // マクロ定義
 class Macro extends Symbol {
     constructor(name, expr, typed, type) {
         super(name, "Macro");
-        this.freevals = [];
+        this.freevars = [];
         this.expr = expr;
         this.typed = typed;
         this.type = type;
@@ -901,12 +993,6 @@ class Macro extends Symbol {
         else
             return this.expr.extractMacros();
     }
-    copy() {
-        if (this.expr === undefined)
-            return new Macro(this.name, undefined, this.typed, this.type);
-        else
-            return new Macro(this.name, this.expr.copy(), this.typed, this.type);
-    }
     toLMNtal() {
         if (this.expr === undefined)
             return "fv(" + this.name + ")";
@@ -919,20 +1005,20 @@ Macro.mapUntyped = {};
 exports.Macro = Macro;
 // ラムダ抽象 \x.M
 class LambdaAbstraction extends Expression {
-    constructor(boundval, expr) {
+    constructor(boundvar, expr) {
         super("LambdaAbstraction");
-        this.freevals = undefined;
-        this.boundval = boundval;
+        this.freevars = undefined;
+        this.boundvar = boundvar;
         this.expr = expr;
     }
     static parse(tokens, typed) {
-        let boundvals = [];
+        let boundvars = [];
         while (tokens.length > 0) {
             let t = tokens.shift();
             if (t.name === ".") {
                 let expr = parseSymbols(tokens, typed);
-                while (boundvals.length > 0) {
-                    expr = new LambdaAbstraction(boundvals.pop(), expr);
+                while (boundvars.length > 0) {
+                    expr = new LambdaAbstraction(boundvars.pop(), expr);
                 }
                 return expr;
             }
@@ -940,53 +1026,53 @@ class LambdaAbstraction extends Expression {
                 throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
             }
             else {
-                boundvals.push(new Variable(t.name));
+                boundvars.push(new Variable(t.name));
             }
         }
         throw new error_1.LambdaParseError("'.' is needed");
     }
     toString(noParens) {
-        let boundvals = [this.boundval];
+        let boundvars = [this.boundvar];
         let expr = this.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval);
+            boundvars.push(expr.boundvar);
             expr = expr.expr;
         }
-        let str = "\\" + boundvals.join("") + "." + expr.toString(true);
+        let str = "\\" + boundvars.join("") + "." + expr.toString(true);
         if (!noParens)
             str = "(" + str + ")";
         return str;
     }
     getFV() {
-        if (this.freevals !== undefined)
-            return this.freevals;
-        this.freevals = [];
-        return this.freevals = Variable.dif(this.expr.getFV(), [this.boundval]);
+        if (this.freevars !== undefined)
+            return this.freevars;
+        this.freevars = [];
+        return this.freevars = Variable.dif(this.expr.getFV(), [this.boundvar]);
     }
     substitute(y, expr) {
-        if (this.boundval.equals(y)) {
+        if (this.boundvar.equals(y)) {
             return this;
         }
-        else if (!Variable.contains(expr.getFV(), this.boundval)) {
-            return new LambdaAbstraction(this.boundval, this.expr.substitute(y, expr));
+        else if (!Variable.contains(expr.getFV(), this.boundvar)) {
+            return new LambdaAbstraction(this.boundvar, this.expr.substitute(y, expr));
         }
         else {
             let uniFV = Variable.union(this.expr.getFV(), expr.getFV());
             let z = Variable.getNew(uniFV);
-            return new LambdaAbstraction(z, this.expr.substitute(this.boundval, z)).substitute(y, expr);
+            return new LambdaAbstraction(z, this.expr.substitute(this.boundvar, z)).substitute(y, expr);
         }
     }
     equals(expr) {
-        return (expr instanceof LambdaAbstraction) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
+        return (expr instanceof LambdaAbstraction) && (expr.boundvar.equals(this.boundvar)) && (expr.expr.equals(this.expr));
     }
     equalsAlpha(expr) {
         if (!(expr instanceof LambdaAbstraction))
             return false;
         if (this.equals(expr))
             return true;
-        let x = this.boundval;
+        let x = this.boundvar;
         let m = this.expr;
-        let y = expr.boundval;
+        let y = expr.boundvar;
         let n = expr.expr;
         if (Variable.contains(m.getFV(), y)) {
             return n.equalsAlpha(m);
@@ -999,35 +1085,35 @@ class LambdaAbstraction extends Expression {
         // (abs)
         let t0 = type_1.TypeVariable.getNew();
         let t1 = type_1.TypeVariable.getNew();
-        this.boundval.type = t1;
-        let next = this.expr.getEquations(gamma.concat(this.boundval), t0, true);
+        this.boundvar.type = t1;
+        let next = this.expr.getEquations(gamma.concat(this.boundvar), t0, true);
         let str = next.proofTree;
         str += "\\RightLabel{\\scriptsize(abs)}\n";
         str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString(noParens) + " : " + type.toTexString() + " $}\n";
         return new TypeResult(next.eqs.concat(new type_1.TypeEquation(type, new type_1.TypeFunc(t1, t0))), str);
     }
     toTexString(noParens) {
-        let boundvals = [this.boundval.toTexString(false)];
+        let boundvars = [this.boundvar.toTexString(false)];
         let expr = this.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval.toTexString(false));
+            boundvars.push(expr.boundvar.toTexString(false));
             expr = expr.expr;
         }
-        let str = "\\lambda " + boundvals.join("") + "." + expr.toTexString(true);
+        let str = "\\lambda " + boundvars.join("") + "." + expr.toTexString(true);
         if (!noParens)
             str = "(" + str + ")";
         return str;
     }
     isEtaRedex() {
-        return (this.expr instanceof Application) && (this.expr.right.equals(this.boundval)) && (!Variable.contains(this.expr.left.getFV(), this.boundval));
+        return (this.expr instanceof Application) && (this.expr.right.equals(this.boundvar)) && (!Variable.contains(this.expr.left.getFV(), this.boundvar));
     }
     getRedexes(typed, etaAllowed, noParens) {
         if (typed)
             return [];
-        let boundvals = [this.boundval];
+        let boundvars = [this.boundvar];
         let expr = this.expr;
         while (expr instanceof LambdaAbstraction) {
-            boundvals.push(expr.boundval);
+            boundvars.push(expr.boundvar);
             expr = expr.expr;
         }
         let lParen = "", rParen = "";
@@ -1035,8 +1121,8 @@ class LambdaAbstraction extends Expression {
             lParen = "(";
             rParen = ")";
         }
-        let ret = Redex.makeNext(expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvals.join("") + ".", rParen, lParen + "\\lambda{" + boundvals.join("") + "}.", rParen, (prev) => {
-            let bvs = [].concat(boundvals);
+        let ret = Redex.makeNext(expr.getRedexes(false, etaAllowed, true), lParen + "\\" + boundvars.join("") + ".", rParen, lParen + "\\lambda{" + boundvars.join("") + "}.", rParen, (prev) => {
+            let bvs = [].concat(boundvars);
             let ret = prev;
             while (bvs.length > 0) {
                 let t = bvs.pop();
@@ -1054,13 +1140,10 @@ class LambdaAbstraction extends Expression {
         return ret;
     }
     extractMacros() {
-        return new LambdaAbstraction(this.boundval, this.expr.extractMacros());
-    }
-    copy() {
-        return new LambdaAbstraction(this.boundval.copy(), this.expr.copy());
+        return new LambdaAbstraction(this.boundvar, this.expr.extractMacros());
     }
     toLMNtal() {
-        let ret = this.expr.toLMNtal().split("fv(" + this.boundval.name + ")");
+        let ret = this.expr.toLMNtal().split("fv(" + this.boundvar.name + ")");
         let str = ret[0];
         let links = [];
         for (let i = 1; i < ret.length; i++) {
@@ -1102,10 +1185,10 @@ class Application extends Expression {
         return str;
     }
     getFV() {
-        if (this.freevals === undefined)
-            return this.freevals = Variable.union(this.left.getFV(), this.right.getFV());
+        if (this.freevars === undefined)
+            return this.freevars = Variable.union(this.left.getFV(), this.right.getFV());
         else
-            return this.freevals;
+            return this.freevars;
     }
     substitute(y, expr) {
         return new Application(this.left.substitute(y, expr), this.right.substitute(y, expr));
@@ -1139,7 +1222,7 @@ class Application extends Expression {
             let rParen = (noParens ? "" : ")");
             if (this.left instanceof LambdaAbstraction) {
                 // (app2)
-                return [new TypedRedex(this, this.left.expr.substitute(this.left.boundval, this.right), "app2")];
+                return [new TypedRedex(this, this.left.expr.substitute(this.left.boundvar, this.right), "app2")];
             }
             else if (this.left instanceof Application
                 && this.left.left instanceof ConstOp
@@ -1209,9 +1292,6 @@ class Application extends Expression {
     extractMacros() {
         return new Application(this.left.extractMacros(), this.right.extractMacros());
     }
-    copy() {
-        return new Application(this.left.copy(), this.right.copy());
-    }
     toLMNtal() {
         return "apply(" + this.left.toLMNtal() + "," + this.right.toLMNtal() + ")";
     }
@@ -1230,10 +1310,10 @@ class List extends Expression {
         return ret;
     }
     getFV() {
-        if (this.freevals === undefined)
-            return this.freevals = Variable.union(this.head.getFV(), this.tail.getFV());
+        if (this.freevars === undefined)
+            return this.freevars = Variable.union(this.head.getFV(), this.tail.getFV());
         else
-            return this.freevals;
+            return this.freevars;
     }
     substitute(y, expr) {
         return new List(this.head.substitute(y, expr), this.tail.substitute(y, expr));
@@ -1270,9 +1350,6 @@ class List extends Expression {
     extractMacros() {
         return new List(this.head.extractMacros(), this.tail.extractMacros());
     }
-    copy() {
-        return new List(this.head.copy(), this.tail.copy());
-    }
 }
 // if
 class If extends Expression {
@@ -1283,7 +1360,7 @@ class If extends Expression {
         this.ifFalse = ifFalse;
     }
     getFV() {
-        return this.freevals = Variable.union(this.state.getFV(), this.ifTrue.getFV(), this.ifFalse.getFV());
+        return this.freevars = Variable.union(this.state.getFV(), this.ifTrue.getFV(), this.ifFalse.getFV());
     }
     toString(noParens) {
         let ret = "[if]" + this.state.toString(true) + "[then]" + this.ifTrue.toString(true) + "[else]" + this.ifFalse.toString(true);
@@ -1385,81 +1462,78 @@ class If extends Expression {
     extractMacros() {
         return new If(this.state.extractMacros(), this.ifTrue.extractMacros(), this.ifFalse.extractMacros());
     }
-    copy() {
-        return new If(this.state.copy(), this.ifTrue.copy(), this.ifFalse.copy());
-    }
 }
 // let in
 class Let extends Expression {
-    constructor(boundval, left, right) {
+    constructor(boundvar, left, right) {
         super("Let");
-        this.boundval = boundval;
+        this.boundvar = boundvar;
         this.left = left;
         this.right = right;
     }
     getFV() {
-        if (this.freevals !== undefined)
-            return this.freevals;
+        if (this.freevars !== undefined)
+            return this.freevars;
         let ret = [];
         for (let fv of this.right.getFV()) {
-            if (!fv.equals(this.boundval)) {
+            if (!fv.equals(this.boundvar)) {
                 ret.push(fv);
             }
         }
-        return this.freevals = Variable.union(ret, this.left.getFV());
+        return this.freevars = Variable.union(ret, this.left.getFV());
     }
     toString(noParens) {
-        let ret = "[let]" + this.boundval.toString(true) + "=" + this.left.toString(true) + "[in]" + this.right.toString(true);
+        let ret = "[let]" + this.boundvar.toString(true) + "=" + this.left.toString(true) + "[in]" + this.right.toString(true);
         if (!noParens)
             ret = "(" + ret + ")";
         return ret;
     }
     substitute(y, expr) {
         let left = this.left.substitute(y, expr);
-        if (this.boundval.equals(y)) {
-            return new Let(this.boundval, left, this.right);
+        if (this.boundvar.equals(y)) {
+            return new Let(this.boundvar, left, this.right);
         }
-        else if (!Variable.contains(expr.getFV(), this.boundval)) {
-            return new Let(this.boundval, left, this.right.substitute(y, expr));
+        else if (!Variable.contains(expr.getFV(), this.boundvar)) {
+            return new Let(this.boundvar, left, this.right.substitute(y, expr));
         }
         else {
             let uniFV = Variable.union(this.right.getFV(), expr.getFV());
             let z = Variable.getNew(uniFV);
             if (z.equals(y)) {
-                return new Let(z, left, this.right.substitute(this.boundval, z));
+                return new Let(z, left, this.right.substitute(this.boundvar, z));
             }
             else {
-                return new Let(z, left, this.right.substitute(this.boundval, z).substitute(y, expr));
+                return new Let(z, left, this.right.substitute(this.boundvar, z).substitute(y, expr));
             }
         }
     }
     equals(expr) {
-        return (expr instanceof Let) && (expr.boundval.equals(this.boundval)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
+        return (expr instanceof Let) && (expr.boundvar.equals(this.boundvar)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
     }
     equalsAlpha(expr) {
         if (!(expr instanceof Let))
             return false;
         if (this.equals(expr))
             return true;
-        let x = this.boundval;
+        let x = this.boundvar;
         let m = this.right;
-        let y = expr.boundval;
+        let y = expr.boundvar;
         let n = expr.right;
         return (!Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y)));
     }
     getEquations(gamma, type, noParens) {
         // (let)
         let t1 = type_1.TypeVariable.getNew();
-        this.boundval.type = t1;
+        this.boundvar.type = t1;
         let nextL = this.left.getEquations(gamma, t1, true);
-        let nextR = this.right.getEquations(gamma.concat(this.boundval), type, true);
+        let nextR = this.right.getEquations(gamma.concat(this.boundvar), type, true);
         let str = nextL.proofTree + nextR.proofTree;
         str += "\\RightLabel{\\scriptsize(let)}\n";
         str += "\\TrinaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString(noParens) + " : " + type.toTexString() + " $}\n";
         return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
     }
     toTexString(noParens) {
-        let ret = "{\\bf let}~" + this.boundval.toTexString(false) + " = " + this.left.toTexString(true) + "~{\\bf in}~" + this.right.toTexString(true);
+        let ret = "{\\bf let}~" + this.boundvar.toTexString(false) + " = " + this.left.toTexString(true) + "~{\\bf in}~" + this.right.toTexString(true);
         if (!noParens)
             ret = "(" + ret + ")";
         return ret;
@@ -1468,13 +1542,13 @@ class Let extends Expression {
         if (!typed)
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         // (let)
-        return [new TypedRedex(this, this.right.substitute(this.boundval, this.left), "let")];
+        return [new TypedRedex(this, this.right.substitute(this.boundvar, this.left), "let")];
     }
     static parse(tokens, typed) {
         let t = tokens.shift();
         if (t.name.match(/^[A-Za-z]$/) === null)
             throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-        let boundval = new Variable(t.name);
+        let boundvar = new Variable(t.name);
         if (tokens.shift().name !== "=")
             throw new error_1.LambdaParseError("'=' is expected");
         let content = [];
@@ -1494,13 +1568,10 @@ class Let extends Expression {
         }
         let contentExpr = parseSymbols(content, typed);
         let restExpr = parseSymbols(tokens, typed);
-        return new Let(boundval, contentExpr, restExpr);
+        return new Let(boundvar, contentExpr, restExpr);
     }
     extractMacros() {
-        return new Let(this.boundval, this.left.extractMacros(), this.right.extractMacros());
-    }
-    copy() {
-        return new Let(this.boundval.copy(), this.left.copy(), this.right.copy());
+        return new Let(this.boundvar, this.left.extractMacros(), this.right.extractMacros());
     }
 }
 // case文 [case] M [of] [nil] -> M | x::x -> M
@@ -1514,8 +1585,8 @@ class Case extends Expression {
         this.ifElse = ifElse;
     }
     getFV() {
-        if (this.freevals !== undefined)
-            return this.freevals;
+        if (this.freevars !== undefined)
+            return this.freevars;
         else
             return Variable.union(this.state.getFV(), this.ifNil.getFV(), Variable.dif(this.ifElse.getFV(), [this.head, this.tail]));
     }
@@ -1669,58 +1740,55 @@ class Case extends Expression {
     extractMacros() {
         return new Case(this.state.extractMacros(), this.ifNil.extractMacros(), this.head, this.tail, this.ifElse.extractMacros());
     }
-    copy() {
-        return new Case(this.state.copy(), this.ifNil.copy(), this.head.copy(), this.tail.copy(), this.ifElse.copy());
-    }
 }
 // 不動点演算子 [fix] x.M
 class Fix extends Expression {
-    constructor(boundval, expr) {
+    constructor(boundvar, expr) {
         super("Fix");
-        this.boundval = boundval;
+        this.boundvar = boundvar;
         this.expr = expr;
     }
     getFV() {
-        if (this.freevals !== undefined)
-            return this.freevals;
+        if (this.freevars !== undefined)
+            return this.freevars;
         let ret = [];
         for (let fv of this.expr.getFV()) {
-            if (!fv.equals(this.boundval)) {
+            if (!fv.equals(this.boundvar)) {
                 ret.push(fv);
             }
         }
-        return this.freevals = ret;
+        return this.freevars = ret;
     }
     toString(noParens) {
-        let ret = "[fix]" + this.boundval.toString(false) + "." + this.expr.toString(true);
+        let ret = "[fix]" + this.boundvar.toString(false) + "." + this.expr.toString(true);
         if (!noParens)
             ret = "(" + ret + ")";
         return ret;
     }
     substitute(y, expr) {
-        if (this.boundval.equals(y)) {
+        if (this.boundvar.equals(y)) {
             return this;
         }
-        else if (!Variable.contains(expr.getFV(), this.boundval)) {
-            return new Fix(this.boundval, this.expr.substitute(y, expr));
+        else if (!Variable.contains(expr.getFV(), this.boundvar)) {
+            return new Fix(this.boundvar, this.expr.substitute(y, expr));
         }
         else {
             let uniFV = Variable.union(this.expr.getFV(), expr.getFV());
             let z = Variable.getNew(uniFV);
-            return new Fix(z, this.expr.substitute(this.boundval, z)).substitute(y, expr);
+            return new Fix(z, this.expr.substitute(this.boundvar, z)).substitute(y, expr);
         }
     }
     equals(expr) {
-        return (expr instanceof Fix) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
+        return (expr instanceof Fix) && (expr.boundvar.equals(this.boundvar)) && (expr.expr.equals(this.expr));
     }
     equalsAlpha(expr) {
         if (!(expr instanceof Fix))
             return false;
         if (this.equals(expr))
             return true;
-        let x = this.boundval;
+        let x = this.boundvar;
         let m = this.expr;
-        let y = expr.boundval;
+        let y = expr.boundvar;
         let n = expr.expr;
         if (Variable.contains(m.getFV(), y)) {
             return n.equalsAlpha(m);
@@ -1731,15 +1799,15 @@ class Fix extends Expression {
     }
     getEquations(gamma, type, noParens) {
         // (fix)
-        this.boundval.type = type;
-        let next = this.expr.getEquations(gamma.concat(this.boundval), type, true);
+        this.boundvar.type = type;
+        let next = this.expr.getEquations(gamma.concat(this.boundvar), type, true);
         let str = next.proofTree;
         str += "\\RightLabel{\\scriptsize(fix)}\n";
         str += "\\UnaryInfC{$" + Variable.gammaToTexString(gamma) + " \\vdash " + this.toTexString(noParens) + " : " + type.toTexString() + " $}\n";
         return new TypeResult(next.eqs, str);
     }
     toTexString(noParens) {
-        let ret = "{\\bf fix}~" + this.boundval.toTexString(true) + "." + this.expr.toTexString(true);
+        let ret = "{\\bf fix}~" + this.boundvar.toTexString(true) + "." + this.expr.toTexString(true);
         if (!noParens)
             ret = "(" + ret + ")";
         return ret;
@@ -1748,23 +1816,20 @@ class Fix extends Expression {
         if (!typed)
             throw new error_1.ReductionError("Untyped Reduction cannot handle typeof " + this.className);
         // (fix)
-        return [new TypedRedex(this, this.expr.substitute(this.boundval, new Fix(new Variable(this.boundval.name), this.expr)), "fix")];
+        return [new TypedRedex(this, this.expr.substitute(this.boundvar, new Fix(new Variable(this.boundvar.name), this.expr)), "fix")];
     }
     static parse(tokens, typed) {
         let t = tokens.shift();
         if (t.name.match(/^[A-Za-z]$/) === null)
             throw new error_1.LambdaParseError("Unexpected token: '" + t + "'");
-        let boundval = new Variable(t.name);
+        let boundvar = new Variable(t.name);
         if (tokens.shift().name !== ".")
             throw new error_1.LambdaParseError("'.' is expected");
         let contentExpr = parseSymbols(tokens, typed);
-        return new Fix(boundval, contentExpr);
+        return new Fix(boundvar, contentExpr);
     }
     extractMacros() {
-        return new Fix(this.boundval, this.expr.extractMacros());
-    }
-    copy() {
-        return new Fix(this.boundval.copy(), this.expr.copy());
+        return new Fix(this.boundvar, this.expr.extractMacros());
     }
 }
 
@@ -1784,9 +1849,11 @@ class GraphNode {
     toString() {
         return this.label;
     }
+    // 簡約グラフの同型性判定
     equalsShape(n) {
         if (this.info.nodes.length !== n.info.nodes.length
-            || this.info.edges.length !== n.info.edges.length)
+            || this.info.edges.length !== n.info.edges.length
+            || this.info.allowMultipleEdges !== n.info.allowMultipleEdges)
             return false;
         return sub(this, n, []);
         function sub(n1, n2, closed) {
@@ -1796,28 +1863,21 @@ class GraphNode {
             let cs2 = [].concat(n2.children);
             let ret = true;
             for (let c1 of n1.children) {
-                let pair = undefined;
-                for (let c of closed) {
-                    if (c.n1.id === c1.id) {
-                        pair = c;
-                        break;
-                    }
-                }
                 let found = false;
                 for (let i = 0; i < cs2.length; i++) {
                     let c2 = cs2[i];
-                    if (pair === undefined) {
-                        if (sub(c1, c2, closed)) {
-                            cs2.splice(i, 1);
-                            found = true;
+                    let pair = undefined;
+                    for (let c of closed) {
+                        if (c.n1.id === c1.id || c.n2.id === c2.id) {
+                            pair = c;
                             break;
                         }
                     }
-                    else {
-                        if (pair.n2.id === c2.id) {
-                            found = true;
-                            break;
-                        }
+                    if ((pair === undefined && sub(c1, c2, closed))
+                        || (pair !== undefined && pair.n1.id === c1.id && pair.n2.id === c2.id)) {
+                        cs2.splice(i, 1);
+                        found = true;
+                        break;
                     }
                 }
                 if (!found) {
@@ -1834,9 +1894,11 @@ class GraphNode {
             throw new Error("Unexpected Error");
         }
     }
+    // input: root -> a,b,c -> d; d -> e
+    // 多重辺が入力に存在する場合、自動で多重辺をオンにする
     static parse(str) {
         let stmts = str.split(";");
-        let info = new Info([], [], null, null, 0);
+        let info = new Info([], [], null, null, 0, false);
         let nodes = {};
         for (let stmt of stmts) {
             let strs = stmt.split("->");
@@ -1845,6 +1907,8 @@ class GraphNode {
                 let cs = str2nodes(strs[i]);
                 for (let p of ps) {
                     for (let c of cs) {
+                        if (info.hasEdge({ from: p, to: c }))
+                            info.allowMultipleEdges = true;
                         info.edges.push({ from: p, to: c });
                         p.children.push(c);
                     }
@@ -1874,7 +1938,7 @@ class GraphNode {
             return rets;
         }
     }
-    static search(n) {
+    static search(n, allowMultipleEdges) {
         let filename = "graph_closure.csv";
         let fs = require("fs");
         try {
@@ -1889,7 +1953,7 @@ class GraphNode {
         for (let line of lines) {
             let strs = line.split(",");
             if (parseInt(strs[2]) === n.info.nodes.length && parseInt(strs[3]) === n.info.edges.length) {
-                let lf = new lambda_friends_1.LambdaFriends(strs[0], false, false);
+                let lf = new lambda_friends_1.LambdaFriends(strs[0], false, false, allowMultipleEdges);
                 // csvに書いてあるものは止まることを保証しておこう
                 while (true)
                     if (lf.deepen() === null)
@@ -1904,12 +1968,21 @@ class GraphNode {
 }
 exports.GraphNode = GraphNode;
 class Info {
-    constructor(nodes, edges, typed, etaAllowed, nextId) {
+    constructor(nodes, edges, typed, etaAllowed, nextId, allowMultipleEdges) {
         this.nodes = nodes;
         this.edges = edges;
         this.typed = typed;
         this.etaAllowed = etaAllowed;
         this.nextId = nextId;
+        this.allowMultipleEdges = allowMultipleEdges;
+    }
+    hasEdge(edge) {
+        for (let e of this.edges) {
+            if (e.from.id === edge.from.id && e.to.id === edge.to.id) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 class ReductionNode extends GraphNode {
@@ -1923,8 +1996,8 @@ class ReductionNode extends GraphNode {
             this.depth = parent.depth + 1;
         this.isNormalForm = this.expr.isNormalForm(info.typed, info.etaAllowed);
     }
-    static makeRoot(expr, typed, etaAllowed) {
-        return new ReductionNode(expr, null, new Info([], [], typed, etaAllowed, 0));
+    static makeRoot(expr, typed, etaAllowed, allowMultipleEdges) {
+        return new ReductionNode(expr, null, new Info([], [], typed, etaAllowed, 0, allowMultipleEdges));
     }
     visit() {
         if (this.isNormalForm)
@@ -1938,13 +2011,17 @@ class ReductionNode extends GraphNode {
                 let n = new ReductionNode(r.next, this, this.info);
                 this.children.push(n);
                 ans.nodes.push(n);
-                ans.edges.push({ from: this, to: n });
-                this.info.edges.push({ from: this, to: n });
+                if (this.info.allowMultipleEdges || !this.info.hasEdge({ from: this, to: n })) {
+                    ans.edges.push({ from: this, to: n });
+                    this.info.edges.push({ from: this, to: n });
+                }
             }
             else {
                 this.children.push(ret);
-                ans.edges.push({ from: this, to: ret });
-                this.info.edges.push({ from: this, to: ret });
+                if (this.info.allowMultipleEdges || !this.info.hasEdge({ from: this, to: ret })) {
+                    ans.edges.push({ from: this, to: ret });
+                    this.info.edges.push({ from: this, to: ret });
+                }
             }
         }
         return ans;
@@ -1967,7 +2044,7 @@ const expression_1 = require("./expression");
 const type_1 = require("./type");
 const graph_1 = require("./graph");
 class LambdaFriends {
-    constructor(str, typed, etaAllowed) {
+    constructor(str, typed, etaAllowed, allowMultipleEdges) {
         let l = str.split("#")[0].trim();
         let names = [];
         while (true) {
@@ -1988,9 +2065,10 @@ class LambdaFriends {
         }
         this.typed = typed;
         this.etaAllowed = etaAllowed;
+        this.allowMultipleEdges = allowMultipleEdges;
         this.processTex = "\\begin{eqnarray*}\n&& ";
         this.curStep = 0;
-        this.root = graph_1.ReductionNode.makeRoot(this.expr, this.typed, this.etaAllowed);
+        this.root = graph_1.ReductionNode.makeRoot(this.expr, this.typed, this.etaAllowed, this.allowMultipleEdges);
         this.curNodes = [this.root];
     }
     getRedexes() {
@@ -2096,7 +2174,7 @@ class LambdaFriends {
         }
         if (names.length === 0)
             return null;
-        let lf = new LambdaFriends(l, typed, undefined); // ???
+        let lf = new LambdaFriends(l, typed, undefined, false); // ????
         for (let name of names) {
             expression_1.Macro.add(name, lf, typed);
         }
@@ -2151,8 +2229,11 @@ class LambdaFriends {
     static clearMacro(typed) {
         return expression_1.Macro.clear(typed);
     }
-    static graph2LF(str) {
-        return graph_1.GraphNode.search(graph_1.GraphNode.parse(str));
+    static graph2LF(str, allowMultipleEdges) {
+        return graph_1.GraphNode.search(graph_1.GraphNode.parse(str), allowMultipleEdges);
+    }
+    static lmntal2LF(str, allowMultipleEdges) {
+        return new LambdaFriends(expression_1.parseLMNtal(str).toString(true), false, false, allowMultipleEdges);
     }
     // typedだったらとりあえずnullを返すことにする
     toLMNtal() {
@@ -2590,6 +2671,7 @@ MicroModal.init({
 let steps = undefined;
 let typed = true;
 let etaAllowed = false;
+let allowMultipleEdges = false;
 let curlf = undefined;
 let input = document.getElementById("input");
 let oel = document.getElementById("output");
@@ -2597,6 +2679,8 @@ let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
 let etaEnableButton = document.getElementById("etaEnable");
 let etaDisableButton = document.getElementById("etaDisable");
+let multiEdgeEnableButton = document.getElementById("multiEdgeEnable");
+let multiEdgeDisableButton = document.getElementById("multiEdgeDisable");
 let fileInput = document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = document.getElementById("clearMacroBtn");
@@ -2678,6 +2762,8 @@ untypedButton.onclick = function () {
     typed = false;
     etaEnableButton.disabled = false;
     etaDisableButton.disabled = false;
+    multiEdgeEnableButton.disabled = false;
+    multiEdgeDisableButton.disabled = false;
     refreshMacroList();
 };
 typedButton.onclick = function () {
@@ -2686,6 +2772,8 @@ typedButton.onclick = function () {
     typed = true;
     etaEnableButton.disabled = true;
     etaDisableButton.disabled = true;
+    multiEdgeEnableButton.disabled = true;
+    multiEdgeDisableButton.disabled = true;
     refreshMacroList();
 };
 etaEnableButton.onclick = function () {
@@ -2697,6 +2785,16 @@ etaDisableButton.onclick = function () {
     etaDisableButton.className = "btn btn-primary";
     etaEnableButton.className = "btn btn-default";
     etaAllowed = false;
+};
+multiEdgeEnableButton.onclick = function () {
+    multiEdgeEnableButton.className = "btn btn-primary";
+    multiEdgeDisableButton.className = "btn btn-default";
+    allowMultipleEdges = true;
+};
+multiEdgeDisableButton.onclick = function () {
+    multiEdgeDisableButton.className = "btn btn-primary";
+    multiEdgeEnableButton.className = "btn btn-default";
+    allowMultipleEdges = false;
 };
 clearMacroButton.onclick = function () {
     lambda_friends_1.LambdaFriends.clearMacro(typed);
@@ -2729,7 +2827,7 @@ let submitInput = function () {
     try {
         let ret = lambda_friends_1.LambdaFriends.parseMacroDef(line, typed);
         if (ret === null) {
-            curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed);
+            curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed, allowMultipleEdges);
             graphClear();
             cy.add({ group: "nodes", data: { id: "" + curlf.root.id, label: curlf.root.toString() }, classes: (curlf.root.isNormalForm ? "goal" : "") });
             makeLayout();
@@ -2985,6 +3083,7 @@ function makeLayout() {
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
+multiEdgeDisableButton.onclick(null);
 refreshMacroList();
 
 },{"./lambda-friends":4,"micromodal":7}],7:[function(require,module,exports){
@@ -3020,6 +3119,46 @@ var createClass = function () {
   };
 }();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 var toConsumableArray = function (arr) {
   if (Array.isArray(arr)) {
     for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
@@ -3031,7 +3170,6 @@ var toConsumableArray = function (arr) {
 };
 
 var MicroModal = function () {
-
   var FOCUSABLE_ELEMENTS = ['a[href]', 'area[href]', 'input:not([disabled]):not([type="hidden"]):not([aria-hidden])', 'select:not([disabled]):not([aria-hidden])', 'textarea:not([disabled]):not([aria-hidden])', 'button:not([disabled]):not([aria-hidden])', 'iframe', 'object', 'embed', '[contenteditable]', '[tabindex]:not([tabindex^="-"])'];
 
   var Modal = function () {

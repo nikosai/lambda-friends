@@ -4,8 +4,8 @@ import { makeTerms, parseLMNtal } from "./expression";
 import { GraphNode } from "./graph";
 declare let require: any;
 
-let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false);
-let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false);
+let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
+let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);
 
 for (let i=0; i<50; i++){
   if (lf1.deepen()===null) break;
@@ -37,11 +37,11 @@ function graphParseTest(){
   //   console.log(i+": "+res.length);
   // }
   for (let line of lines){
-    let lf = new LambdaFriends(line,false,false);
+    let lf = new LambdaFriends(line,false,false,true);
     console.log("Original: "+lf.expr.toString(true));
     line = lf.toLMNtal().slice(5,-1);
     console.log("toLMNtal: "+line);
-    lf = new LambdaFriends(parseLMNtal(line).toString(true),false,false);
+    lf = new LambdaFriends(parseLMNtal(line).toString(true),false,false,true);
     console.log("ReParsed: "+lf.expr.toString(true));
     console.log("ReLMNtal: "+lf.toLMNtal().slice(5,-1));
   }
@@ -58,7 +58,7 @@ function outputInfo(){
   
   for (let r of res){
     if (cnt%100==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
-    let lf = new LambdaFriends(r.toString(true),false,false);
+    let lf = new LambdaFriends(r.toString(true),false,false,true);
     for (let i=0; i<200; i++){
       if (lf.deepen()===null) break;
     }
@@ -98,7 +98,7 @@ function test(){
   let res = makeTerms(4);
   let c1 = 0;
   for (let r of res){
-    let lf = new LambdaFriends(r.toString(true),false,false);
+    let lf = new LambdaFriends(r.toString(true),false,false,true);
     for (let i=0; i<30; i++){
       if (lf.deepen(10)===null) break;
     }

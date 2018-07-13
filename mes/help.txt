@@ -4,9 +4,11 @@
   :g <graph>    - reverse search from reduction graph
   :s            - show current continuation steps
   :s <number>   - set continuation steps
-  :t            - show current Typed/Untyped 
+  :t            - show current Typed/Untyped
   :t <y/n>      - set Typed/Untyped
   :e            - show whether eta-reduction is allowed
   :e <y/n>      - enable/disable eta-reduction
+  :me           - show whether multiple-edges are allowed
+  :me <y/n>     - enable/disable multiple-edges
   :q            - close this interpreter
   :lmn <code>   - translate LMNtal code to lambda-friends

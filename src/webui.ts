@@ -50,6 +50,7 @@ MicroModal.init({
 let steps:number = undefined;
 let typed = true;
 let etaAllowed = false;
+let allowMultipleEdges = false;
 let curlf:LambdaFriends = undefined;
 
 let input = <HTMLInputElement>document.getElementById("input");
@@ -58,6 +59,8 @@ let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
 let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
 let etaDisableButton = <HTMLButtonElement>document.getElementById("etaDisable");
+let multiEdgeEnableButton = <HTMLButtonElement>document.getElementById("multiEdgeEnable");
+let multiEdgeDisableButton = <HTMLButtonElement>document.getElementById("multiEdgeDisable");
 let fileInput = <HTMLInputElement>document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = <HTMLButtonElement>document.getElementById("clearMacroBtn");
@@ -145,6 +148,8 @@ untypedButton.onclick = function(){
   typed = false;
   etaEnableButton.disabled = false;
   etaDisableButton.disabled = false;
+  multiEdgeEnableButton.disabled = false;
+  multiEdgeDisableButton.disabled = false;
   refreshMacroList();
 };
 
@@ -154,6 +159,8 @@ typedButton.onclick = function(){
   typed = true;
   etaEnableButton.disabled = true;
   etaDisableButton.disabled = true;
+  multiEdgeEnableButton.disabled = true;
+  multiEdgeDisableButton.disabled = true;
   refreshMacroList();
 };
 
@@ -167,6 +174,18 @@ etaDisableButton.onclick = function(){
   etaDisableButton.className = "btn btn-primary";
   etaEnableButton.className = "btn btn-default";
   etaAllowed = false;
+}
+
+multiEdgeEnableButton.onclick = function(){
+  multiEdgeEnableButton.className = "btn btn-primary";
+  multiEdgeDisableButton.className = "btn btn-default";
+  allowMultipleEdges = true;
+}
+
+multiEdgeDisableButton.onclick = function(){
+  multiEdgeDisableButton.className = "btn btn-primary";
+  multiEdgeEnableButton.className = "btn btn-default";
+  allowMultipleEdges = false;
 }
 
 clearMacroButton.onclick = function(){
@@ -201,7 +220,7 @@ let submitInput = function(){
   try{
     let ret = LambdaFriends.parseMacroDef(line,typed);
     if (ret===null) {
-      curlf = new LambdaFriends(line,typed,etaAllowed);
+      curlf = new LambdaFriends(line,typed,etaAllowed,allowMultipleEdges);
       graphClear();
       cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
       makeLayout();
@@ -453,4 +472,5 @@ function makeLayout(){
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
+multiEdgeDisableButton.onclick(null);
 refreshMacroList();
