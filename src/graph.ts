@@ -19,6 +19,7 @@ export class GraphNode{
     return this.label;
   }
 
+  // 簡約グラフの同型性判定
   equalsShape(n:GraphNode):boolean{
     if (this.info.nodes.length !== n.info.nodes.length
       || this.info.edges.length !== n.info.edges.length) return false;
@@ -30,27 +31,21 @@ export class GraphNode{
       let cs2:GraphNode[] = [].concat(n2.children);
       let ret = true;
       for (let c1 of n1.children){
-        let pair:{n1:GraphNode,n2:GraphNode} = undefined;
-        for (let c of closed){
-          if (c.n1.id === c1.id){
-            pair = c;
-            break;
-          }
-        }
         let found = false;
         for (let i=0; i<cs2.length; i++){
           let c2 = cs2[i];
-          if (pair===undefined){
-            if (sub(c1,c2,closed)){
-              cs2.splice(i,1);
-              found = true;
+          let pair:{n1:GraphNode,n2:GraphNode} = undefined;
+          for (let c of closed){
+            if (c.n1.id === c1.id || c.n2.id === c2.id){
+              pair = c;
               break;
             }
-          }else{
-            if (pair.n2.id === c2.id){
-              found = true;
-              break;
-            }
+          }
+          if ((pair===undefined && sub(c1,c2,closed))
+            || (pair !== undefined && pair.n1.id === c1.id && pair.n2.id === c2.id)){
+            cs2.splice(i,1);
+            found = true;
+            break;
           }
         }
         if (!found){

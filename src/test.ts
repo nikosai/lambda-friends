@@ -4,19 +4,19 @@ import { makeTerms, parseLMNtal } from "./expression";
 import { GraphNode } from "./graph";
 declare let require: any;
 
-// let lf1 = new LambdaFriends("(\\a.aa)(\\a.aa)(\\a.(\\b.a)a)",false,false);
-// let lf2 = new LambdaFriends("(\\a.a)((\\a.aa)(\\a.aa))",false,false);
+let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false);
+let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false);
 
-// for (let i=0; i<50; i++){
-//   if (lf1.deepen()===null) break;
-// }
-// for (let i=0; i<50; i++){
-//   if (lf2.deepen()===null) break;
-// }
+for (let i=0; i<50; i++){
+  if (lf1.deepen()===null) break;
+}
+for (let i=0; i<50; i++){
+  if (lf2.deepen()===null) break;
+}
 
-// console.log(lf1.root.equalsShape(lf2.root));
+console.log(lf1.root.equalsShape(lf2.root), lf2.root.equalsShape(lf1.root));
 
-graphParseTest();
+// graphParseTest();
 // outputInfo();
 // for (let i=0; i<6; i++) console.log(i+" : "+makeTerms(i).length)
 
