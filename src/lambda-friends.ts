@@ -45,13 +45,16 @@ export class LambdaFriends{
   public getRedexes(){
     return this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
   }
+  
+  public getLeftMostRedex(){
+    return this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
+  }
 
   public reduction(redex?:Redex):string{
     if (redex === undefined){
       // 簡約基指定のない場合、最左簡約
-      let rs = this.getRedexes();
-      if (rs.length===0) return null;
-      redex = rs[0];
+      redex = this.getLeftMostRedex();
+      if (redex === null) return null;
     }
     this.expr = redex.next;
     this.processTex += redex.toTexString();
