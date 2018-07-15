@@ -561,9 +561,6 @@ class Expression {
     constructor(className) {
         this.className = className;
     }
-    isNormalForm(type, etaAllowed) {
-        return this.getLeftMostRedex(type, etaAllowed, true) === null;
-    }
     parseChurchNum() {
         if (!(this instanceof LambdaAbstraction))
             return null;
@@ -2245,18 +2242,20 @@ class ReductionNode extends GraphNode {
             this.depth = 0;
         else
             this.depth = parent.depth + 1;
-        this.isNormalForm = this.expr.isNormalForm(info.typed, info.etaAllowed);
+        this.nextrs = this.expr.getRedexes(info.typed, info.etaAllowed, true);
+        // this.isNormalForm = this.expr.isNormalForm(info.typed,info.etaAllowed);
+    }
+    isNormalForm() {
+        return this.nextrs.length === 0;
     }
     static makeRoot(expr, typed, etaAllowed, allowMultipleEdges) {
         return new ReductionNode(expr, null, new Info([], [], typed, etaAllowed, 0, allowMultipleEdges));
     }
     visit() {
-        if (this.isNormalForm)
-            return { nodes: [], edges: [] };
-        let rs = this.expr.getRedexes(this.info.typed, this.info.etaAllowed, true);
-        let ans;
-        ans = { nodes: [], edges: [] };
-        for (let r of rs) {
+        // if (this.isNormalForm) return {nodes:[],edges:[]};
+        // let rs = this.expr.getRedexes(this.info.typed,this.info.etaAllowed,true);
+        let ans = { nodes: [], edges: [] };
+        for (let r of this.nextrs) {
             let ret = this.find(r.next);
             if (ret === null) {
                 let n = new ReductionNode(r.next, this, this.info);
@@ -2321,12 +2320,17 @@ class LambdaFriends {
         this.curStep = 0;
         this.root = graph_1.ReductionNode.makeRoot(this.expr, this.typed, this.etaAllowed, this.allowMultipleEdges);
         this.curNodes = [this.root];
+        this.nextRedexes = undefined;
     }
     getRedexes() {
-        return this.expr.getRedexes(this.typed, this.etaAllowed, true).sort(expression_1.Redex.compare);
+        if (this.nextRedexes)
+            return this.nextRedexes;
+        return this.nextRedexes = this.expr.getRedexes(this.typed, this.etaAllowed, true).sort(expression_1.Redex.compare);
     }
     getLeftMostRedex() {
-        return this.expr.getLeftMostRedex(this.typed, this.etaAllowed, true);
+        if (this.nextLeftMostRedex)
+            return this.nextLeftMostRedex;
+        return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.typed, this.etaAllowed, true);
     }
     reduction(redex) {
         if (redex === undefined) {
@@ -2336,6 +2340,8 @@ class LambdaFriends {
                 return null;
         }
         this.expr = redex.next;
+        this.nextRedexes = undefined;
+        this.nextLeftMostRedex = undefined;
         this.processTex += redex.toTexString();
         let ret;
         if (redex.type === "macro") {
@@ -2377,7 +2383,7 @@ class LambdaFriends {
         return ret;
     }
     hasNext() {
-        return !this.expr.isNormalForm(this.typed, this.etaAllowed);
+        return this.getLeftMostRedex() !== null;
     }
     // 未展開のノードがまだあるか
     hasNodes() {
@@ -3082,7 +3088,7 @@ let submitInput = function () {
         if (ret === null) {
             curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed, allowMultipleEdges);
             graphClear();
-            cy.add({ group: "nodes", data: { id: "" + curlf.root.id, label: curlf.root.toString() }, classes: (curlf.root.isNormalForm ? "goal" : "") });
+            cy.add({ group: "nodes", data: { id: "" + curlf.root.id, label: curlf.root.toString() }, classes: (curlf.root.isNormalForm() ? "goal" : "") });
             makeLayout();
             outputLine(curlf.toString());
             if (typed)

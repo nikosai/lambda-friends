@@ -18,26 +18,27 @@ function outputInfo(termDepth:number, graphDepth:number, allowMultiEdges:boolean
   let results:{lf:LambdaFriends, c:number}[] = [];
   for (let r of res){
     if (cnt%100==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
+    cnt++;
     let lf = new LambdaFriends(r.toString(true),false,false,allowMultiEdges);
     for (let i=0; i<graphDepth; i++){
       if (lf.deepen()===null) break;
     }
-    if (lf.hasNodes()) timeout_count++;
-    else {
-      let lflen = lf.expr.toString(true).length;
-      let flag = false;
-      for (let r of results){
-        if (lf.root.equalsShape(r.lf.root)){
-          let rlen = r.lf.expr.toString(true).length;
-          if (rlen > lflen) r.lf = lf;
-          r.c++;
-          flag = true;
-          break;
-        }
-      }
-      if (!flag) results.push({lf:lf,c:1});
+    if (lf.hasNodes()) {
+      timeout_count++;
+      continue;
     }
-    cnt++;
+    let lflen = lf.expr.toString(true).length;
+    let flag = false;
+    for (let r of results){
+      if (lf.root.equalsShape(r.lf.root)){
+        let rlen = r.lf.expr.toString(true).length;
+        if (rlen > lflen) r.lf = lf;
+        r.c++;
+        flag = true;
+        break;
+      }
+    }
+    if (!flag) results.push({lf:lf,c:1});
   }
   console.error("Timeout: "+timeout_count);
   results.sort((a,b)=>{

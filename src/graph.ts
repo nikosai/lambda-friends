@@ -153,7 +153,7 @@ class Info{
 
 export class ReductionNode extends GraphNode{
   private expr: Expression;
-  isNormalForm:boolean;
+  nextrs:Redex[];
   depth:number;
   parent:ReductionNode;
   constructor(expr:Expression, parent:ReductionNode, info:Info){
@@ -162,7 +162,11 @@ export class ReductionNode extends GraphNode{
     this.parent = parent;
     if (parent===null) this.depth = 0;
     else this.depth = parent.depth + 1;
-    this.isNormalForm = this.expr.isNormalForm(info.typed,info.etaAllowed);
+    this.nextrs = this.expr.getRedexes(info.typed,info.etaAllowed,true);
+  }
+
+  public isNormalForm(){
+    return this.nextrs.length === 0;
   }
 
   static makeRoot(expr:Expression, typed:boolean, etaAllowed:boolean,allowMultipleEdges:boolean){
@@ -170,11 +174,8 @@ export class ReductionNode extends GraphNode{
   }
   
   visit():{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]}{
-    if (this.isNormalForm) return {nodes:[],edges:[]};
-    let rs = this.expr.getRedexes(this.info.typed,this.info.etaAllowed,true);
-    let ans:{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]};
-    ans = {nodes:[],edges:[]};
-    for (let r of rs){
+    let ans:{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]} = {nodes:[],edges:[]};
+    for (let r of this.nextrs){
       let ret = this.find(r.next);
       if (ret===null) {
         let n = new ReductionNode(r.next,this,this.info);

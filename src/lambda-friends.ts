@@ -14,6 +14,8 @@ export class LambdaFriends{
   etaAllowed:boolean;
   root:ReductionNode;
   curNodes:ReductionNode[];
+  nextRedexes:Redex[];
+  nextLeftMostRedex:Redex;
   static nextLinkID:number;
   constructor(str:string,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
     let l = str.split("#")[0].trim();
@@ -40,14 +42,17 @@ export class LambdaFriends{
     this.curStep = 0;
     this.root = ReductionNode.makeRoot(this.expr,this.typed,this.etaAllowed,this.allowMultipleEdges);
     this.curNodes = [this.root];
+    this.nextRedexes = undefined;
   }
 
   public getRedexes(){
-    return this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
+    if (this.nextRedexes) return this.nextRedexes;
+    return this.nextRedexes = this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
   }
   
   public getLeftMostRedex(){
-    return this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
+    if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
+    return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
   }
 
   public reduction(redex?:Redex):string{
@@ -57,6 +62,8 @@ export class LambdaFriends{
       if (redex === null) return null;
     }
     this.expr = redex.next;
+    this.nextRedexes = undefined;
+    this.nextLeftMostRedex = undefined;
     this.processTex += redex.toTexString();
     let ret;
     if (redex.type === "macro"){
@@ -97,7 +104,7 @@ export class LambdaFriends{
   }
 
   public hasNext():boolean{
-    return !this.expr.isNormalForm(this.typed,this.etaAllowed);
+    return this.getLeftMostRedex() !== null;
   }
 
   // 未展開のノードがまだあるか

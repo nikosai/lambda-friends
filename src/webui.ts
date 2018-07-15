@@ -222,7 +222,7 @@ let submitInput = function(){
     if (ret===null) {
       curlf = new LambdaFriends(line,typed,etaAllowed,allowMultipleEdges);
       graphClear();
-      cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
+      cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm()?"goal":"")});
       makeLayout();
       outputLine(curlf.toString());
       if (typed) doContinual();

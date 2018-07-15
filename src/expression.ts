@@ -486,10 +486,6 @@ export abstract class Expression{
     this.className = className;
   }
 
-  public isNormalForm(type:boolean,etaAllowed:boolean):boolean{
-    return this.getLeftMostRedex(type,etaAllowed,true) === null;
-  }
-
   public parseChurchNum():number{
     if (!(this instanceof LambdaAbstraction)) return null;
     const f = this.boundvar;
