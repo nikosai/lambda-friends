@@ -2243,7 +2243,6 @@ class ReductionNode extends GraphNode {
         else
             this.depth = parent.depth + 1;
         this.nextrs = this.expr.getRedexes(info.typed, info.etaAllowed, true);
-        // this.isNormalForm = this.expr.isNormalForm(info.typed,info.etaAllowed);
     }
     isNormalForm() {
         return this.nextrs.length === 0;
@@ -2252,8 +2251,6 @@ class ReductionNode extends GraphNode {
         return new ReductionNode(expr, null, new Info([], [], typed, etaAllowed, 0, allowMultipleEdges));
     }
     visit() {
-        // if (this.isNormalForm) return {nodes:[],edges:[]};
-        // let rs = this.expr.getRedexes(this.info.typed,this.info.etaAllowed,true);
         let ans = { nodes: [], edges: [] };
         for (let r of this.nextrs) {
             let ret = this.find(r.next);
