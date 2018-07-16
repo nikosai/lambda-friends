@@ -1,5 +1,5 @@
 =============== Command Help ===============
-  :?            - show this command help
+  :?, :h        - show this command help
   :l <filename> - load macros from textfile
   :g <graph>    - reverse search from reduction graph
   :s            - show current continuation steps

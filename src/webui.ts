@@ -70,10 +70,12 @@ let tabA = document.getElementById("tabA");
 // let submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
 let outputButtons = document.getElementById("outputBtns");
 let stepInput = <HTMLInputElement>document.getElementById("stepInput");
-let graphDiv = document.getElementById("graph");
 let startGraph = document.getElementById("startGraph");
 let stopGraph = document.getElementById("stopGraph");
 let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
+let tabAbtn = document.getElementById("tabAbtn");
+let tabBbtn = document.getElementById("tabBbtn");
+let tabCbtn = document.getElementById("tabCbtn");
 let tabDbtn = document.getElementById("tabDbtn");
 
 fileInput.addEventListener("change",function (ev){
@@ -207,7 +209,8 @@ let workspace: string[] = [""];
 let submitInput = function(){
   let line = input.value;
   if (line==="" && curlf!==undefined){
-    doContinual();
+    if (graphActive) launchGraph();
+    else doContinual();
     return;
   }
   history.unshift(line);
@@ -273,7 +276,8 @@ document.getElementById("input").onkeydown = function(e){
 }
 let graphStop:boolean = false;
 let graphDepth:number;
-startGraph.onclick = function(){
+startGraph.onclick = launchGraph;
+function launchGraph(){
   makeLayout();
   if (curlf === undefined) return;
   graphStop = false;
@@ -314,8 +318,22 @@ maxDepth.addEventListener("change",function(){
   }
 });
 
+let graphActive = false;
+tabAbtn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
+tabBbtn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
+tabCbtn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
 tabDbtn.addEventListener("click",()=>{
   setTimeout(makeLayout,10);
+  graphActive = true;
 });
 
 // let submitMacro = function(){
@@ -403,12 +421,16 @@ function makeTexDiv(title:string, content:string){
   div.appendChild(code);
   return div;
 }
+let continualRunning = false;
 function doContinual(){
+  if (continualRunning) return;
+  continualRunning = true;
   outputButtons.textContent = null;
   let f = (n:number)=>setTimeout(() => {
     if (n===0 || !curlf.hasNext()) {
       showContinueBtn();
       tabA.scrollTop = oel.offsetHeight-15;
+      continualRunning = false;
       return;
     }
     let res = curlf.reduction();
