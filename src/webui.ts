@@ -72,6 +72,7 @@ let outputButtons = document.getElementById("outputBtns");
 let stepInput = <HTMLInputElement>document.getElementById("stepInput");
 let startGraph = document.getElementById("startGraph");
 let stopGraph = document.getElementById("stopGraph");
+let imgGraph = document.getElementById("imgGraph");
 let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
 let tabAbtn = document.getElementById("tabAbtn");
 let tabBbtn = document.getElementById("tabBbtn");
@@ -307,6 +308,10 @@ function launchGraph(){
 }
 stopGraph.onclick = function(){
   graphStop = true;
+}
+
+imgGraph.onclick = function(){
+  window.open(cy.png());
 }
 
 maxDepth.addEventListener("change",function(){
