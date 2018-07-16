@@ -20,6 +20,7 @@ silent: js/cui.js
 
 docs/app.js: $(ALLSRC) js/webui.js
 	npx webpack
+	cp graph_closure.csv docs/
 
 web: docs/app.js js/server.js
 	node js/server.js
