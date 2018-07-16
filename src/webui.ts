@@ -1,5 +1,4 @@
 import { LambdaFriends } from "./lambda-friends";
-import { ReductionNode } from "./graph";
 declare let require: any;
 declare let cytoscape: any;
 let cy = cytoscape({
@@ -40,7 +39,7 @@ let cy = cytoscape({
     },
   ]
 });
-let MicroModal = require('micromodal');
+declare let MicroModal:any;
 // Initial config for setting up modals
 MicroModal.init({
   disableScroll: false,
@@ -50,6 +49,7 @@ MicroModal.init({
 let steps:number = undefined;
 let typed = true;
 let etaAllowed = false;
+let allowMultipleEdges = false;
 let curlf:LambdaFriends = undefined;
 
 let input = <HTMLInputElement>document.getElementById("input");
@@ -58,21 +58,32 @@ let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
 let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
 let etaDisableButton = <HTMLButtonElement>document.getElementById("etaDisable");
+let multiEdgeEnableButton = <HTMLButtonElement>document.getElementById("multiEdgeEnable");
+let multiEdgeDisableButton = <HTMLButtonElement>document.getElementById("multiEdgeDisable");
 let fileInput = <HTMLInputElement>document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = <HTMLButtonElement>document.getElementById("clearMacroBtn");
-let tabC = document.getElementById("tabC");
+let translateDiv = document.getElementById("translate");
 let tabA = document.getElementById("tabA");
 // let macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
 // let macroInput = <HTMLInputElement>document.getElementById("macroInput");
 // let submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
 let outputButtons = document.getElementById("outputBtns");
 let stepInput = <HTMLInputElement>document.getElementById("stepInput");
-let graphDiv = document.getElementById("graph");
 let startGraph = document.getElementById("startGraph");
 let stopGraph = document.getElementById("stopGraph");
+let imgGraph = document.getElementById("imgGraph");
 let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
+let tabAbtn = document.getElementById("tabAbtn");
+let tabBbtn = document.getElementById("tabBbtn");
+let tabCbtn = document.getElementById("tabCbtn");
 let tabDbtn = document.getElementById("tabDbtn");
+let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
+let lmnSubmitBtn = document.getElementById("lmnSubmit");
+let lmnOutput = document.getElementById("lmnOutput");
+let graphInput = <HTMLInputElement>document.getElementById("graphInput");
+let graphSubmitBtn = document.getElementById("graphSubmit");
+let graphOutput = document.getElementById("graphOutput");
 
 fileInput.addEventListener("change",function (ev){
   let target:any = ev.target;
@@ -145,6 +156,8 @@ untypedButton.onclick = function(){
   typed = false;
   etaEnableButton.disabled = false;
   etaDisableButton.disabled = false;
+  multiEdgeEnableButton.disabled = false;
+  multiEdgeDisableButton.disabled = false;
   refreshMacroList();
 };
 
@@ -154,6 +167,8 @@ typedButton.onclick = function(){
   typed = true;
   etaEnableButton.disabled = true;
   etaDisableButton.disabled = true;
+  multiEdgeEnableButton.disabled = true;
+  multiEdgeDisableButton.disabled = true;
   refreshMacroList();
 };
 
@@ -167,6 +182,18 @@ etaDisableButton.onclick = function(){
   etaDisableButton.className = "btn btn-primary";
   etaEnableButton.className = "btn btn-default";
   etaAllowed = false;
+}
+
+multiEdgeEnableButton.onclick = function(){
+  multiEdgeEnableButton.className = "btn btn-primary";
+  multiEdgeDisableButton.className = "btn btn-default";
+  allowMultipleEdges = true;
+}
+
+multiEdgeDisableButton.onclick = function(){
+  multiEdgeDisableButton.className = "btn btn-primary";
+  multiEdgeEnableButton.className = "btn btn-default";
+  allowMultipleEdges = false;
 }
 
 clearMacroButton.onclick = function(){
@@ -189,7 +216,8 @@ let workspace: string[] = [""];
 let submitInput = function(){
   let line = input.value;
   if (line==="" && curlf!==undefined){
-    doContinual();
+    if (graphActive) launchGraph();
+    else doContinual();
     return;
   }
   history.unshift(line);
@@ -201,7 +229,10 @@ let submitInput = function(){
   try{
     let ret = LambdaFriends.parseMacroDef(line,typed);
     if (ret===null) {
-      curlf = new LambdaFriends(line,typed,etaAllowed);
+      curlf = new LambdaFriends(line,typed,etaAllowed,allowMultipleEdges);
+      graphClear();
+      cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
+      makeLayout();
       outputLine(curlf.toString());
       if (typed) doContinual();
       showContinueBtn();
@@ -250,58 +281,26 @@ document.getElementById("input").onkeydown = function(e){
     e.preventDefault();
   }
 }
-let curNodes:ReductionNode[] = [];
 let graphStop:boolean = false;
 let graphDepth:number;
-startGraph.onclick = function(){
-  cy.resize();
+startGraph.onclick = launchGraph;
+function launchGraph(){
   makeLayout();
-  let line = input.value;
-  if (line!==""){
-    history.unshift(line);
-    historyNum = 0;
-    workspace = [].concat(history);
-    workspace.unshift("");
-    line = line.split("#")[0];
-    line = line.trim();
-    input.value = "";
-    let root:ReductionNode;
-    try{
-      if (LambdaFriends.parseMacroDef(line,typed)!==null) return;
-      graphClear();
-      ReductionNode.init(typed,etaAllowed);
-      root = new ReductionNode(new LambdaFriends(line,typed,etaAllowed).expr,null);
-    }catch(e){
-      alert(e.toString());
-      console.log(e);
-      return;
-    }
-    cy.add({group: "nodes", data: {id: ""+root.id, label:root.toString()}, classes:(root.isNormalForm?"goal":"")});
-    makeLayout();
-    curNodes = [root];
-  }
+  if (curlf === undefined) return;
   graphStop = false;
   let f = () => setTimeout(()=>{
-    if (graphStop || curNodes.length===0){
+    if (graphStop){
       makeLayout();
       return;
     }
-    let t = curNodes.shift();
-    if (t.depth>=(graphDepth===undefined?10:graphDepth)){
-      curNodes.push(t);
-      makeLayout();
-      return;
-    }
-    let ret = t.visit();
+    let ret = curlf.deepen(graphDepth);
     if (ret===null) {
-      f();
       makeLayout();
       return;
     }
     let ans:any[] = [];
     for (let n of ret.nodes){
-      ans.push({group: "nodes", data: {id: ""+n.id, label:n.toString()}, classes:(n.isNormalForm?"goal":"")});
-      curNodes.push(n);
+      ans.push({group: "nodes", data: {id: ""+n.id, label:""+n.toString()}, classes:(n.isNormalForm?"goal":"")});
     }
     for (let e of ret.edges){
       ans.push({group: "edges", data: {source:e.from.id.toString(),target:e.to.id.toString()}});
@@ -317,6 +316,10 @@ stopGraph.onclick = function(){
   graphStop = true;
 }
 
+imgGraph.onclick = function(){
+  window.open(cy.png());
+}
+
 maxDepth.addEventListener("change",function(){
   let new_s = parseInt(maxDepth.value);
   if (!isNaN(new_s)){
@@ -326,9 +329,58 @@ maxDepth.addEventListener("change",function(){
   }
 });
 
-// let submitMacro = function(){
-//   LambdaFriends.parseMacroDef()
-// }
+let graphActive = false;
+tabAbtn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
+tabBbtn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
+tabCbtn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
+tabDbtn.addEventListener("click",()=>{
+  setTimeout(makeLayout,10);
+  graphActive = true;
+});
+
+lmnInput.onkeydown = function(e){
+  if (e.keyCode===13){
+    submitLMNtal();
+    e.preventDefault();
+  }
+}
+lmnSubmitBtn.onclick = submitLMNtal;
+function submitLMNtal(){
+  let input = lmnInput.value;
+  try {
+    let ret = LambdaFriends.lmntal2LF(input,allowMultipleEdges);
+    lmnOutput.innerText = "Found: "+ret.expr.toString(true);
+  } catch (e){
+    lmnOutput.innerText = e.toString();
+  }
+}
+
+graphInput.onkeydown = function(e){
+  if (e.keyCode===13){
+    submitGraph();
+    e.preventDefault();
+  }
+}
+graphSubmitBtn.onclick = submitGraph;
+function submitGraph(){
+  let input = graphInput.value;
+  try {
+    let ret = LambdaFriends.graph2LF(input,allowMultipleEdges);
+    if (ret===null) graphOutput.innerText = "Not Found";
+    else graphOutput.innerText = "Found: "+ret.expr.toString(true);
+  } catch (e){
+    graphOutput.innerText = e.toString();
+  }
+}
 
 let outputBuffer = "";
 function output(str:string){
@@ -375,12 +427,12 @@ function htmlEscape(str:string):string{
   });
 }
 function refreshTex(){
-  tabC.textContent = null;
+  translateDiv.textContent = null;
   if (curlf === undefined) return;
 
-  tabC.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
-  if (typed) tabC.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
-  else tabC.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
+  translateDiv.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
+  if (typed) translateDiv.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
+  else translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
 }
 function makeTexDiv(title:string, content:string){
   let p = document.createElement("p");
@@ -411,19 +463,22 @@ function makeTexDiv(title:string, content:string){
   div.appendChild(code);
   return div;
 }
+let continualRunning = false;
 function doContinual(){
+  if (continualRunning) return;
+  continualRunning = true;
   outputButtons.textContent = null;
   let f = (n:number)=>setTimeout(() => {
     if (n===0 || !curlf.hasNext()) {
       showContinueBtn();
-      tabA.scrollTop = tabA.scrollHeight;
+      tabA.scrollTop = oel.offsetHeight-15;
+      continualRunning = false;
       return;
     }
     let res = curlf.reduction();
     outputNextLine(res);
-    tabA.scrollTop = tabA.scrollHeight;
+    tabA.scrollTop = oel.offsetHeight-15;
     refreshTex();
-    console.log(n);
     f(n-1);
   }, 1);
   f(steps===undefined?100:steps);
@@ -457,6 +512,7 @@ function showContinueBtn(){
     b.onclick = function(){
       outputNextLine(curlf.reduction(r));
       showContinueBtn();
+      tabA.scrollTop = oel.offsetHeight-15;
       refreshTex();
     }
     div.appendChild(b);
@@ -466,6 +522,7 @@ function graphClear(){
   cy.remove("*");
 }
 function makeLayout(){
+  cy.resize();
   cy.elements().makeLayout({
     name: "dagre",
     nodeSpacing: 5,
@@ -478,4 +535,5 @@ function makeLayout(){
 // ===== initialize =====
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
+multiEdgeDisableButton.onclick(null);
 refreshMacroList();

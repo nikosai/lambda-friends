@@ -1,16 +1,3 @@
-/*!
- * "SourceHanCodeJP" is lisenced under the SIL Open Font License 1.1
- * by Masataka Hattori
- */
-@font-face {
-  font-family: 'SourceHanCodeJP';
-  src: 
-    url('./fonts/sourcehancodejp-normal-webfont.woff2') format('woff2'),
-    url('./fonts/sourcehancodejp-normal-webfont.woff') format('woff'),
-    url('./fonts/SourceHanCodeJP-Normal.otf') format('opentype'),
-    url('./fonts/sourcehancodejp-normal-webfont.ttf') format('truetype');
-}
-
 html,body {
   margin: 0;
   height: 100%;
@@ -33,7 +20,8 @@ body {
 }
 
 .code,code,pre {
-  font-family: 'SourceHanCodeJP', 'Courier New', Courier, monospace;
+  font-family: 'M+ MN Type-1 (basic latin) Regular', 'M+ Type-1 (general-j) Regular','SourceHanCodeJP', 'Courier New', Courier, monospace;
+  font-weight: 400;
 }
 
 #wrapper header{
@@ -74,7 +62,7 @@ body {
   background-color: #ffffffcf;
   border-radius:0px 0px 5px 5px;
   resize: none;
-  height: 400px;
+  height: 600px;
   overflow-y: scroll;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -84,6 +72,11 @@ body {
 #output {
   margin-bottom: 15px;
   line-height: 1.6em;
+}
+
+#tabA {
+  overflow-x: scroll;
+  white-space: nowrap;
 }
 
 #output-group li>a {
@@ -110,6 +103,7 @@ body {
 }
 #outputBtns {
   margin-bottom: 20px;
+  white-space: initial;
 }
 
 #outputBtns *{
@@ -163,18 +157,18 @@ body {
   margin-top: 5px;
 }
 
-#tabC>p {
+#translate>p {
   margin-bottom: 15px;
   word-wrap: normal;
   overflow-wrap: normal;
   word-break: normal;
 }
 
-#tabC>h5 {
+#translate>h5 {
   margin-top: 30px;
 }
 
-#tabC>p>sup {
+#translate>p>sup {
   vertical-align: super;
   top: 0em;
   font-size: 60%;
@@ -194,14 +188,23 @@ body {
   word-break: break-all;
 }
 
-#tabC>div {
+#tabC .input-output{
   margin-bottom: 15px;
 }
 
-#tabC>div button {
+#tabC .input-output>.output{
+  height: 60px;
+  padding: 8px;
+}
+
+#translate>div {
+  margin-bottom: 15px;
+}
+
+#translate>div button {
   margin-right: 10px;
 }
-#tabC>div p * {
+#translate>div p * {
   vertical-align: middle;
 }
 
@@ -217,7 +220,7 @@ body {
 
 #graph {
   width:100%;
-  height:330px;
+  height:530px;
 }
 
 .modal {

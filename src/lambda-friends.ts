@@ -1,17 +1,23 @@
-import { Expression, Macro, makeAST, Redex } from "./expression";
+import { Expression, Macro, makeAST, Redex, makeTerms, parseLMNtal } from "./expression";
 import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
+import { ReductionNode, GraphNode } from "./graph";
 
 export class LambdaFriends{
   expr:Expression;
   typed:boolean;
   curStep: number;
   type:Type;
+  allowMultipleEdges:boolean;
   proofTree:string;
   processTex:string;
   original:Expression;
   etaAllowed:boolean;
+  root:ReductionNode;
+  curNodes:ReductionNode[];
+  nextRedexes:Redex[];
+  nextLeftMostRedex:Redex;
   static nextLinkID:number;
-  constructor(str:string,typed:boolean,etaAllowed:boolean){
+  constructor(str:string,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
     let l = str.split("#")[0].trim();
     let names = [];
     while (true) {
@@ -31,25 +37,42 @@ export class LambdaFriends{
     }
     this.typed = typed;
     this.etaAllowed = etaAllowed;
+    this.allowMultipleEdges = allowMultipleEdges;
     this.processTex = "\\begin{eqnarray*}\n&& ";
     this.curStep = 0;
+    this.root = ReductionNode.makeRoot(this.expr,this.typed,this.etaAllowed,this.allowMultipleEdges);
+    this.curNodes = [this.root];
+    this.nextRedexes = undefined;
   }
 
   public getRedexes(){
-    return this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
+    if (this.nextRedexes) return this.nextRedexes;
+    return this.nextRedexes = this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
+  }
+  
+  public getLeftMostRedex(){
+    if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
+    return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
   }
 
   public reduction(redex?:Redex):string{
     if (redex === undefined){
       // 簡約基指定のない場合、最左簡約
-      let rs = this.getRedexes();
-      if (rs.length===0) return null;
-      redex = rs[0];
+      redex = this.getLeftMostRedex();
+      if (redex === null) return null;
     }
     this.expr = redex.next;
-    this.curStep++;
-    this.processTex += redex.toTexString() + " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
-    let ret = this.curStep+": ("+redex.rule+") --> " + this.expr.toString(true);
+    this.nextRedexes = undefined;
+    this.nextLeftMostRedex = undefined;
+    this.processTex += redex.toTexString();
+    let ret;
+    if (redex.type === "macro"){
+      this.processTex += " \\\\\n&\\equiv& ";
+      ret = "-: (macro) = " + this.expr.toString(true);
+    } else {
+      this.processTex += " \\\\\n&\\longrightarrow_{"+redex.getTexRule()+"}& ";
+      ret = ++this.curStep+": ("+redex.rule+") --> " + this.expr.toString(true);
+    }
     if (!this.hasNext()){
       ret += "    (normal form)\n";
       let n = this.parseChurchNum();
@@ -61,8 +84,32 @@ export class LambdaFriends{
     return ret;
   }
 
+  // グラフのノードを新たに1つ展開する（限界深度を指定してもよい）
+  public deepen(maxDepth?:number):{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]}{
+    if (this.curNodes.length===0){
+      // 展開完了
+      return null;
+    }
+    let t = this.curNodes.shift();
+    if (maxDepth!==undefined && t.depth>=maxDepth){
+      // 限界深度に到達
+      this.curNodes.push(t);
+      return null;
+    }
+    let ret = t.visit();
+    for (let n of ret.nodes){
+      this.curNodes.push(n);
+    }
+    return ret;
+  }
+
   public hasNext():boolean{
-    return !this.expr.isNormalForm(this.typed,this.etaAllowed);
+    return this.getLeftMostRedex() !== null;
+  }
+
+  // 未展開のノードがまだあるか
+  public hasNodes():boolean{
+    return this.curNodes.length>0;
   }
 
   public getProofTree(){
@@ -108,7 +155,7 @@ export class LambdaFriends{
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     if (names.length===0) return null;
-    let lf = new LambdaFriends(l,typed,undefined); // ???
+    let lf = new LambdaFriends(l,typed,undefined,false); // ????
     for (let name of names){
       Macro.add(name, lf, typed);
     }
@@ -166,11 +213,19 @@ export class LambdaFriends{
     return Macro.clear(typed);
   }
 
+  public static graph2LF(str:string,allowMultipleEdges:boolean){
+    return GraphNode.search(GraphNode.parse(str),allowMultipleEdges);
+  }
+
+  public static lmntal2LF(str:string,allowMultipleEdges:boolean){
+    return new LambdaFriends(parseLMNtal(str).toString(true),false,false,allowMultipleEdges);
+  }
+
   // typedだったらとりあえずnullを返すことにする
   public toLMNtal():string{
     LambdaFriends.nextLinkID = 0;
     if (this.typed) return null;
-    else return "root="+this.original.toLMNtal()+".";
+    else return this.original.toLMNtal();
   }
   
   public toString():string{

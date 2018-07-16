@@ -62,3 +62,10 @@ export class TexError extends LambdaFriendsError{
     super("TexError",message);
   }
 }
+
+// GraphをParseする際の例外
+export class GraphParseError extends LambdaFriendsError{
+  constructor(message: string){
+    super("GraphParseError",message);
+  }
+}

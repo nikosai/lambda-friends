@@ -4,11 +4,12 @@ import { LambdaFriends } from "./lambda-friends";
 
 // 字句解析
 function tokenize(str:string, typed:boolean):Symbol[]{
-  let strs:string[] = str.split(/\s*/).join("").split("");
+  let strs:string[] = str.split("");
   let tokens:Symbol[] = [];
   while (strs.length>0){
-    let c = strs.shift();
-    if (c === "<") {
+    let c = strs.shift().trim();
+    if (c === ""){}
+    else if (c === "<") {
       // <macro>
       let content = "";
       while (true){
@@ -145,6 +146,104 @@ export function makeAST(str:string, typed:boolean):Expression{
   return parseSymbols(tokenize(str,typed),typed);
 }
 
+// Input : lambda(cp(L0,L1),lambda(L2,apply(apply(L1,L0),L2)))
+// Now   : lambda([L0,L1], lambda([L2],apply()))
+// Output: \xy.xxy
+export function parseLMNtal(str:string):Expression{
+  return parse(str,[],{});
+
+  function parse(str:string,usedVars:Variable[],map:{[key:string]:string}){
+    str = str.trim();
+    let res = str.match(/^.+?(?=\()/);
+    if (res===null){
+      let ret = map[str];
+      if (ret === undefined) throw new LambdaParseError("Malformed LMNtal Lambda Term. Unknown Token: "+str);
+      return new Variable(ret);
+    }
+
+    let atom = res[0].trim();
+    let args = parseArg(str.match(/\(.+$/)[0]);
+
+    switch(atom){
+      case "lambda":{
+        if (args.length!==2) throw new LambdaParseError("Malformed LMNtal Lambda Term. lambda(X,A) should have 2 args.");
+        let v = Variable.getNew(usedVars);
+        let bvs = parseAbsArg(args[0]);
+        for (let bv of bvs) map[bv] = v.name;
+        return new LambdaAbstraction(v,parse(args[1],usedVars.concat(v),Object.assign({},map)));
+      }
+      case "apply":{
+        if (args.length!==2) throw new LambdaParseError("Malformed LMNtal Lambda Term. apply(A,B) should have 2 args.");
+        return new Application(parse(args[0],[].concat(usedVars),Object.assign({},map)),parse(args[1],[].concat(usedVars),Object.assign({},map)));
+      }
+      case "fv":{
+        if (args.length!==1) throw new LambdaParseError("Malformed LMNtal Lambda Term. fv(X) should have 1 arg.");
+        return Macro.get(args[0],false);
+      }
+      default:
+        throw new LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: "+atom);
+    }
+  }
+
+  // Ex1: (L0,cp(L1,L2)) => ["L0","cp(L1,L2)"]
+  // Ex2: (L0) => ["L0"]
+  // Ex3: ( ) => []
+  function parseArg(str:string):string[]{
+    str = str.trim();
+    if (str[0]!=="(" || str[str.length-1]!==")")
+      throw new LambdaParseError("Malformed LMNtal Lambda Term. Invalid Parentheses.");
+    let level = 0;
+    let content = "";
+    let strs:string[] = [];
+    for (let i=1; i<str.length-1; i++){
+      let t = str[i];
+      if (t==="(") level++;
+      else if (t===")") level--;
+      if (level===0 && t===",") {
+        strs.push(content);
+        content = "";
+      } else {
+        content += t;
+      }
+    }
+    if (level!==0) throw new LambdaParseError("Malformed LMNtal Lambda Term. Invalid Parentheses.");
+    strs.push(content);
+    if (strs.length === 1){
+      let s = strs[0].trim();
+      if (s==="") return [];
+      else return [s];
+    }
+    let ret:string[] = [];
+    for (let s of strs) ret.push(s.trim());
+    return ret;
+  }
+
+  // Ex1: cp(L0,cp(L1,L2)) => [L0,L1,L2]
+  // Ex2: L0 => [L0]
+  // Ex3: rm => []
+  function parseAbsArg(str:string):string[]{
+    str = str.trim();
+    let res = str.match(/^.+?(?=\()/);
+    if (res===null){
+      if(str === "rm") return [];
+      else return [str];
+    }
+    let atom = res[0].trim();
+    let args = parseArg(str.match(/\(.+$/)[0]);
+    if (atom==="rm"){
+      if (args.length!==0)
+        throw new LambdaParseError("Malformed LMNtal Lambda Term. rm() should have 0 args.");
+      return [];
+    } else if (atom==="cp"){
+      if (args.length!==2)
+        throw new LambdaParseError("Malformed LMNtal Lambda Term. cp(A,B) should have 2 args.");
+      return parseAbsArg(args[0].trim()).concat(parseAbsArg(args[1].trim()));
+    } else {
+      throw new LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: "+atom);
+    }
+  }
+}
+
 // チャーチ数を表すExpressionの生成
 function makeChurchNum(n:number,typed:boolean):Expression{
   let str = "\\sz.";
@@ -153,6 +252,24 @@ function makeChurchNum(n:number,typed:boolean):Expression{
     content = "s("+content+")";
   }
   return makeAST(str+content,typed);
+}
+
+export function makeTerms(depth:number):Expression[]{
+  return sub([],depth);
+  function sub(vs:Variable[], depth:number):Expression[]{
+    let ret:Expression[] = [].concat(vs);
+    if (depth === 0) return ret;
+    let res = sub(vs,depth-1);
+    // Application
+    for (let i=0; i<res.length; i++)
+      for (let j=0; j<res.length; j++)
+        ret.push(new Application(res[i],res[j]));
+    // Lambda Abstraction
+    let newVar = Variable.getNew(vs);
+    let res1 = sub(vs.concat(newVar),depth-1);
+    for (let r of res1) ret.push(new LambdaAbstraction(newVar,r));
+    return ret;
+  }
 }
 
 function htmlEscape(str:string):string{
@@ -238,39 +355,39 @@ class BetaRedex extends Redex{
     super("beta");
     this.content = e;
     this.la = <LambdaAbstraction>e.left;
-    this.next = this.la.expr.substitute(this.la.boundval,e.right);
+    this.next = this.la.expr.substitute(this.la.boundvar,e.right);
     this.arg = e.right;
     this.rule = "beta";
   }
   public toString():string{
-    let boundvals:string[] = [];
+    let boundvars:string[] = [];
     let expr = this.la.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toString(false));
+      boundvars.push(expr.boundvar.toString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+"."+expr.toString(true);
-    return this.left+"(\\["+this.la.boundval.toString(false)+"]"+str+")["+this.arg.toString(false)+"]"+this.right;
+    let str = boundvars.join("")+"."+expr.toString(true);
+    return this.left+"(\\["+this.la.boundvar.toString(false)+"]"+str+")["+this.arg.toString(false)+"]"+this.right;
   }
   public toTexString():string{
-    let boundvals:string[] = [];
+    let boundvars:string[] = [];
     let expr = this.la.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toTexString(false));
+      boundvars.push(expr.boundvar.toTexString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+"."+expr.toTexString(true);
-    return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundval.toTexString(false)+"}}"+str+")\\underline{\\strut "+this.arg.toTexString(false)+"}"+this.texRight;
+    let str = boundvars.join("")+"."+expr.toTexString(true);
+    return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundvar.toTexString(false)+"}}"+str+")\\underline{\\strut "+this.arg.toTexString(false)+"}"+this.texRight;
   }
   public toHTMLString():string{
-    let boundvals:string[] = [];
+    let boundvars:string[] = [];
     let expr = this.la.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toString(false));
+      boundvars.push(expr.boundvar.toString(false));
       expr = expr.expr;
     }
-    let str = boundvals.join("")+"."+expr.toString(true);
-    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundval">'+htmlEscape(this.la.boundval.toString(false))+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString(false))+'</span>'+htmlEscape(this.right);
+    let str = boundvars.join("")+"."+expr.toString(true);
+    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundvar">'+htmlEscape(this.la.boundvar.toString(false))+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString(false))+'</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\beta";
@@ -362,24 +479,20 @@ class TypeResult{
 // ラムダ項（抽象クラス）
 export abstract class Expression{
   className: string;
-  freevals: Variable[];
+  freevars: Variable[];
   // type: Type;
 
   constructor(className:string){
     this.className = className;
   }
 
-  public isNormalForm(type:boolean,etaAllowed:boolean):boolean{
-    return this.getRedexes(type,etaAllowed,true).length===0;
-  }
-
   public parseChurchNum():number{
     if (!(this instanceof LambdaAbstraction)) return null;
-    const f = this.boundval;
+    const f = this.boundvar;
     let e = this.expr;
     let n = 0;
     if (!(e instanceof LambdaAbstraction)) return null;
-    const x = e.boundval;
+    const x = e.boundvar;
     e = e.expr;
     while (e instanceof Application) {
       n++;
@@ -410,8 +523,8 @@ export abstract class Expression{
   public abstract equalsAlpha(expr:Expression):boolean;
   public abstract getEquations(gamma:Variable[], type:Type, noParens:boolean):TypeResult;
   public abstract getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[];
+  public abstract getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex;
   public abstract extractMacros():Expression;
-  public abstract copy():Expression;
 }
 
 // 終端記号（未解析）
@@ -436,7 +549,7 @@ class Symbol extends Expression{
     throw new TexError("class Symbol does not have tex string");
   }
   public getFV():Variable[]{
-    return this.freevals;
+    return this.freevars;
   }
   public substitute(x:Variable, expr:Expression):Expression{
     throw new SubstitutionError("Undefined Substitution");
@@ -447,11 +560,11 @@ class Symbol extends Expression{
   public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     throw new ReductionError("Symbols must not appear in parsed Expression")
   }
-  public extractMacros():Expression{
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
     throw new ReductionError("Symbols must not appear in parsed Expression")
   }
-  public copy():Symbol{
-    return new Symbol(this.name,this.className);
+  public extractMacros():Expression{
+    throw new ReductionError("Symbols must not appear in parsed Expression")
   }
 }
 
@@ -460,7 +573,7 @@ class Variable extends Symbol{
   type:Type;
   constructor(name:string){
     super(name, "Variable");
-    this.freevals = [this];
+    this.freevars = [this];
   }
 
   public substitute(x:Variable, expr:Expression):Expression{
@@ -539,11 +652,11 @@ class Variable extends Symbol{
   public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     return [];
   }
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
+    return null;
+  }
   public extractMacros():Expression{
     return this;
-  }
-  public copy():Variable{
-    return new Variable(this.name);
   }
   public toLMNtal():string{
     return "fv("+this.name+")";
@@ -556,7 +669,7 @@ abstract class Const extends Symbol {
   abstract type:Type;
   constructor(name:string, className:string){
     super(name, className);
-    this.freevals = [];
+    this.freevars = [];
   }
   public substitute(x:Variable, expr:Expression):Expression{
     return this;
@@ -581,6 +694,13 @@ abstract class Const extends Symbol {
       throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
     }
   }
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
+    if (typed){
+      return null;
+    } else {
+      throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+    }
+  }
   public extractMacros():Expression{
     return this;
   }
@@ -595,9 +715,6 @@ class ConstInt extends Const{
     this.value = value;
     this.type = new TypeInt();
   }
-  public copy():Const{
-    return new ConstInt(this.value);
-  }
 }
 
 // bool型定数 c^{bool}
@@ -608,9 +725,6 @@ class ConstBool extends Const{
     super(value.toString(), "ConstBool");
     this.value = value;
     this.type = new TypeBool();
-  }
-  public copy():ConstBool{
-    return new ConstBool(this.value);
   }
 }
 
@@ -697,9 +811,6 @@ class ConstOp extends Const{
         throw new LambdaParseError("Undefined function: "+funcName);
     }
   }
-  public copy():ConstOp{
-    return new ConstOp(this.name);
-  }
 }
 
 // 空リスト nil
@@ -709,7 +820,7 @@ class Nil extends Symbol{
   }
   constructor(){
     super("nil","Nil");
-    this.freevals=[];
+    this.freevars=[];
   }
   public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (nil)
@@ -733,11 +844,15 @@ class Nil extends Symbol{
       throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
     }
   }
+  public getLeftMostRedex(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex{
+    if (typed){
+      return null;
+    } else {
+      throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+    }
+  }
   public extractMacros():Expression{
     return this;
-  }
-  public copy():Nil{
-    return new Nil();
   }
 }
 
@@ -750,7 +865,7 @@ export class Macro extends Symbol{
   private static mapUntyped:{[key: string]:Macro} = {};
   private constructor(name:string, expr:Expression, typed:boolean, type:Type){
     super(name, "Macro");
-    this.freevals = [];
+    this.freevars = [];
     this.expr = expr;
     this.typed = typed;
     this.type = type;
@@ -826,13 +941,14 @@ export class Macro extends Symbol{
     if (next.expr === undefined) return [];
     else return [new MacroRedex(next)];
   }
+  public getLeftMostRedex(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex{
+    let next = Macro.get(this.name,typed);
+    if (next.expr === undefined) return null;
+    else return new MacroRedex(next);
+  }
   public extractMacros(){
     if (this.expr === undefined) return this;
     else return this.expr.extractMacros();
-  }
-  public copy():Macro{
-    if (this.expr === undefined) return new Macro(this.name,undefined,this.typed,this.type);
-    else return new Macro(this.name,this.expr.copy(),this.typed,this.type);
   }
   public toLMNtal():string{
     if (this.expr === undefined) return "fv("+this.name+")";
@@ -842,69 +958,69 @@ export class Macro extends Symbol{
 
 // ラムダ抽象 \x.M
 class LambdaAbstraction extends Expression{
-  boundval: Variable;
+  boundvar: Variable;
   expr: Expression;
 
-  constructor(boundval:Variable, expr:Expression){
+  constructor(boundvar:Variable, expr:Expression){
     super("LambdaAbstraction");
-    this.freevals = undefined;
-    this.boundval = boundval;
+    this.freevars = undefined;
+    this.boundvar = boundvar;
     this.expr = expr;
   }
   static parse(tokens:Symbol[],typed:boolean):LambdaAbstraction{
-    let boundvals:Variable[] = [];
+    let boundvars:Variable[] = [];
     while (tokens.length>0){
       let t:Symbol = tokens.shift();
       if (t.name==="."){
         let expr = parseSymbols(tokens,typed);
-        while (boundvals.length>0){
-          expr = new LambdaAbstraction(boundvals.pop(),expr);
+        while (boundvars.length>0){
+          expr = new LambdaAbstraction(boundvars.pop(),expr);
         }
         return <LambdaAbstraction>expr;
       } else if (t.name.match(/^[A-Za-z]$/)===null){
         throw new LambdaParseError("Unexpected token: '"+t+"'");
       } else {
-        boundvals.push(new Variable(t.name));
+        boundvars.push(new Variable(t.name));
       }
     }
     throw new LambdaParseError("'.' is needed");
   }
   public toString(noParens:boolean):string{
-    let boundvals = [this.boundval];
+    let boundvars = [this.boundvar];
     let expr = this.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval);
+      boundvars.push(expr.boundvar);
       expr = expr.expr;
     }
-    let str = "\\"+boundvals.join("")+"."+expr.toString(true);
+    let str = "\\"+boundvars.join("")+"."+expr.toString(true);
     if (!noParens) str = "("+str+")";
     return str;
   }
   public getFV():Variable[]{
-    if (this.freevals !== undefined) return this.freevals;
-    this.freevals = [];
-    return this.freevals = Variable.dif(this.expr.getFV(),[this.boundval]);
+    if (this.freevars !== undefined) return this.freevars;
+    this.freevars = [];
+    return this.freevars = Variable.dif(this.expr.getFV(),[this.boundvar]);
   }
   public substitute(y:Variable, expr:Expression):Expression{
-    if (this.boundval.equals(y)){
+    if (this.boundvar.equals(y)){
       return this;
-    } else if (!Variable.contains(expr.getFV(),this.boundval)){
-      return new LambdaAbstraction(this.boundval,this.expr.substitute(y,expr));
+    } else if (!Variable.contains(expr.getFV(),this.boundvar)){
+      return new LambdaAbstraction(this.boundvar,this.expr.substitute(y,expr));
     } else {
       let uniFV = Variable.union(this.expr.getFV(),expr.getFV());
       let z = Variable.getNew(uniFV);
-      return new LambdaAbstraction(z,this.expr.substitute(this.boundval,z)).substitute(y,expr);
+      return new LambdaAbstraction(z,this.expr.substitute(this.boundvar,z)).substitute(y,expr);
     }
   }
   public equals(expr:Expression):boolean{
-    return (expr instanceof LambdaAbstraction) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
+    return (expr instanceof LambdaAbstraction) && (expr.boundvar.equals(this.boundvar)) && (expr.expr.equals(this.expr));
   }
   public equalsAlpha(expr:Expression):boolean{
     if (!(expr instanceof LambdaAbstraction)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundval;
+    let x = this.boundvar;
     let m = this.expr;
-    let y = expr.boundval;
+    let y = expr.boundvar;
     let n = expr.expr;
     if (Variable.contains(m.getFV(),y)){
       return n.equalsAlpha(m);
@@ -916,33 +1032,33 @@ class LambdaAbstraction extends Expression{
     // (abs)
     let t0 = TypeVariable.getNew();
     let t1 = TypeVariable.getNew();
-    this.boundval.type = t1;
-    let next = this.expr.getEquations(gamma.concat(this.boundval),t0,true);
+    this.boundvar.type = t1;
+    let next = this.expr.getEquations(gamma.concat(this.boundvar),t0,true);
     let str = next.proofTree;
     str += "\\RightLabel{\\scriptsize(abs)}\n";
     str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(next.eqs.concat(new TypeEquation(type,new TypeFunc(t1,t0))),str);
   }
   public toTexString(noParens:boolean):string{
-    let boundvals = [this.boundval.toTexString(false)];
+    let boundvars = [this.boundvar.toTexString(false)];
     let expr = this.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval.toTexString(false));
+      boundvars.push(expr.boundvar.toTexString(false));
       expr = expr.expr;
     }
-    let str = "\\lambda "+boundvals.join("")+"."+expr.toTexString(true);
+    let str = "\\lambda "+boundvars.join("")+"."+expr.toTexString(true);
     if (!noParens) str = "("+str+")";
     return str;
   }
   public isEtaRedex():boolean{
-    return (this.expr instanceof Application) && (this.expr.right.equals(this.boundval)) && (!Variable.contains(this.expr.left.getFV(),this.boundval));
+    return (this.expr instanceof Application) && (this.expr.right.equals(this.boundvar)) && (!Variable.contains(this.expr.left.getFV(),this.boundvar));
   }
   public getRedexes(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex[]{
     if (typed) return [];
-    let boundvals = [this.boundval];
+    let boundvars = [this.boundvar];
     let expr = this.expr;
     while(expr instanceof LambdaAbstraction){
-      boundvals.push(expr.boundval);
+      boundvars.push(expr.boundvar);
       expr = expr.expr;
     }
     let lParen = "", rParen = "";
@@ -952,12 +1068,12 @@ class LambdaAbstraction extends Expression{
     }
     let ret = Redex.makeNext(
       expr.getRedexes(false,etaAllowed,true),
-      lParen+"\\"+boundvals.join("")+".",
+      lParen+"\\"+boundvars.join("")+".",
       rParen,
-      lParen+"\\lambda{"+boundvals.join("")+"}.",
+      lParen+"\\lambda{"+boundvars.join("")+"}.",
       rParen,
       (prev)=>{
-        let bvs:Variable[] = [].concat(boundvals);
+        let bvs:Variable[] = [].concat(boundvars);
         let ret=prev;
         while (bvs.length>0){
           let t = bvs.pop();
@@ -974,14 +1090,51 @@ class LambdaAbstraction extends Expression{
     }
     return ret;
   }
-  public extractMacros():Expression{
-    return new LambdaAbstraction(this.boundval,this.expr.extractMacros());
+  public getLeftMostRedex(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex{
+    if (typed) return null;
+    
+    if (etaAllowed===undefined){
+      console.error("etaAllowed is undefined.");
+      etaAllowed = false;
+    }
+    if (etaAllowed && this.isEtaRedex()){
+      return new EtaRedex(this);
+    }
+    
+    let boundvars = [this.boundvar];
+    let expr = this.expr;
+    while(expr instanceof LambdaAbstraction){
+      boundvars.push(expr.boundvar);
+      expr = expr.expr;
+    }
+    let lParen = "", rParen = "";
+    if (!noParens){
+      lParen = "(";
+      rParen = ")";
+    }
+    let ret = expr.getLeftMostRedex(false,etaAllowed,true);
+    if (ret === null) return null;
+
+    ret.next = ((prev)=>{
+      let bvs:Variable[] = [].concat(boundvars);
+      let ret=prev;
+      while (bvs.length>0){
+        let t = bvs.pop();
+        ret = new LambdaAbstraction(t,ret);
+      }
+      return ret;
+    })(ret.next);
+    ret.addLeft(lParen+"\\"+boundvars.join("")+".");
+    ret.addRight(rParen);
+    ret.addTexLeft(lParen+"\\lambda{"+boundvars.join("")+"}.");
+    ret.addTexRight(rParen);
+    return ret;
   }
-  public copy():LambdaAbstraction{
-    return new LambdaAbstraction(this.boundval.copy(),this.expr.copy());
+  public extractMacros():Expression{
+    return new LambdaAbstraction(this.boundvar,this.expr.extractMacros());
   }
   public toLMNtal():string{
-    let ret = this.expr.toLMNtal().split("fv("+this.boundval.name+")");
+    let ret = this.expr.toLMNtal().split("fv("+this.boundvar.name+")");
     let str = ret[0];
     let links:string[] = [];
     for (let i=1; i<ret.length; i++){
@@ -1031,9 +1184,9 @@ class Application extends Expression{
   }
 
   public getFV():Variable[]{
-    if (this.freevals===undefined)
-      return this.freevals = Variable.union(this.left.getFV(),this.right.getFV());
-    else return this.freevals;
+    if (this.freevars===undefined)
+      return this.freevars = Variable.union(this.left.getFV(),this.right.getFV());
+    else return this.freevars;
   }
 
   public substitute(y:Variable, expr:Expression):Expression{
@@ -1068,7 +1221,7 @@ class Application extends Expression{
       let rParen = (noParens ? "" : ")");
       if (this.left instanceof LambdaAbstraction){
         // (app2)
-        return [new TypedRedex(this, this.left.expr.substitute(this.left.boundval,this.right),"app2")];
+        return [new TypedRedex(this, this.left.expr.substitute(this.left.boundvar,this.right),"app2")];
       } else if (this.left instanceof Application 
         && this.left.left instanceof ConstOp
         && this.left.right instanceof Const){
@@ -1135,8 +1288,7 @@ class Application extends Expression{
           "",
           t.right.toTexString(false),
           (prev) => (new Application(prev,t.right)));
-        let lstr = t.left.toString(false);
-        if (t.left instanceof Application) lstr = lstr.slice(1,-1);
+        let lstr = t.left.toString(true);
         let ret2 = Redex.makeNext(
           t.right.getRedexes(false,etaAllowed,false),
           lstr,
@@ -1157,11 +1309,112 @@ class Application extends Expression{
       return ret;
     }
   }
+  public getLeftMostRedex(typed:boolean, etaAllowed:boolean, noParens:boolean):Redex{
+    if (typed){
+      // typed
+      let lParen = (noParens ? "" : "(");
+      let rParen = (noParens ? "" : ")");
+      if (this.left instanceof LambdaAbstraction){
+        // (app2)
+        return new TypedRedex(this, this.left.expr.substitute(this.left.boundvar,this.right),"app2");
+      } else if (this.left instanceof Application 
+        && this.left.left instanceof ConstOp
+        && this.left.right instanceof Const){
+        let op = this.left.left;
+        let left = this.left.right;
+        let right = this.right;
+        if (right instanceof Const){
+          // (app5)
+          if (op.type.left.equals(left.type) && op.type.right instanceof TypeFunc && op.type.right.left.equals(right.type)){
+            return new TypedRedex(this,op.value(left,right),"app5");
+          } else {
+            throw new ReductionError(op.type+" cannot handle "+left.type+" and "+right.type+" as arguments");
+          }
+        } else {
+          // (app4)
+          let ret = right.getLeftMostRedex(true,false,false);
+          if (ret === null) return null;
+          ret.next = new Application(new Application(op,left),ret.next);
+          ret.addLeft(lParen+op.toString(false)+left.toString(false));
+          ret.addRight(rParen);
+          ret.addTexLeft(lParen+op.toTexString(false)+left.toTexString(false));
+          ret.addTexRight(rParen);
+          return ret;
+        }
+      } else if (this.left instanceof ConstOp) {
+        // (app3)
+        let ret = this.right.getLeftMostRedex(true,false,false);
+        if (ret === null) return null;
+        ret.next = new Application(this.left,ret.next);
+        ret.addLeft(lParen+this.left.toString(false));
+        ret.addRight(rParen);
+        ret.addTexLeft(lParen+this.left.toTexString(false));
+        ret.addTexRight(rParen);
+        return ret;
+      } else {
+        // (app1)
+        let ret = this.right.getLeftMostRedex(true,false,false);
+        if (ret === null) return null;
+        ret.next = new Application(this.left,ret.next);
+        ret.addLeft(lParen);
+        ret.addRight(rParen+this.right.toString(false));
+        ret.addTexLeft(lParen);
+        ret.addTexRight(rParen+this.right.toTexString(false));
+        return ret;
+      }
+    } else {
+      // untyped
+      let apps:Application[] = [this];
+      let right:string[] = [""];
+      let texRight:string[] = [""];
+      while (true){
+        let t = apps[apps.length-1];
+        right.push(t.right.toString(false)+right[right.length-1]);
+        texRight.push(t.right.toTexString(false)+right[texRight.length-1]);
+        if (!(t.left instanceof Application)) break;
+        apps.push(t.left);
+      }
+      // apps = [abc, ab]
+      // right = ["","c","bc"]
+      let ret = apps[apps.length-1].left.getLeftMostRedex(false,etaAllowed,false);
+      while (apps.length>0) {
+        let t = apps.pop();
+        if (t.isBetaRedex()){
+          ret = new BetaRedex(t);
+        } else if (ret === null){
+          // 右から次を作る
+          ret = t.right.getLeftMostRedex(false,etaAllowed,false);
+          if (ret !== null){
+            let lstr = t.left.toString(true);
+            ret.next = new Application(t.left,ret.next);
+            ret.addLeft(lstr);
+            ret.addRight("");
+            ret.addTexLeft(t.left.toTexString(false));
+            ret.addTexRight("");
+          }
+        } else {
+          // 前のから次を作る
+          ret.next = new Application(ret.next,t.right);
+          ret.addLeft("");
+          ret.addRight(t.right.toString(false));
+          ret.addTexLeft("");
+          ret.addTexRight(t.right.toTexString(false));
+        }
+        right.pop();
+        texRight.pop();
+      }
+      if (ret === null) return null;
+      if (!noParens){
+        ret.addLeft("(");
+        ret.addRight(")");
+        ret.addTexLeft("(");
+        ret.addTexRight(")");
+      }
+      return ret;
+    }
+  }
   public extractMacros():Expression{
     return new Application(this.left.extractMacros(),this.right.extractMacros());
-  }
-  public copy():Application{
-    return new Application(this.left.copy(),this.right.copy());
   }
   public toLMNtal():string{
     return "apply("+this.left.toLMNtal()+","+this.right.toLMNtal()+")";
@@ -1186,9 +1439,9 @@ class List extends Expression{
   }
 
   public getFV():Variable[]{
-    if (this.freevals===undefined)
-      return this.freevals = Variable.union(this.head.getFV(),this.tail.getFV());
-    else return this.freevals;
+    if (this.freevars===undefined)
+      return this.freevars = Variable.union(this.head.getFV(),this.tail.getFV());
+    else return this.freevars;
   }
 
   public substitute(y:Variable, expr:Expression):Expression{
@@ -1222,11 +1475,12 @@ class List extends Expression{
     if (typed) return [];
     else throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
   }
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
+    if (typed) return null;
+    else throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
+  }
   public extractMacros():Expression{
     return new List(this.head.extractMacros(),this.tail.extractMacros());
-  }
-  public copy():Expression{
-    return new List(this.head.copy(),this.tail.copy());
   }
 }
 
@@ -1242,7 +1496,7 @@ class If extends Expression{
     this.ifFalse = ifFalse;
   }
   public getFV():Variable[]{
-    return this.freevals = Variable.union(this.state.getFV(),this.ifTrue.getFV(),this.ifFalse.getFV());
+    return this.freevars = Variable.union(this.state.getFV(),this.ifTrue.getFV(),this.ifFalse.getFV());
   }
   public toString(noParens:boolean):string{
     let ret = "[if]"+this.state.toString(true)+"[then]"+this.ifTrue.toString(true)+"[else]"+this.ifFalse.toString(true);
@@ -1295,6 +1549,29 @@ class If extends Expression{
         (prev)=>(new If(prev,this.ifTrue,this.ifFalse)));
     }
   }
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
+    if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+
+    if (this.state instanceof ConstBool){
+      if (this.state.value){
+        // (if2)
+        return new TypedRedex(this,this.ifTrue,"if2");
+      } else {
+        // (if3)
+        return new TypedRedex(this,this.ifFalse,"if3");
+      }
+    } else {
+      // (if1)
+      let ret = this.state.getLeftMostRedex(true,false,false);
+      if (ret === null) return null;
+      ret.next = new If(ret.next,this.ifTrue,this.ifFalse);
+      ret.addLeft("([if]");
+      ret.addRight("[then]"+this.ifTrue.toString(true)+"[else]"+this.ifFalse.toString(true)+")");
+      ret.addTexLeft("({\\bf if}~");
+      ret.addTexRight("~{\\bf then}~"+this.ifTrue.toTexString(true)+"~{\\bf else}~"+this.ifFalse.toTexString(true)+")");
+      return ret;
+    }
+  }
   public static parse(tokens:Symbol[], typed:boolean):If{
     let state:Symbol[] = [];
     let i_num=0, t_num=0, e_num=0;
@@ -1342,78 +1619,75 @@ class If extends Expression{
   public extractMacros():Expression{
     return new If(this.state.extractMacros(),this.ifTrue.extractMacros(),this.ifFalse.extractMacros());
   }
-  public copy():Expression{
-    return new If(this.state.copy(),this.ifTrue.copy(),this.ifFalse.copy());
-  }
 }
 
 // let in
 class Let extends Expression{
-  boundval:Variable;
+  boundvar:Variable;
   left:Expression;
   right:Expression;
-  constructor(boundval:Variable, left:Expression, right:Expression){
+  constructor(boundvar:Variable, left:Expression, right:Expression){
     super("Let");
-    this.boundval = boundval;
+    this.boundvar = boundvar;
     this.left = left;
     this.right = right;
   }
   public getFV():Variable[]{
-    if (this.freevals!==undefined) return this.freevals;
+    if (this.freevars!==undefined) return this.freevars;
     let ret:Variable[] = [];
     for (let fv of this.right.getFV()){
-      if (!fv.equals(this.boundval)){
+      if (!fv.equals(this.boundvar)){
         ret.push(fv);
       }
     }
-    return this.freevals = Variable.union(ret, this.left.getFV());
+    return this.freevars = Variable.union(ret, this.left.getFV());
   }
   public toString(noParens:boolean):string{
-    let ret = "[let]"+this.boundval.toString(true)+"="+this.left.toString(true)+"[in]"+this.right.toString(true);
+    let ret = "[let]"+this.boundvar.toString(true)+"="+this.left.toString(true)+"[in]"+this.right.toString(true);
     if (!noParens) ret = "("+ret+")";
     return ret;
   }
   public substitute(y:Variable, expr:Expression):Expression{
     let left = this.left.substitute(y,expr);
-    if (this.boundval.equals(y)){
-      return new Let(this.boundval,left,this.right);
-    } else if (!Variable.contains(expr.getFV(),this.boundval)){
-      return new Let(this.boundval,left,this.right.substitute(y,expr));
+    if (this.boundvar.equals(y)){
+      return new Let(this.boundvar,left,this.right);
+    } else if (!Variable.contains(expr.getFV(),this.boundvar)){
+      return new Let(this.boundvar,left,this.right.substitute(y,expr));
     } else {
       let uniFV = Variable.union(this.right.getFV(),expr.getFV());
       let z = Variable.getNew(uniFV);
       if (z.equals(y)){
-        return new Let(z,left,this.right.substitute(this.boundval,z));
+        return new Let(z,left,this.right.substitute(this.boundvar,z));
       } else {
-        return new Let(z,left,this.right.substitute(this.boundval,z).substitute(y,expr));
+        return new Let(z,left,this.right.substitute(this.boundvar,z).substitute(y,expr));
       }
     }
   }
   public equals(expr:Expression):boolean{
-    return (expr instanceof Let) && (expr.boundval.equals(this.boundval)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
+    return (expr instanceof Let) && (expr.boundvar.equals(this.boundvar)) && (expr.left.equals(this.left)) && (expr.right.equals(this.right));
   }
   public equalsAlpha(expr:Expression):boolean{
     if (!(expr instanceof Let)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundval;
+    let x = this.boundvar;
     let m = this.right;
-    let y = expr.boundval;
+    let y = expr.boundvar;
     let n = expr.right;
     return (!Variable.contains(m.getFV(),y) && n.equalsAlpha(m.substitute(x,y)));
   }
   public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (let)
     let t1 = TypeVariable.getNew();
-    this.boundval.type = t1;
+    this.boundvar.type = t1;
     let nextL = this.left.getEquations(gamma,t1,true);
-    let nextR = this.right.getEquations(gamma.concat(this.boundval),type,true);
+    let nextR = this.right.getEquations(gamma.concat(this.boundvar),type,true);
     let str = nextL.proofTree+nextR.proofTree;
     str += "\\RightLabel{\\scriptsize(let)}\n";
     str += "\\TrinaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(nextL.eqs.concat(nextR.eqs),str);
   }
   public toTexString(noParens:boolean):string{
-    let ret = "{\\bf let}~"+this.boundval.toTexString(false)+" = "+this.left.toTexString(true)+"~{\\bf in}~"+this.right.toTexString(true);
+    let ret = "{\\bf let}~"+this.boundvar.toTexString(false)+" = "+this.left.toTexString(true)+"~{\\bf in}~"+this.right.toTexString(true);
     if (!noParens) ret = "("+ret+")";
     return ret;
   }
@@ -1421,13 +1695,19 @@ class Let extends Expression{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
 
     // (let)
-    return [new TypedRedex(this,this.right.substitute(this.boundval,this.left),"let")];
+    return [new TypedRedex(this,this.right.substitute(this.boundvar,this.left),"let")];
+  }
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
+    if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+
+    // (let)
+    return new TypedRedex(this,this.right.substitute(this.boundvar,this.left),"let");
   }
   public static parse(tokens:Symbol[], typed:boolean):Let{
     let t = tokens.shift();
     if (t.name.match(/^[A-Za-z]$/)===null)
       throw new LambdaParseError("Unexpected token: '"+t+"'");
-    let boundval = new Variable(t.name);
+    let boundvar = new Variable(t.name);
     if (tokens.shift().name!=="=")
       throw new LambdaParseError("'=' is expected");
     let content:Symbol[] = [];
@@ -1443,13 +1723,10 @@ class Let extends Expression{
     }
     let contentExpr:Expression = parseSymbols(content,typed);
     let restExpr:Expression = parseSymbols(tokens,typed);
-    return new Let(boundval,contentExpr,restExpr);
+    return new Let(boundvar,contentExpr,restExpr);
   }
   public extractMacros():Expression{
-    return new Let(this.boundval,this.left.extractMacros(),this.right.extractMacros());
-  }
-  public copy():Expression{
-    return new Let(this.boundval.copy(),this.left.copy(),this.right.copy());
+    return new Let(this.boundvar,this.left.extractMacros(),this.right.extractMacros());
   }
 }
 
@@ -1469,7 +1746,7 @@ class Case extends Expression{
     this.ifElse = ifElse;
   }
   public getFV():Variable[]{
-    if (this.freevals!==undefined) return this.freevals;
+    if (this.freevars!==undefined) return this.freevars;
     else return Variable.union(this.state.getFV(),this.ifNil.getFV(),Variable.dif(this.ifElse.getFV(),[this.head,this.tail]));
   }
   public toString(noParens:boolean):string{
@@ -1555,6 +1832,26 @@ class Case extends Expression{
         (prev)=>(new Case(prev,this.ifNil,this.head,this.tail,this.ifElse)));
     }
   }
+  public getLeftMostRedex(typed:boolean,etaAllowed?:boolean):Redex{
+    if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+    if (this.state instanceof Nil){
+      // (case2)
+      return new TypedRedex(this,this.ifNil,"case2");
+    } else if (this.state instanceof List){
+      // (case3)
+      return new TypedRedex(this,this.ifElse.substitute(this.head,this.state.head).substitute(this.tail,this.state.tail),"case3");
+    } else {
+      // (case1)
+      let ret = this.state.getLeftMostRedex(true,false,true);
+      if (ret === null) return null;
+      ret.next = new Case(ret.next,this.ifNil,this.head,this.tail,this.ifElse);
+      ret.addLeft("([case]");
+      ret.addRight("[of][nil]->"+this.ifNil+" | "+this.head+"::"+this.tail+"->"+this.ifElse+")");
+      ret.addTexLeft("({\\bf case} ");
+      ret.addTexRight(" {\\bf of} {\\rm nil} \\Rightarrow "+this.ifNil.toTexString(true)+" | "+this.head.toTexString(true)+"::"+this.tail.toTexString(true)+" \\Rightarrow "+this.ifElse.toTexString(true)+")");
+      return ret;
+    }
+  }
   public static parse(tokens:Symbol[],typed:boolean):Case{
     let state:Symbol[] = [];
     let i=1;
@@ -1611,55 +1908,52 @@ class Case extends Expression{
   public extractMacros():Expression{
     return new Case(this.state.extractMacros(),this.ifNil.extractMacros(),this.head,this.tail,this.ifElse.extractMacros());
   }
-  public copy():Expression{
-    return new Case(this.state.copy(),this.ifNil.copy(),this.head.copy(),this.tail.copy(),this.ifElse.copy());
-  }
 }
 
 // 不動点演算子 [fix] x.M
 class Fix extends Expression{
-  boundval:Variable;
+  boundvar:Variable;
   expr:Expression;
-  constructor(boundval:Variable, expr:Expression){
+  constructor(boundvar:Variable, expr:Expression){
     super("Fix");
-    this.boundval = boundval;
+    this.boundvar = boundvar;
     this.expr = expr;
   }
   public getFV():Variable[]{
-    if (this.freevals!==undefined) return this.freevals;
+    if (this.freevars!==undefined) return this.freevars;
     let ret:Variable[] = [];
     for (let fv of this.expr.getFV()){
-      if (!fv.equals(this.boundval)){
+      if (!fv.equals(this.boundvar)){
         ret.push(fv);
       }
     }
-    return this.freevals = ret;
+    return this.freevars = ret;
   }
   public toString(noParens:boolean):string{
-    let ret = "[fix]"+this.boundval.toString(false)+"."+this.expr.toString(true);
+    let ret = "[fix]"+this.boundvar.toString(false)+"."+this.expr.toString(true);
     if (!noParens) ret = "("+ret+")";
     return ret;
   }
   public substitute(y:Variable, expr:Expression):Expression{
-    if (this.boundval.equals(y)){
+    if (this.boundvar.equals(y)){
       return this;
-    } else if (!Variable.contains(expr.getFV(),this.boundval)){
-      return new Fix(this.boundval,this.expr.substitute(y,expr));
+    } else if (!Variable.contains(expr.getFV(),this.boundvar)){
+      return new Fix(this.boundvar,this.expr.substitute(y,expr));
     } else {
       let uniFV = Variable.union(this.expr.getFV(),expr.getFV());
       let z = Variable.getNew(uniFV);
-      return new Fix(z,this.expr.substitute(this.boundval,z)).substitute(y,expr);
+      return new Fix(z,this.expr.substitute(this.boundvar,z)).substitute(y,expr);
     }
   }
   public equals(expr:Expression):boolean{
-    return (expr instanceof Fix) && (expr.boundval.equals(this.boundval)) && (expr.expr.equals(this.expr));
+    return (expr instanceof Fix) && (expr.boundvar.equals(this.boundvar)) && (expr.expr.equals(this.expr));
   }
   public equalsAlpha(expr:Expression):boolean{
     if (!(expr instanceof Fix)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundval;
+    let x = this.boundvar;
     let m = this.expr;
-    let y = expr.boundval;
+    let y = expr.boundvar;
     let n = expr.expr;
     if (Variable.contains(m.getFV(),y)){
       return n.equalsAlpha(m);
@@ -1669,15 +1963,15 @@ class Fix extends Expression{
   }
   public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (fix)
-    this.boundval.type = type;
-    let next = this.expr.getEquations(gamma.concat(this.boundval),type,true);
+    this.boundvar.type = type;
+    let next = this.expr.getEquations(gamma.concat(this.boundvar),type,true);
     let str = next.proofTree;
     str += "\\RightLabel{\\scriptsize(fix)}\n";
     str += "\\UnaryInfC{$"+Variable.gammaToTexString(gamma)+" \\vdash "+this.toTexString(noParens)+" : "+type.toTexString()+" $}\n";
     return new TypeResult(next.eqs,str);
   }
   public toTexString(noParens:boolean):string{
-    let ret = "{\\bf fix}~"+this.boundval.toTexString(true)+"."+this.expr.toTexString(true);
+    let ret = "{\\bf fix}~"+this.boundvar.toTexString(true)+"."+this.expr.toTexString(true);
     if (!noParens) ret = "("+ret+")";
     return ret;
   }
@@ -1685,23 +1979,26 @@ class Fix extends Expression{
     if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
 
     // (fix)
-    return [new TypedRedex(this,this.expr.substitute(this.boundval, new Fix(new Variable(this.boundval.name),this.expr)),"fix")];
+    return [new TypedRedex(this,this.expr.substitute(this.boundvar, new Fix(new Variable(this.boundvar.name),this.expr)),"fix")];
+  }
+  public getLeftMostRedex(typed:boolean,etaAllowed:boolean,noParens:boolean):Redex{
+    if (!typed) throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
+
+    // (fix)
+    return new TypedRedex(this,this.expr.substitute(this.boundvar, new Fix(new Variable(this.boundvar.name),this.expr)),"fix");
   }
   public static parse(tokens:Symbol[], typed:boolean):Fix{
     let t = tokens.shift();
     if (t.name.match(/^[A-Za-z]$/)===null)
       throw new LambdaParseError("Unexpected token: '"+t+"'");
-    let boundval = new Variable(t.name);
+    let boundvar = new Variable(t.name);
     if (tokens.shift().name!==".")
       throw new LambdaParseError("'.' is expected");
 
     let contentExpr:Expression = parseSymbols(tokens,typed);
-    return new Fix(boundval,contentExpr);
+    return new Fix(boundvar,contentExpr);
   }
   public extractMacros():Expression{
-    return new Fix(this.boundval,this.expr.extractMacros());
-  }
-  public copy():Expression{
-    return new Fix(this.boundval.copy(),this.expr.copy());
+    return new Fix(this.boundvar,this.expr.extractMacros());
   }
 }

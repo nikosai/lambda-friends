@@ -9,6 +9,7 @@ export class CUI{
   steps: number;
   typed: boolean;
   etaAllowed: boolean;
+  allowMultipleEdges: boolean;
   lf: LambdaFriends;
 
   constructor(){
@@ -21,6 +22,7 @@ export class CUI{
     this.steps = 100;
     this.typed = false;
     this.etaAllowed = false;
+    this.allowMultipleEdges = false;
     this.mainFunc = (line:string)=>{
       line = line.split("#")[0];
       line = line.trim();
@@ -49,33 +51,41 @@ export class CUI{
       }
       if (line===""){}
       else if (line.startsWith(":")){
-        let cmds = line.replace(":","").trim().split(/\s+/g);
-        switch (cmds[0]){
-          case "q":
+        let cmd = line.match(/^:\s*.*?(?=\s|$)/)[0].replace(/^:\s*/,"");
+        let arg = line.replace(/^:\s*.*?(\s|$)/,"").trim();
+        switch (cmd){
+          case "q":{
             process.exit(0);
             return;
+          }
           case "?":
+          case "help":
+          case "h":{
             CUI.fileMes("mes/help.txt");
             break;
-          case "t":
-            if (cmds[1]==="y") this.typed = true;
-            else if (cmds[1]==="n") this.typed = false;
+          }
+          case "t":{
+            if (arg==="y") this.typed = true;
+            else if (arg==="n") this.typed = false;
             console.log("Current setting: "+(this.typed?"Typed":"Untyped"));
             break;
-          case "e":
-            if (cmds[1]==="y") this.etaAllowed = true;
-            else if (cmds[1]==="n") this.etaAllowed = false;
+          }
+          case "e":{
+            if (arg==="y") this.etaAllowed = true;
+            else if (arg==="n") this.etaAllowed = false;
             console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
             break;
-          case "s":
-            let new_s = parseInt(cmds[1]);
+          }
+          case "s":{
+            let new_s = parseInt(arg);
             if (!isNaN(new_s)){
               this.steps = new_s;
             }
             console.log("Continuation steps: "+this.steps);
             break;
-          case "l":
-            let file = cmds[1];
+          }
+          case "l":{
+            let file = arg;
             if (file === undefined){
               console.log("Command Usage = :l <filename>");
               break;
@@ -111,15 +121,43 @@ export class CUI{
             }
             console.log();
             break;
-          case "m":
+          }
+          case "g":{
+            try {
+              let ret = LambdaFriends.graph2LF(arg,this.allowMultipleEdges);
+              if (ret===null) console.log("not found");
+              else console.log("Found: "+ret.expr.toString(true));
+            } catch (e){
+              console.log(e.toString());
+            }
+            break;
+          }
+          case "lmn":{
+            try {
+              let ret = LambdaFriends.lmntal2LF(arg,this.allowMultipleEdges);
+              console.log("Found: "+ret.expr.toString(true));
+            } catch (e){
+              console.log(e.toString());
+            }
+            break;
+          }
+          case "me":{
+            if (arg==="y") this.allowMultipleEdges = true;
+            else if (arg==="n") this.allowMultipleEdges = false;
+            console.log("Multiple-Edges are now "+(this.allowMultipleEdges?"allowed":"not allowed"));
+            break;
+          }
+          case "m":{
             console.log(LambdaFriends.getMacroList(this.typed));
             break;
-          default:
+          }
+          default:{
             console.log("Undefined command: "+line);
+          }
         }
       } else {
         try{
-          let lf = new LambdaFriends(line,this.typed,this.etaAllowed);
+          let lf = new LambdaFriends(line,this.typed,this.etaAllowed,this.allowMultipleEdges);
           console.log(lf.toString());
           for (let i=0; i<this.steps; i++){
             let res = lf.reduction();
@@ -143,7 +181,7 @@ export class CUI{
 
   start(){
     CUI.fileMes("mes/title.txt");
-    process.stdout.write("\n"+this.prompt);
+    process.stdout.write(this.prompt);
     this.stdin.on("line", this.mainFunc);
   }
 
