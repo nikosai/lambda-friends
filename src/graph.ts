@@ -1,6 +1,7 @@
 import { Redex, Expression } from "./expression";
 import { GraphParseError } from "./error";
 import { LambdaFriends } from "./lambda-friends";
+import { request } from "http";
 
 export class GraphNode{
   info:Info;
@@ -109,15 +110,23 @@ export class GraphNode{
   }
 
   static search(n:GraphNode,allowMultipleEdges:boolean):LambdaFriends{
+    let input:string;
     let filename = "graph_closure.csv";
-    let fs = require("fs");
-    try{
-      fs.statSync(filename);
-    }catch(e){
-      console.log("File Not Found: "+filename);
-      return;
+    try {
+      let request = new XMLHttpRequest();
+      input = request.responseText;
+      request.open('GET',filename,false);
+      request.send(null);
+    } catch (e) {
+      let fs = require("fs");
+      try{
+        fs.statSync(filename);
+      } catch (e) {
+        console.error("File Not Found: "+filename);
+        return;
+      }
+      input = fs.readFileSync(filename,"utf8");
     }
-    let input:string = fs.readFileSync(filename,"utf8");
     let lines = input.split("\n");
     for (let line of lines){
       let strs = line.split(",");

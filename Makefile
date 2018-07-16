@@ -19,7 +19,7 @@ silent: js/cui.js
 	@node js/cui.js
 
 docs/app.js: $(ALLSRC) js/webui.js
-	browserify js/webui.js -o docs/app.js
+	npx webpack
 
 web: docs/app.js js/server.js
 	node js/server.js

@@ -21,9 +21,11 @@
   "homepage": "https://github.com/nikosai/lambda-friends#readme",
   "devDependencies": {
     "@types/node": "^9.4.7",
-    "browserify": "^15.2.0",
     "express": "^4.16.2",
-    "typescript": "^2.6.2"
+    "webpack": "^4.16.1",
+    "webpack-cli": "^3.0.8",
+    "webpack-dev-server": "^3.1.4",
+    "xhr2": "^0.1.4"
   },
   "dependencies": {
     "cytoscape": "^3.2.8",

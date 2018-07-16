@@ -1,5 +1,4 @@
 import { LambdaFriends } from "./lambda-friends";
-import { ReductionNode } from "./graph";
 declare let require: any;
 declare let cytoscape: any;
 let cy = cytoscape({
@@ -40,7 +39,7 @@ let cy = cytoscape({
     },
   ]
 });
-let MicroModal = require('micromodal');
+declare let MicroModal:any;
 // Initial config for setting up modals
 MicroModal.init({
   disableScroll: false,
