@@ -10,5 +10,5 @@
   :e <y/n>      - enable/disable eta-reduction
   :me           - show whether multiple-edges are allowed
   :me <y/n>     - enable/disable multiple-edges
-  :q            - close this interpreter
   :lmn <code>   - translate LMNtal code to lambda-friends
+  :q            - close this interpreter
