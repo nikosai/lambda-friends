@@ -181,7 +181,7 @@ export class CUI{
 
   start(){
     CUI.fileMes("mes/title.txt");
-    process.stdout.write("\n"+this.prompt);
+    process.stdout.write(this.prompt);
     this.stdin.on("line", this.mainFunc);
   }
 

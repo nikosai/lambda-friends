@@ -76,14 +76,14 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 
 1. 上田和紀, 純粋λ計算の階層グラフ書換えへのエンコーディング, 第9回プログラミングおよびプログラミング言語ワークショップ論文集, 2007.
 
-## CUIモードの動かし方（deprecated）
+## CLIモードの動かし方（deprecated）
 ```
 $ git clone https://github.com/nikosai/lambda-friends.git
 $ npm install
 $ make run
 ```
 
-すると、入力待ち状態になる。詳しい操作方法は、`:h`で表示されるヘルプを参照してください。
+すると、入力待ち状態になる。詳しい操作方法は、`:?` または `:h` で表示されるヘルプを参照してください。
 
 ## その他
 * このプロジェクトは、[Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)に影響を受けて始動しました。

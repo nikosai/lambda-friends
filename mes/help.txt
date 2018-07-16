@@ -1,4 +1,4 @@
-=============== Command Help ===============
+commands:
   :?, :h        - show this command help
   :l <filename> - load macros from textfile
   :g <graph>    - reverse search from reduction graph
