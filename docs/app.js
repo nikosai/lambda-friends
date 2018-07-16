@@ -2243,9 +2243,7 @@ class ReductionNode extends GraphNode {
         else
             this.depth = parent.depth + 1;
         this.nextrs = this.expr.getRedexes(info.typed, info.etaAllowed, true);
-    }
-    isNormalForm() {
-        return this.nextrs.length === 0;
+        this.isNormalForm = (this.nextrs.length === 0);
     }
     static makeRoot(expr, typed, etaAllowed, allowMultipleEdges) {
         return new ReductionNode(expr, null, new Info([], [], typed, etaAllowed, 0, allowMultipleEdges));
@@ -3085,7 +3083,7 @@ let submitInput = function () {
         if (ret === null) {
             curlf = new lambda_friends_1.LambdaFriends(line, typed, etaAllowed, allowMultipleEdges);
             graphClear();
-            cy.add({ group: "nodes", data: { id: "" + curlf.root.id, label: curlf.root.toString() }, classes: (curlf.root.isNormalForm() ? "goal" : "") });
+            cy.add({ group: "nodes", data: { id: "" + curlf.root.id, label: curlf.root.toString() }, classes: (curlf.root.isNormalForm ? "goal" : "") });
             makeLayout();
             outputLine(curlf.toString());
             if (typed)

@@ -156,6 +156,7 @@ export class ReductionNode extends GraphNode{
   nextrs:Redex[];
   depth:number;
   parent:ReductionNode;
+  isNormalForm:boolean;
   constructor(expr:Expression, parent:ReductionNode, info:Info){
     super((expr = expr.extractMacros()).toString(true), info);
     this.expr = expr;
@@ -163,10 +164,7 @@ export class ReductionNode extends GraphNode{
     if (parent===null) this.depth = 0;
     else this.depth = parent.depth + 1;
     this.nextrs = this.expr.getRedexes(info.typed,info.etaAllowed,true);
-  }
-
-  public isNormalForm(){
-    return this.nextrs.length === 0;
+    this.isNormalForm = (this.nextrs.length===0);
   }
 
   static makeRoot(expr:Expression, typed:boolean, etaAllowed:boolean,allowMultipleEdges:boolean){
