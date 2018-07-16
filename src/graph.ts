@@ -114,10 +114,14 @@ export class GraphNode{
     let filename = "graph_closure.csv";
     try {
       let request = new XMLHttpRequest();
-      input = request.responseText;
       request.open('GET',filename,false);
       request.send(null);
+      input = request.responseText;
     } catch (e) {
+      if (!require){
+        console.error("require is not defined");
+        return;
+      }
       let fs = require("fs");
       try{
         fs.statSync(filename);

@@ -225,7 +225,7 @@ export class LambdaFriends{
   public toLMNtal():string{
     LambdaFriends.nextLinkID = 0;
     if (this.typed) return null;
-    else return "root="+this.original.toLMNtal()+".";
+    else return this.original.toLMNtal();
   }
   
   public toString():string{

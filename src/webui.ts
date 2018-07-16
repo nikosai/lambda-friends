@@ -63,7 +63,7 @@ let multiEdgeDisableButton = <HTMLButtonElement>document.getElementById("multiEd
 let fileInput = <HTMLInputElement>document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = <HTMLButtonElement>document.getElementById("clearMacroBtn");
-let tabC = document.getElementById("tabC");
+let translateDiv = document.getElementById("translate");
 let tabA = document.getElementById("tabA");
 // let macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
 // let macroInput = <HTMLInputElement>document.getElementById("macroInput");
@@ -78,6 +78,12 @@ let tabAbtn = document.getElementById("tabAbtn");
 let tabBbtn = document.getElementById("tabBbtn");
 let tabCbtn = document.getElementById("tabCbtn");
 let tabDbtn = document.getElementById("tabDbtn");
+let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
+let lmnSubmitBtn = document.getElementById("lmnSubmit");
+let lmnOutput = document.getElementById("lmnOutput");
+let graphInput = <HTMLInputElement>document.getElementById("graphInput");
+let graphSubmitBtn = document.getElementById("graphSubmit");
+let graphOutput = document.getElementById("graphOutput");
 
 fileInput.addEventListener("change",function (ev){
   let target:any = ev.target;
@@ -341,9 +347,40 @@ tabDbtn.addEventListener("click",()=>{
   graphActive = true;
 });
 
-// let submitMacro = function(){
-//   LambdaFriends.parseMacroDef()
-// }
+lmnInput.onkeydown = function(e){
+  if (e.keyCode===13){
+    submitLMNtal();
+    e.preventDefault();
+  }
+}
+lmnSubmitBtn.onclick = submitLMNtal;
+function submitLMNtal(){
+  let input = lmnInput.value;
+  try {
+    let ret = LambdaFriends.lmntal2LF(input,allowMultipleEdges);
+    lmnOutput.innerText = "Found: "+ret.expr.toString(true);
+  } catch (e){
+    lmnOutput.innerText = e.toString();
+  }
+}
+
+graphInput.onkeydown = function(e){
+  if (e.keyCode===13){
+    submitGraph();
+    e.preventDefault();
+  }
+}
+graphSubmitBtn.onclick = submitGraph;
+function submitGraph(){
+  let input = graphInput.value;
+  try {
+    let ret = LambdaFriends.graph2LF(input,allowMultipleEdges);
+    if (ret===null) graphOutput.innerText = "Not Found";
+    else graphOutput.innerText = "Found: "+ret.expr.toString(true);
+  } catch (e){
+    graphOutput.innerText = e.toString();
+  }
+}
 
 let outputBuffer = "";
 function output(str:string){
@@ -390,12 +427,12 @@ function htmlEscape(str:string):string{
   });
 }
 function refreshTex(){
-  tabC.textContent = null;
+  translateDiv.textContent = null;
   if (curlf === undefined) return;
 
-  tabC.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
-  if (typed) tabC.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
-  else tabC.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
+  translateDiv.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
+  if (typed) translateDiv.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
+  else translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
 }
 function makeTexDiv(title:string, content:string){
   let p = document.createElement("p");
