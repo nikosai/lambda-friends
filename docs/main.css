@@ -208,6 +208,10 @@ body {
   vertical-align: middle;
 }
 
+#translate {
+  margin-bottom: 25px;
+}
+
 #graphSettings {
   display: flex;
   align-items: center;
