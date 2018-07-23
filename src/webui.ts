@@ -1,5 +1,4 @@
 import { LambdaFriends } from "./lambda-friends";
-declare let require: any;
 declare let cytoscape: any;
 let cy = cytoscape({
   container: document.getElementById('graph'),
@@ -230,6 +229,7 @@ let submitInput = function(){
     let ret = LambdaFriends.parseMacroDef(line,typed);
     if (ret===null) {
       curlf = new LambdaFriends(line,typed,etaAllowed,allowMultipleEdges);
+      curGraphDepth = 0;
       graphClear();
       cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
       makeLayout();
@@ -283,20 +283,26 @@ document.getElementById("input").onkeydown = function(e){
 }
 let graphStop:boolean = false;
 let graphDepth:number;
+let curGraphDepth = 0;
+let graphRunning = false;
 startGraph.onclick = launchGraph;
 function launchGraph(){
+  if (graphRunning) return;
   makeLayout();
   if (curlf === undefined) return;
   graphStop = false;
+  graphRunning = true;
+  curGraphDepth += graphDepth || 10;
   let f = () => setTimeout(()=>{
     if (graphStop){
       makeLayout();
+      graphRunning = false;
       return;
     }
-    if (!graphDepth) graphDepth = 10;
-    let ret = curlf.deepen(graphDepth);
+    let ret = curlf.deepen(curGraphDepth);
     if (ret===null) {
       makeLayout();
+      graphRunning = false;
       return;
     }
     let ans:any[] = [];
