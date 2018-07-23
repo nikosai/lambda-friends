@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "cytoscape": "^3.2.8",
-    "micromodal": "^0.3.1",
-    "readline-sync": "^1.4.7"
+    "micromodal": "^0.3.1"
   }
 }
