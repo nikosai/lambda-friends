@@ -293,6 +293,7 @@ function launchGraph(){
       makeLayout();
       return;
     }
+    if (!graphDepth) graphDepth = 10;
     let ret = curlf.deepen(graphDepth);
     if (ret===null) {
       makeLayout();
