@@ -2,7 +2,7 @@ import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
 declare let require: any;
 
-export class CUI{
+export class CLI{
   mainFunc: Function;
   stdin: any;
   prompt: string;
@@ -61,7 +61,7 @@ export class CUI{
           case "?":
           case "help":
           case "h":{
-            CUI.fileMes("mes/help.txt");
+            CLI.fileMes("mes/help.txt");
             break;
           }
           case "t":{
@@ -180,7 +180,7 @@ export class CUI{
   }
 
   start(){
-    CUI.fileMes("mes/title.txt");
+    CLI.fileMes("mes/title.txt");
     process.stdout.write(this.prompt);
     this.stdin.on("line", this.mainFunc);
   }
@@ -197,4 +197,4 @@ export class CUI{
   }
 }
 
-new CUI().start();
+new CLI().start();
