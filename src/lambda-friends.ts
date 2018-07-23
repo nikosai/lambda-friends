@@ -51,6 +51,7 @@ export class LambdaFriends{
   }
   
   public getLeftMostRedex(){
+    if (this.typed) return (this.getRedexes()[0] || null);
     if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
     return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
   }
@@ -59,7 +60,7 @@ export class LambdaFriends{
     if (redex === undefined){
       // 簡約基指定のない場合、最左簡約
       redex = this.getLeftMostRedex();
-      if (redex === null) return null;
+      if (!redex) return null;
     }
     this.expr = redex.next;
     this.nextRedexes = undefined;
