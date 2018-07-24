@@ -15,7 +15,8 @@ function getFileInput(file:string):string{
 }
 
 commander
-  .usage('[OPTION...] [FILE]')
+  .name("lambda-friends")
+  .usage("[options] [FILE]")
   .option('-i,--string <input>', 'Read from string <input>')
   .option('-I,--stdin', 'Read from standard input')
   .option('-l,--lmnin','Translate LMNtal code to lambda term')
@@ -25,7 +26,7 @@ commander
   .option('-m,--macro <filename>','Load macros from textfile')
   .option('-s,--steps <n>','Set continuation steps',parseInt)
   .option('-t,--typed','Use Typed mode')
-  .option('-e,--eta','enable eta-reduction')
+  .option('-e,--eta','Enable eta-reduction')
   .option('-M,--multiedge','Enable multiple-edges')
   .parse(process.argv);
 
@@ -47,8 +48,6 @@ let steps = 100;
 let typed = false;
 let etaAllowed = false;
 let allowMultipleEdges = false;
-
-// console.error("Input: "+input);
 
 if (commander.steps){
   if (isNaN(commander.steps)){
