@@ -18,9 +18,10 @@ commander
   .usage('[OPTION...] [FILE]')
   .option('-i,--string <input>', 'Read from string <input>')
   .option('-I,--stdin', 'Read from standard input')
-  .option('-l,--lmntal','Translate LMNtal code to lambda term')
+  .option('-l,--lmnin','Translate LMNtal code to lambda term')
   .option('-g,--graph','Reverse search from reduction graph (tentative)')
   .option('-t,--trace','Show reduction trace')
+  .option('-L,--lmnout','Translate lambda term to LMNtal code')
   .option('-m,--macro <filename>','Load macros from textfile')
   .option('-s,--steps <n>','Set continuation steps',parseInt)
   .option('-t,--typed','Use Typed mode')
@@ -61,8 +62,8 @@ if (commander.typed) typed = true;
 if (commander.eta) etaAllowed = true;
 if (commander.multiedge) allowMultipleEdges = true;
 
-// 実行モードを決める。優先順位はlmntal > graph
-if (commander.lmntal){
+// 実行モードを決める。優先順位はlmnin > graph
+if (commander.lmnin){
   // Translate LMNtal code to lambda term
   try {
     if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
@@ -94,6 +95,10 @@ if (commander.lmntal){
     return;
   }
   try{
+    if (commander.lmnout){
+      console.log(new LambdaFriends(input,false,etaAllowed,allowMultipleEdges).toLMNtal());
+      return;
+    }
     let lf = new LambdaFriends(input,typed,etaAllowed,allowMultipleEdges);
     for (let i=0; i<steps; i++){
       let res = lf.reduction();

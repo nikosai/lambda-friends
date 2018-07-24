@@ -178,7 +178,9 @@ export function parseLMNtal(str:string):Expression{
       }
       case "fv":{
         if (args.length!==1) throw new LambdaParseError("Malformed LMNtal Lambda Term. fv(X) should have 1 arg.");
-        return Macro.get(args[0],false);
+        if (args[0].length!==1 || !args[0].match(/[a-z]/)) return Macro.get(args[0],false);
+        // throw new LambdaParseError("too long free variable name: "+ args[0]);
+        return new Variable(args[0]);
       }
       default:
         throw new LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: "+atom);
