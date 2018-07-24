@@ -1,5 +1,6 @@
 import { LambdaFriends } from "./lambda-friends";
-declare let cytoscape: any;
+import * as cytoscape from "cytoscape";
+
 let cy = cytoscape({
   container: document.getElementById('graph'),
 
@@ -532,10 +533,10 @@ function makeLayout(){
   cy.resize();
   cy.elements().makeLayout({
     name: "dagre",
-    nodeSpacing: 5,
+    // nodeSpacing: 5,
     animate: true,
     randomize: false,
-    maxSimulationTime: 1500
+    // maxSimulationTime: 1500
   }).run();
 }
 

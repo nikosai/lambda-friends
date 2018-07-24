@@ -1,6 +1,6 @@
 import * as fs from "fs";
+import * as commander from "commander";
 import { LambdaFriends } from "./lambda-friends";
-import * as commander from "commander"
 import { REPL } from "./repl";
 
 (()=>{

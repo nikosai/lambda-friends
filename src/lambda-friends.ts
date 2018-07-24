@@ -1,4 +1,4 @@
-import { Expression, Macro, makeAST, Redex, makeTerms, parseLMNtal } from "./expression";
+import { Expression, Macro, makeAST, Redex, parseLMNtal } from "./expression";
 import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 import { ReductionNode, GraphNode } from "./graph";
 

@@ -1,4 +1,4 @@
-import { Type, TypeFunc, TypeInt, TypeBool, TypeEquation, TypeList, TypeVariable, TypeUntyped } from "./type";
+import { Type, TypeFunc, TypeInt, TypeBool, TypeEquation, TypeList, TypeVariable } from "./type";
 import { LambdaParseError, SubstitutionError, ReductionError, MacroError, TypeError, TexError } from "./error";
 import { LambdaFriends } from "./lambda-friends";
 
