@@ -1,8 +1,6 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
 import { makeTerms, parseLMNtal } from "./expression";
-import { GraphNode } from "./graph";
-declare let require: any;
 
 let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
 let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);

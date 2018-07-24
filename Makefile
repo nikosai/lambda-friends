@@ -1,22 +1,22 @@
 .PHONY: web run clean silent test all
 ALLSRC := $(wildcard src/*.ts)
 
-all: js/cui.js docs/app.js
+all: js/cli.js docs/app.js
 
-js/cui.js: $(ALLSRC) tsconfig.json Makefile
+js/cli.js: $(ALLSRC) tsconfig.json Makefile
 	tsc
 
-js/webui.js: js/cui.js
+js/webui.js: js/cli.js
 
-js/server.js: js/cui.js
+js/server.js: js/cli.js
 
-js/test.js: js/cui.js
+js/test.js: js/cli.js
 
-run: js/cui.js
-	node js/cui.js
+run: js/cli.js
+	node js/cli.js
 
-silent: js/cui.js
-	@node js/cui.js
+silent: js/cli.js
+	@node js/cli.js
 
 docs/app.js: $(ALLSRC) js/webui.js
 	npx webpack
@@ -28,7 +28,7 @@ web: docs/app.js js/server.js
 test: js/test.js
 	node js/test.js
 
-graph_closure.csv: js/cui.js
+graph_closure.csv: js/cli.js
 	node js/closure.js > graph_closure.csv
 
 clean:

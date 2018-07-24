@@ -81,14 +81,18 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 
 1. 上田和紀, 純粋λ計算の階層グラフ書換えへのエンコーディング, 第9回プログラミングおよびプログラミング言語ワークショップ論文集, 2007.
 
-## CLIモードの動かし方（deprecated）
-```
+## CLIモードの動かし方
+```bash
 $ git clone https://github.com/nikosai/lambda-friends.git
-$ npm install
-$ make run
+$ cd lambda-friends
+$ npm i
+$ ./run.sh
 ```
+すると、対話モード（REPL）が起動します。詳しい操作方法は、`:?` または `:h` で表示されるヘルプを参照してください。
 
-すると、入力待ち状態になる。詳しい操作方法は、`:?` または `:h` で表示されるヘルプを参照してください。
+また、実行時オプションを付けることもできます。使用できるオプションは、`./run.sh -h`で表示されます。
+
+特に、`./run.sh -i "<2><2>"` のようにすると、ワンライナーで実行ができます。
 
 ## その他
 * このプロジェクトは、[Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)に影響を受けて始動しました。

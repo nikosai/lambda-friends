@@ -1,6 +1,6 @@
 import { LambdaFriends } from "./lambda-friends";
-declare let require: any;
-declare let cytoscape: any;
+import * as cytoscape from "cytoscape";
+
 let cy = cytoscape({
   container: document.getElementById('graph'),
 
@@ -230,6 +230,7 @@ let submitInput = function(){
     let ret = LambdaFriends.parseMacroDef(line,typed);
     if (ret===null) {
       curlf = new LambdaFriends(line,typed,etaAllowed,allowMultipleEdges);
+      curGraphDepth = 0;
       graphClear();
       cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
       makeLayout();
@@ -283,20 +284,26 @@ document.getElementById("input").onkeydown = function(e){
 }
 let graphStop:boolean = false;
 let graphDepth:number;
+let curGraphDepth = 0;
+let graphRunning = false;
 startGraph.onclick = launchGraph;
 function launchGraph(){
+  if (graphRunning) return;
   makeLayout();
   if (curlf === undefined) return;
   graphStop = false;
+  graphRunning = true;
+  curGraphDepth += graphDepth || 10;
   let f = () => setTimeout(()=>{
     if (graphStop){
       makeLayout();
+      graphRunning = false;
       return;
     }
-    if (!graphDepth) graphDepth = 10;
-    let ret = curlf.deepen(graphDepth);
+    let ret = curlf.deepen(curGraphDepth);
     if (ret===null) {
       makeLayout();
+      graphRunning = false;
       return;
     }
     let ans:any[] = [];
@@ -358,7 +365,7 @@ lmnSubmitBtn.onclick = submitLMNtal;
 function submitLMNtal(){
   let input = lmnInput.value;
   try {
-    let ret = LambdaFriends.lmntal2LF(input,allowMultipleEdges);
+    let ret = LambdaFriends.lmntal2LF(input);
     lmnOutput.innerText = "Found: "+ret.expr.toString(true);
   } catch (e){
     lmnOutput.innerText = e.toString();
@@ -526,10 +533,10 @@ function makeLayout(){
   cy.resize();
   cy.elements().makeLayout({
     name: "dagre",
-    nodeSpacing: 5,
+    // nodeSpacing: 5,
     animate: true,
     randomize: false,
-    maxSimulationTime: 1500
+    // maxSimulationTime: 1500
   }).run();
 }
 

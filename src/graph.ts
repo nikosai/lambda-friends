@@ -1,7 +1,6 @@
 import { Redex, Expression } from "./expression";
 import { GraphParseError } from "./error";
 import { LambdaFriends } from "./lambda-friends";
-import { request } from "http";
 
 export class GraphNode{
   info:Info;

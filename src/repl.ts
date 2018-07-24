@@ -1,9 +1,8 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
-declare let require: any;
 
-export class CUI{
-  mainFunc: Function;
+export class REPL{
+  mainFunc: (line:string) => void;
   stdin: any;
   prompt: string;
   steps: number;
@@ -12,17 +11,17 @@ export class CUI{
   allowMultipleEdges: boolean;
   lf: LambdaFriends;
 
-  constructor(){
+  constructor(steps:number,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
     this.stdin = require("readline").createInterface({
       input: process.stdin,
       output: process.stdout
     });
     this.prompt = "input> ";
     this.stdin.setPrompt(this.prompt);
-    this.steps = 100;
-    this.typed = false;
-    this.etaAllowed = false;
-    this.allowMultipleEdges = false;
+    this.steps = steps;
+    this.typed = typed;
+    this.etaAllowed = etaAllowed;
+    this.allowMultipleEdges = allowMultipleEdges;
     this.mainFunc = (line:string)=>{
       line = line.split("#")[0];
       line = line.trim();
@@ -61,7 +60,7 @@ export class CUI{
           case "?":
           case "help":
           case "h":{
-            CUI.fileMes("mes/help.txt");
+            REPL.fileMes("mes/help.txt");
             break;
           }
           case "t":{
@@ -134,7 +133,7 @@ export class CUI{
           }
           case "lmn":{
             try {
-              let ret = LambdaFriends.lmntal2LF(arg,this.allowMultipleEdges);
+              let ret = LambdaFriends.lmntal2LF(arg);
               console.log("Found: "+ret.expr.toString(true));
             } catch (e){
               console.log(e.toString());
@@ -180,7 +179,7 @@ export class CUI{
   }
 
   start(){
-    CUI.fileMes("mes/title.txt");
+    REPL.fileMes("mes/title.txt");
     process.stdout.write(this.prompt);
     this.stdin.on("line", this.mainFunc);
   }
@@ -196,5 +195,3 @@ export class CUI{
     }
   }
 }
-
-new CUI().start();
