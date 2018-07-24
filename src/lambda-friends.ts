@@ -66,7 +66,7 @@ export class LambdaFriends{
     this.nextRedexes = undefined;
     this.nextLeftMostRedex = undefined;
     this.processTex += redex.toTexString();
-    let ret;
+    let ret:string;
     if (redex.type === "macro"){
       this.processTex += " \\\\\n&\\equiv& ";
       ret = "-: (macro) = " + this.expr.toString(true);
@@ -80,7 +80,7 @@ export class LambdaFriends{
       if (n!==null) ret += "  = "+n+" (as nat)\n";
       let b = this.parseChurchBool();
       if (b!==null) ret += "  = "+b+" (as bool)\n";
-      ret.slice(0,ret.length-1);
+      ret = ret.slice(0,-1);
     }
     return ret;
   }
@@ -218,8 +218,8 @@ export class LambdaFriends{
     return GraphNode.search(GraphNode.parse(str),allowMultipleEdges);
   }
 
-  public static lmntal2LF(str:string,allowMultipleEdges:boolean){
-    return new LambdaFriends(parseLMNtal(str).toString(true),false,false,allowMultipleEdges);
+  public static lmntal2LF(str:string){
+    return new LambdaFriends(parseLMNtal(str).toString(true),false,false,false);
   }
 
   // typedだったらとりあえずnullを返すことにする

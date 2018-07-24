@@ -364,7 +364,7 @@ lmnSubmitBtn.onclick = submitLMNtal;
 function submitLMNtal(){
   let input = lmnInput.value;
   try {
-    let ret = LambdaFriends.lmntal2LF(input,allowMultipleEdges);
+    let ret = LambdaFriends.lmntal2LF(input);
     lmnOutput.innerText = "Found: "+ret.expr.toString(true);
   } catch (e){
     lmnOutput.innerText = e.toString();

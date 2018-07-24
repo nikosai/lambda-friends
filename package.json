@@ -20,6 +20,8 @@
   },
   "homepage": "https://github.com/nikosai/lambda-friends#readme",
   "devDependencies": {
+    "@types/argv": "0.0.4",
+    "@types/cytoscape": "^3.2.5",
     "@types/node": "^9.4.7",
     "express": "^4.16.2",
     "webpack": "^4.16.1",
@@ -28,6 +30,7 @@
     "xhr2": "^0.1.4"
   },
   "dependencies": {
+    "commander": "^2.16.0",
     "cytoscape": "^3.2.8",
     "micromodal": "^0.3.1"
   }

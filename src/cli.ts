@@ -1,200 +1,108 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
-declare let require: any;
+import * as commander from "commander"
+import { REPL } from "./repl";
 
-export class CLI{
-  mainFunc: Function;
-  stdin: any;
-  prompt: string;
-  steps: number;
-  typed: boolean;
-  etaAllowed: boolean;
-  allowMultipleEdges: boolean;
-  lf: LambdaFriends;
-
-  constructor(){
-    this.stdin = require("readline").createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
-    this.prompt = "input> ";
-    this.stdin.setPrompt(this.prompt);
-    this.steps = 100;
-    this.typed = false;
-    this.etaAllowed = false;
-    this.allowMultipleEdges = false;
-    this.mainFunc = (line:string)=>{
-      line = line.split("#")[0];
-      line = line.trim();
-      if (this.lf !== undefined){
-        if (line.toLowerCase() === "n"){
-          this.lf = undefined;
-          console.log();
-          process.stdout.write(this.prompt);
-          return;
-        }
-        try{
-          for (let i=0; i<this.steps; i++){
-            let res = this.lf.reduction();
-            if (res === null) break;
-            console.log(res);
-          }
-          if (!this.lf.hasNext()) this.lf = undefined;
-          else {
-            process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
-            return;
-          }
-        }catch(e){
-          console.log(e.toString());
-          return;
-        }
-      }
-      if (line===""){}
-      else if (line.startsWith(":")){
-        let cmd = line.match(/^:\s*.*?(?=\s|$)/)[0].replace(/^:\s*/,"");
-        let arg = line.replace(/^:\s*.*?(\s|$)/,"").trim();
-        switch (cmd){
-          case "q":{
-            process.exit(0);
-            return;
-          }
-          case "?":
-          case "help":
-          case "h":{
-            CLI.fileMes("mes/help.txt");
-            break;
-          }
-          case "t":{
-            if (arg==="y") this.typed = true;
-            else if (arg==="n") this.typed = false;
-            console.log("Current setting: "+(this.typed?"Typed":"Untyped"));
-            break;
-          }
-          case "e":{
-            if (arg==="y") this.etaAllowed = true;
-            else if (arg==="n") this.etaAllowed = false;
-            console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
-            break;
-          }
-          case "s":{
-            let new_s = parseInt(arg);
-            if (!isNaN(new_s)){
-              this.steps = new_s;
-            }
-            console.log("Continuation steps: "+this.steps);
-            break;
-          }
-          case "l":{
-            let file = arg;
-            if (file === undefined){
-              console.log("Command Usage = :l <filename>");
-              break;
-            }
-            if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
-            try{
-              fs.statSync(file);
-            }catch(e){
-              console.log("File Not Found: "+file);
-              break;
-            }
-            let ret = LambdaFriends.fileInput(fs.readFileSync(file,"utf8"),this.typed);
-            console.log("File input completed.");
-            if (ret.defs.length!==0){
-              console.log("\nFinally, "+ret.defs.length+" macros are successfully added.");
-              for (let r of ret.defs){
-                let names = r.names;
-                let name = names.shift();
-                let ret = "<"+name+">";
-                while (names.length>0){
-                  let name = names.shift();
-                  ret += " and <"+name+">";
-                }
-                ret += " is defined as "+r.expr+" : "+r.type;
-                console.log("  * "+ret);
-              } 
-            }
-            if (ret.errs.length!==0){
-              console.log("\nUnfortunately, "+ret.errs.length+" macros are rejected due to some errors");
-              for (let r of ret.errs){
-                console.log("  * "+r);
-              }
-            }
-            console.log();
-            break;
-          }
-          case "g":{
-            try {
-              let ret = LambdaFriends.graph2LF(arg,this.allowMultipleEdges);
-              if (ret===null) console.log("not found");
-              else console.log("Found: "+ret.expr.toString(true));
-            } catch (e){
-              console.log(e.toString());
-            }
-            break;
-          }
-          case "lmn":{
-            try {
-              let ret = LambdaFriends.lmntal2LF(arg,this.allowMultipleEdges);
-              console.log("Found: "+ret.expr.toString(true));
-            } catch (e){
-              console.log(e.toString());
-            }
-            break;
-          }
-          case "me":{
-            if (arg==="y") this.allowMultipleEdges = true;
-            else if (arg==="n") this.allowMultipleEdges = false;
-            console.log("Multiple-Edges are now "+(this.allowMultipleEdges?"allowed":"not allowed"));
-            break;
-          }
-          case "m":{
-            console.log(LambdaFriends.getMacroList(this.typed));
-            break;
-          }
-          default:{
-            console.log("Undefined command: "+line);
-          }
-        }
-      } else {
-        try{
-          let lf = new LambdaFriends(line,this.typed,this.etaAllowed,this.allowMultipleEdges);
-          console.log(lf.toString());
-          for (let i=0; i<this.steps; i++){
-            let res = lf.reduction();
-            if (res === null) break;
-            console.log(res);
-          }
-          if (lf.hasNext()){
-            this.lf = lf;
-            process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
-            return;
-          } else {
-            this.lf = undefined;
-          }
-        }catch(e){
-          console.log(e.toString()+"\n");
-        }
-      }
-      process.stdout.write(this.prompt);
-    };
+(()=>{
+function getFileInput(file:string):string{
+  try{
+    fs.statSync(file);
+  }catch(e){
+    console.error("File Not Found: "+file);
+    return undefined;
   }
+  return fs.readFileSync(file,"utf8");
+}
 
-  start(){
-    CLI.fileMes("mes/title.txt");
-    process.stdout.write(this.prompt);
-    this.stdin.on("line", this.mainFunc);
+commander
+  .usage('[OPTION...] [FILE]')
+  .option('-i,--string <input>', 'Read from string <input>')
+  .option('-I,--stdin', 'Read from standard input')
+  .option('-l,--lmntal','Translate LMNtal code to lambda term')
+  .option('-g,--graph','Reverse search from reduction graph (tentative)')
+  .option('-t,--trace','Show reduction trace')
+  .option('-m,--macro <filename>','Load macros from textfile')
+  .option('-s,--steps <n>','Set continuation steps',parseInt)
+  .option('-t,--typed','Use Typed mode')
+  .option('-e,--eta','enable eta-reduction')
+  .option('-M,--multiedge','Enable multiple-edges')
+  .parse(process.argv);
+
+// 入力を受け取る
+// オプションの優先度はstring, stdinの順
+// それらがなければ、FILEを読みに行くが、それもなければnull
+function getInput(){
+  if (commander.string) return commander.string;
+  if (commander.stdin) return fs.readFileSync("/dev/stdin", "utf8");
+  if (commander.args[0]){
+    let file = getFileInput(commander.args[0]);
+    if (file) return file;
   }
+  return null;
+}
 
-  static fileMes(file:string){
-    if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
-    try{
-      fs.statSync(file);
-      let lines = fs.readFileSync(file,"utf8");
-      console.log(lines);
-    }catch(e){
-      console.log("File Not Found: "+file);
-    }
+let input = getInput();
+let steps = 100;
+let typed = false;
+let etaAllowed = false;
+let allowMultipleEdges = false;
+
+// console.error("Input: "+input);
+
+if (commander.steps){
+  if (isNaN(commander.steps)){
+    console.error("-s,--steps <n>: n is not a number")
+  } else {
+    steps = commander.steps;
   }
 }
 
-new CLI().start();
+if (commander.typed) typed = true;
+if (commander.eta) etaAllowed = true;
+if (commander.multiedge) allowMultipleEdges = true;
+
+// 実行モードを決める。優先順位はlmntal > graph
+if (commander.lmntal){
+  // Translate LMNtal code to lambda term
+  try {
+    if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
+    let ret = LambdaFriends.lmntal2LF(input);
+    console.log(ret.expr.toString(true));
+  } catch (e){
+    console.error(e.toString());
+  }
+} else if (commander.graph){
+  // Reverse search from reduction graph (tentative)
+  try {
+    if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
+    let ret = LambdaFriends.graph2LF(input,allowMultipleEdges);
+    if (ret===null) console.log("");
+    else console.log(ret.expr.toString(true));
+  } catch (e){
+    console.error(e.toString());
+  }
+} else {
+  // normal mode
+  if (commander.macro){
+    let macro = getFileInput(commander.macro);
+    if (macro){
+      LambdaFriends.fileInput(macro,typed);
+    }
+  }
+  if (!input) {
+    new REPL(steps,typed,etaAllowed,allowMultipleEdges).start();
+    return;
+  }
+  try{
+    let lf = new LambdaFriends(input,typed,etaAllowed,allowMultipleEdges);
+    for (let i=0; i<steps; i++){
+      let res = lf.reduction();
+      if (res === null) break;
+      if (commander.trace) console.log(res);
+    }
+    if (!commander.trace) console.log(lf.toString());
+  } catch (e) {
+    console.error(e.toString());
+  }
+}
+})();
