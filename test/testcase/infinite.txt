@@ -1,0 +1,2 @@
+(\fx.(x(ffx)))(\fx.(x(ffx)))
+(\x.xx)(\x.xx)

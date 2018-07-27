@@ -25,8 +25,8 @@ commander
   .option('-L,--lmnout','Translate lambda term to LMNtal code')
   .option('-m,--macro <filename>','Load macros from textfile')
   .option('-s,--steps <n>','Set continuation steps',parseInt)
-  .option('-t,--typed','Use Typed mode')
-  .option('-e,--eta','Enable eta-reduction')
+  .option('-T,--typed','Use Typed mode')
+  .option('-E,--eta','Enable eta-reduction')
   .option('-M,--multiedge','Enable multiple-edges')
   .parse(process.argv);
 
@@ -99,6 +99,7 @@ if (commander.lmnin){
       return;
     }
     let lf = new LambdaFriends(input,typed,etaAllowed,allowMultipleEdges);
+    if (commander.trace) console.log(lf.toString())
     for (let i=0; i<steps; i++){
       let res = lf.reduction();
       if (res === null) break;

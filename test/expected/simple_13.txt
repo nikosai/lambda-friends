@@ -1,0 +1,7 @@
+(\p.p(\xy.x))((\xyf.fxy)ab) : Untyped
+1: (beta) --> (\xyf.fxy)ab(\xy.x)
+2: (beta) --> (\yf.fay)b(\xy.x)
+3: (beta) --> (\f.fab)(\xy.x)
+4: (beta) --> (\xy.x)ab
+5: (beta) --> (\y.a)b
+6: (beta) --> a    (normal form)

@@ -1,0 +1,7 @@
+<2>(\x.xx)s : Untyped
+-: (macro) = (\sz.s(sz))(\x.xx)s
+1: (beta) --> (\z.(\x.xx)((\x.xx)z))s
+2: (beta) --> (\x.xx)((\x.xx)s)
+3: (beta) --> (\x.xx)s((\x.xx)s)
+4: (beta) --> ss((\x.xx)s)
+5: (beta) --> ss(ss)    (normal form)
