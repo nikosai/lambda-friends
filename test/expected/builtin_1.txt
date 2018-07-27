@@ -1,0 +1,11 @@
+<3>(\x.xx)y : Untyped
+-: (macro) = (\sz.s(s(sz)))(\x.xx)y
+1: (beta) --> (\z.(\x.xx)((\x.xx)((\x.xx)z)))y
+2: (beta) --> (\x.xx)((\x.xx)((\x.xx)y))
+3: (beta) --> (\x.xx)((\x.xx)y)((\x.xx)((\x.xx)y))
+4: (beta) --> (\x.xx)y((\x.xx)y)((\x.xx)((\x.xx)y))
+5: (beta) --> yy((\x.xx)y)((\x.xx)((\x.xx)y))
+6: (beta) --> yy(yy)((\x.xx)((\x.xx)y))
+7: (beta) --> yy(yy)((\x.xx)y((\x.xx)y))
+8: (beta) --> yy(yy)(yy((\x.xx)y))
+9: (beta) --> yy(yy)(yy(yy))    (normal form)

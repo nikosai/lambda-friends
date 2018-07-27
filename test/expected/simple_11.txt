@@ -1,0 +1,5 @@
+(\fgx.fx(gx))(\xy.x)(\xy.x) : Untyped
+1: (beta) --> (\gx.(\xy.x)x(gx))(\xy.x)
+2: (beta) --> \x.(\xy.x)x((\xy.x)x)
+3: (beta) --> \x.(\y.x)((\xy.x)x)
+4: (beta) --> \x.x    (normal form)

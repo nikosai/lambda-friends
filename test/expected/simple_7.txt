@@ -1,0 +1,2 @@
+(\x.x(\x.xy))y : Untyped
+1: (beta) --> y(\x.xy)    (normal form)

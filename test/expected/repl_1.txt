@@ -1,0 +1,7 @@
+============================================
+  Welcome to Lambda-Friends!
+  Type ":?" to show command help.
+  Type ":q" to close.
+============================================
+
+input> input> 

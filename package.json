@@ -1,10 +1,10 @@
 {
   "name": "lambda-friends",
-  "version": "1.0.0",
+  "version": "3.2.0",
   "description": "Typed Lambda Calculus",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "test/test.sh",
     "build": "tsc",
     "watch": "tsc --watch"
   },

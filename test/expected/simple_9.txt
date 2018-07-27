@@ -1,0 +1,4 @@
+(\f.fyx)(\xy.x) : Untyped
+1: (beta) --> (\xy.x)yx
+2: (beta) --> (\a.y)x
+3: (beta) --> y    (normal form)

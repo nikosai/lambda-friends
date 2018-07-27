@@ -1,0 +1,13 @@
+\x.x\x.x\x.x
+(\x.(\x.x)(yx))z
+(\x.xy)y
+(\x.\y.xy)y
+(  \ x .\ y . x y) y
+(\xy.xy)y
+(\x.x(\x.xy))y
+(\fx.f(fx))(\x.x)
+(\f.fyx)(\xy.x)
+(\x.y)((\x.xx)(\x.xx))
+(\fgx.fx(gx))(\xy.x)(\xy.x)
+(\fx.(f(f(fx))))(\fx.(f(f(fx))))
+(\p.p(\xy.x))((\xyf.fxy)ab)
