@@ -1,5 +1,7 @@
 ![らむだフレンズ](docs/logo.png "らむだフレンズ")
 
+[![CircleCI](https://circleci.com/gh/nikosai/lambda-friends.svg?style=svg)](https://circleci.com/gh/nikosai/lambda-friends)
+
 純粋型なしλ計算と、型付きλ計算（FL）のインタプリタです。
 
 言語は、Typescriptを用いています。
