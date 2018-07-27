@@ -1,5 +1,5 @@
 import { LambdaFriends } from "./lambda-friends";
-import * as cytoscape from "cytoscape";
+declare let cytoscape:any;
 
 let cy = cytoscape({
   container: document.getElementById('graph'),
@@ -37,6 +37,18 @@ let cy = cytoscape({
         'background-color': '#b3424a'
       }
     },
+    {
+      selector: '.root',
+      style: {
+        'background-color': '#536728'
+      }
+    },
+    {
+      selector: '.goal.root',
+      style: {
+        'background-color': '#ff8c00'
+      }
+    },    
   ]
 });
 declare let MicroModal:any;
@@ -533,10 +545,10 @@ function makeLayout(){
   cy.resize();
   cy.elements().makeLayout({
     name: "dagre",
-    // nodeSpacing: 5,
+    nodeSpacing: 5,
     animate: true,
     randomize: false,
-    // maxSimulationTime: 1500
+    maxSimulationTime: 1500
   }).run();
 }
 
