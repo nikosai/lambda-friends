@@ -156,7 +156,7 @@ export class LambdaFriends{
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     if (names.length===0) return null;
-    let lf = new LambdaFriends(l,typed,undefined,false); // ????
+    let lf = new LambdaFriends(l,typed,false,false); // ????
     for (let name of names){
       Macro.add(name, lf, typed);
     }
