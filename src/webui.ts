@@ -1,5 +1,6 @@
 import { LambdaFriends } from "./lambda-friends";
-import * as cytoscape from "cytoscape";
+import { ReductionNode } from "./graph";
+declare let cytoscape:any;
 
 let cy = cytoscape({
   container: document.getElementById('graph'),
@@ -37,6 +38,18 @@ let cy = cytoscape({
         'background-color': '#b3424a'
       }
     },
+    {
+      selector: '.root',
+      style: {
+        'background-color': '#407f5d'
+      }
+    },
+    {
+      selector: '.goal.root',
+      style: {
+        'background-color': '#d17200'
+      }
+    },    
   ]
 });
 declare let MicroModal:any;
@@ -232,7 +245,7 @@ let submitInput = function(){
       curlf = new LambdaFriends(line,typed,etaAllowed,allowMultipleEdges);
       curGraphDepth = 0;
       graphClear();
-      cy.add({group: "nodes", data: {id: ""+curlf.root.id, label:curlf.root.toString()}, classes:(curlf.root.isNormalForm?"goal":"")});
+      cy.add(node2cyObj(curlf.root));
       makeLayout();
       outputLine(curlf.toString());
       if (typed) doContinual();
@@ -308,7 +321,7 @@ function launchGraph(){
     }
     let ans:any[] = [];
     for (let n of ret.nodes){
-      ans.push({group: "nodes", data: {id: ""+n.id, label:""+n.toString()}, classes:(n.isNormalForm?"goal":"")});
+      ans.push(node2cyObj(n));
     }
     for (let e of ret.edges){
       ans.push({group: "edges", data: {source:e.from.id.toString(),target:e.to.id.toString()}});
@@ -529,14 +542,21 @@ function showContinueBtn(){
 function graphClear(){
   cy.remove("*");
 }
+function node2cyObj(n:ReductionNode){
+  return {
+    group: "nodes",
+    data: {id: ""+n.id, label:""+n.toString()},
+    classes:(n.isNormalForm?"goal ":"")+(n.isRoot?"root":"")
+  }
+}
 function makeLayout(){
   cy.resize();
   cy.elements().makeLayout({
     name: "dagre",
-    // nodeSpacing: 5,
+    nodeSpacing: 5,
     animate: true,
     randomize: false,
-    // maxSimulationTime: 1500
+    maxSimulationTime: 1500
   }).run();
 }
 

@@ -1,0 +1,7 @@
+<S><K><K> : Untyped
+-: (macro) = (\xyz.xz(yz))<K><K>
+1: (beta) --> (\yz.<K>z(yz))<K>
+2: (beta) --> \z.<K>z(<K>z)
+-: (macro) = \z.(\xy.x)z(<K>z)
+3: (beta) --> \z.(\y.z)(<K>z)
+4: (beta) --> \z.z    (normal form)

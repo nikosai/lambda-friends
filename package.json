@@ -1,7 +1,7 @@
 {
   "name": "lambda-friends",
-  "version": "3.2.0",
-  "description": "Typed Lambda Calculus",
+  "version": "3.3.0",
+  "description": "Integrated Lambda-calculus Interpreter",
   "main": "index.js",
   "scripts": {
     "test": "test/test.sh",
@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "commander": "^2.16.0",
-    "cytoscape": "^3.2.8",
     "micromodal": "^0.3.1"
   }
 }

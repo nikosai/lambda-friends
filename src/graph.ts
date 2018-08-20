@@ -7,11 +7,13 @@ export class GraphNode{
   children:GraphNode[] = [];
   id:number;
   label:string;
+  isRoot:boolean;
 
-  constructor(label:string, info:Info){
+  constructor(label:string, info:Info, isRoot:boolean){
     this.label = label;
     this.info = info;
     this.id = info.nextId++;
+    this.isRoot = isRoot;
     info.nodes.push(this);
   }
 
@@ -100,7 +102,7 @@ export class GraphNode{
         if (!(/^[a-z][a-z0-9]*$/.test(t))) throw new GraphParseError("the name '"+t+"' cannot be used as node name, must be [a-z][a-z0-9]*");
         let n = nodes[t];
         if (n===undefined){
-          n = nodes[t] = new GraphNode(t,info);
+          n = nodes[t] = new GraphNode(t,info,t==="root");
         }
         rets.push(n);
       }
@@ -169,8 +171,8 @@ export class ReductionNode extends GraphNode{
   depth:number;
   parent:ReductionNode;
   isNormalForm:boolean;
-  constructor(expr:Expression, parent:ReductionNode, info:Info){
-    super((expr = expr.extractMacros()).toString(true), info);
+  constructor(expr:Expression, parent:ReductionNode, info:Info,isRoot:boolean){
+    super((expr = expr.extractMacros()).toString(true), info,isRoot);
     this.expr = expr;
     this.parent = parent;
     if (parent===null) this.depth = 0;
@@ -180,7 +182,7 @@ export class ReductionNode extends GraphNode{
   }
 
   static makeRoot(expr:Expression, typed:boolean, etaAllowed:boolean,allowMultipleEdges:boolean){
-    return new ReductionNode(expr,null,new Info([],[],typed,etaAllowed,0,allowMultipleEdges));
+    return new ReductionNode(expr,null,new Info([],[],typed,etaAllowed,0,allowMultipleEdges),true);
   }
   
   visit():{nodes:ReductionNode[],edges:{from:ReductionNode,to:ReductionNode}[]}{
@@ -188,7 +190,7 @@ export class ReductionNode extends GraphNode{
     for (let r of this.nextrs){
       let ret = this.find(r.next);
       if (ret===null) {
-        let n = new ReductionNode(r.next,this,this.info);
+        let n = new ReductionNode(r.next,this,this.info,false);
         this.children.push(n);
         ans.nodes.push(n);
         if (this.info.allowMultipleEdges || !this.info.hasEdge({from:this,to:n})){
