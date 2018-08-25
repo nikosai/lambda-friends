@@ -1,6 +1,6 @@
 {
   "name": "lambda-friends",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "Integrated Lambda-calculus Interpreter",
   "main": "index.js",
   "scripts": {
