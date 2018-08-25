@@ -112,7 +112,7 @@ fileInput.addEventListener("change",function (ev){
 });
 
 fileReader.addEventListener("load", function (){
-  let ret = LambdaFriends.fileInput(fileReader.result,typed);
+  let ret = LambdaFriends.fileInput(<string>fileReader.result,typed);
   refreshMacroList();
   let div = document.getElementById("fileInputLog");
   div.textContent = null;
