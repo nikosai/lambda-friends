@@ -777,13 +777,13 @@ class ConstOp extends Const{
         this.value = (x:ConstInt,y:ConstInt)=>(new ConstBool(x.value==y.value));
         this.type = new TypeFunc(new TypeInt(),new TypeFunc(new TypeInt(),new TypeBool()));
         break;
+      case "=":
+        this.value = (x:ConstInt,y:ConstInt)=>(new ConstBool(x.value==y.value));
+        this.type = new TypeFunc(new TypeInt(),new TypeFunc(new TypeInt(),new TypeBool()));
+        break;
       case "!=":
         this.value = (x:ConstInt,y:ConstInt)=>(new ConstBool(x.value!=y.value));
         this.type = new TypeFunc(new TypeInt(),new TypeFunc(new TypeInt(),new TypeBool()));
-        break;
-      case "eq":
-        this.value = (x:ConstBool,y:ConstBool)=>(new ConstBool(x.value==y.value));
-        this.type = new TypeFunc(new TypeBool(),new TypeFunc(new TypeBool(),new TypeBool()));
         break;
       case "eq":
         this.value = (x:ConstBool,y:ConstBool)=>(new ConstBool(x.value==y.value));
@@ -903,10 +903,13 @@ export class Macro extends Symbol{
       // 組み込みマクロ。typeがundefでいいかは疑問の余地あり
       if (name.match(/^\d+$/)!==null){
         return new Macro(name,makeChurchNum(parseInt(name),typed),typed,undefined);
-      } else if (name=="true"){
-        return new Macro(name,makeAST("\\xy.x",typed),typed,undefined);
-      } else if (name=="false"){
-        return new Macro(name,makeAST("\\xy.y",typed),typed,undefined);
+      } else {
+        let f = (term)=>(new Macro(name,makeAST(term,typed),typed,undefined));
+        if (name==="true") return f("\\xy.x");
+        if (name==="false") return f("\\xy.y");
+        if (name==="S") return f("\\fgx.fx(gx)");
+        if (name==="K") return f("\\xy.x");
+        if (name==="I") return f("\\x.x");
       }
 
       // 発展の余地あり。typeを指定したundefマクロを許す？
