@@ -416,7 +416,7 @@ class EtaRedex extends Redex{
     return this.texLeft+"\\underline{\\strut "+this.content.toTexString(this.left+this.right==="")+"}"+this.texRight;
   }
   public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-eta">('+htmlEscape(this.content.toString(this.left+this.right===""))+')</span>'+htmlEscape(this.right);
+    return htmlEscape(this.left)+'<span class="lf-eta">'+htmlEscape(this.content.toString(this.left+this.right===""))+'</span>'+htmlEscape(this.right);
   }
   public getTexRule():string{
     return "\\eta";
