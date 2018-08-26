@@ -1,6 +1,7 @@
 ![らむだフレンズ](docs/logo.png "らむだフレンズ")
 
 [![CircleCI](https://circleci.com/gh/nikosai/lambda-friends.svg?style=svg)](https://circleci.com/gh/nikosai/lambda-friends)
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
 純粋型なしλ計算と、型付きλ計算（FL）のインタプリタです。
 
