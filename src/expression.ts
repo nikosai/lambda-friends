@@ -1,477 +1,8 @@
 import { Type, TypeFunc, TypeInt, TypeBool, TypeEquation, TypeList, TypeVariable } from "./type";
-import { LambdaParseError, SubstitutionError, ReductionError, MacroError, TypeError, TexError } from "./error";
+import { LambdaParseError, SubstitutionError, ReductionError, MacroError, TypeError, TexError, TranslateError } from "./error";
 import { LambdaFriends } from "./lambda-friends";
-
-// 字句解析
-function tokenize(str:string, typed:boolean):Symbol[]{
-  let strs:string[] = str.split("");
-  let tokens:Symbol[] = [];
-  while (strs.length>0){
-    let c = strs.shift().trim();
-    if (c === ""){}
-    else if (c === "<") {
-      // <macro>
-      let content = "";
-      while (true){
-        if (strs.length==0) throw new LambdaParseError("Too many LANGLE '<'");
-        c = strs.shift();
-        if (c===">") break;
-        else content += c;
-      }
-      tokens.push(Macro.get(content,typed));
-    } else if (typed && c === "["){
-      // [const]
-      let content = "";
-      while (true){
-        if (strs.length==0) throw new LambdaParseError("Too many LBRACKET '['");
-        c = strs.shift();
-        if (c==="]") break;
-        else content += c;
-      }
-      let result:Symbol = null;
-      switch (content){
-        case "nil":
-          result = new Nil();
-          break;
-        case "false":
-        case "true":
-          result = new ConstBool(content==="true");
-          break;
-        case "if":
-        case "then":
-        case "else":
-        case "let":
-        case "in":
-        case "case":
-        case "of":
-        case "fix":
-          result = new Symbol(content);
-          break;
-        default:
-          if (content.match(/^\d+$|^-\d+$/)!==null){
-            result = new ConstInt(parseInt(content));
-          } else {
-            result = new ConstOp(content); // fail -> null
-          }
-      }
-      if (result===null)
-        throw new LambdaParseError("Unknown Const: ["+content+"]");
-      tokens.push(result);
-    } else {
-      tokens.push(new Symbol(c));
-    }
-  }
-  return tokens;
-}
-
-// 構文解析
-function parseSymbols(tokens: Symbol[], typed:boolean):Expression{
-  let left:Expression = null;
-  while (tokens.length>0){
-    // 最初のSymbol
-    let first:Symbol = tokens.shift();
-    if (first instanceof Const || first instanceof Nil || first instanceof Macro){
-      if (left===null) left = first;
-      else left = new Application(left, first);
-      continue;
-    }
-
-    switch(first.name){
-      case "\\":
-      case "\u00a5":
-      case "λ":{
-        // abst
-        if (left===null) return LambdaAbstraction.parse(tokens,typed);
-        else return new Application(left, LambdaAbstraction.parse(tokens,typed));
-      }
-      case "(":{
-        // application
-        let content:Symbol[] = [];
-        let i=1;
-        while (true){
-          if (tokens.length==0) throw new LambdaParseError("Too many LPAREN '('");
-          let t = tokens.shift();
-          if (t.name==="(") i++;
-          else if (t.name===")") i--;
-          if (i==0) break;
-          content.push(t);
-        }
-        let contentExpr:Expression = parseSymbols(content,typed);
-        if (left===null) left = contentExpr;
-        else left = new Application(left, contentExpr);
-        break;
-      }
-      default:{
-        if (typed) {
-          switch (first.name){
-            case "if": {
-              // if statement
-              return If.parse(tokens,typed);
-            }
-            case "let": {
-              // let statement
-              return Let.parse(tokens,typed);
-            }
-            case "case": {
-              // case statement: [case] M [of] [nil] -> M | x::x -> M
-              return Case.parse(tokens,typed);
-            }
-            case "fix": {
-              // fixed-point: [fix] x.M
-              return Fix.parse(tokens,typed);
-            }
-            case ":": {
-              // list
-              let t = tokens.shift();
-              if (t.name!==":")
-                throw new LambdaParseError("Unexpected token: '"+t+"'");
-              return new List(left,parseSymbols(tokens,typed));
-            }
-          }
-        }
-        if (first.name.match(/^[A-Za-z]$/)===null)
-          throw new LambdaParseError("Unexpected token: '"+first+"'");
-        // variable
-        if (left===null) left = new Variable(first.name);
-        else left = new Application(left, new Variable(first.name));
-      }
-    }
-  }
-  if (left===null) throw new LambdaParseError("No contents in Expression");
-  return left;
-}
-
-// 字句解析と構文解析 return: root node
-export function makeAST(str:string, typed:boolean):Expression{
-  return parseSymbols(tokenize(str,typed),typed);
-}
-
-// Input : lambda(cp(L0,L1),lambda(L2,apply(apply(L1,L0),L2)))
-// Now   : lambda([L0,L1], lambda([L2],apply()))
-// Output: \xy.xxy
-export function parseLMNtal(str:string):Expression{
-  return parse(str,[],{});
-
-  function parse(str:string,usedVars:Variable[],map:{[key:string]:string}){
-    str = str.trim();
-    let res = str.match(/^.+?(?=\()/);
-    if (res===null){
-      let ret = map[str];
-      if (ret === undefined) throw new LambdaParseError("Malformed LMNtal Lambda Term. Unknown Token: "+str);
-      return new Variable(ret);
-    }
-
-    let atom = res[0].trim();
-    let args = parseArg(str.match(/\(.+$/)[0]);
-
-    switch(atom){
-      case "lambda":{
-        if (args.length!==2) throw new LambdaParseError("Malformed LMNtal Lambda Term. lambda(X,A) should have 2 args.");
-        let v = Variable.getNew(usedVars);
-        let bvs = parseAbsArg(args[0]);
-        for (let bv of bvs) map[bv] = v.name;
-        return new LambdaAbstraction(v,parse(args[1],usedVars.concat(v),Object.assign({},map)));
-      }
-      case "apply":{
-        if (args.length!==2) throw new LambdaParseError("Malformed LMNtal Lambda Term. apply(A,B) should have 2 args.");
-        return new Application(parse(args[0],[].concat(usedVars),Object.assign({},map)),parse(args[1],[].concat(usedVars),Object.assign({},map)));
-      }
-      case "fv":{
-        if (args.length!==1) throw new LambdaParseError("Malformed LMNtal Lambda Term. fv(X) should have 1 arg.");
-        if (args[0].length!==1 || !args[0].match(/[a-z]/)) return Macro.get(args[0],false);
-        // throw new LambdaParseError("too long free variable name: "+ args[0]);
-        return new Variable(args[0]);
-      }
-      default:
-        throw new LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: "+atom);
-    }
-  }
-
-  // Ex1: (L0,cp(L1,L2)) => ["L0","cp(L1,L2)"]
-  // Ex2: (L0) => ["L0"]
-  // Ex3: ( ) => []
-  function parseArg(str:string):string[]{
-    str = str.trim();
-    if (str[0]!=="(" || str[str.length-1]!==")")
-      throw new LambdaParseError("Malformed LMNtal Lambda Term. Invalid Parentheses.");
-    let level = 0;
-    let content = "";
-    let strs:string[] = [];
-    for (let i=1; i<str.length-1; i++){
-      let t = str[i];
-      if (t==="(") level++;
-      else if (t===")") level--;
-      if (level===0 && t===",") {
-        strs.push(content);
-        content = "";
-      } else {
-        content += t;
-      }
-    }
-    if (level!==0) throw new LambdaParseError("Malformed LMNtal Lambda Term. Invalid Parentheses.");
-    strs.push(content);
-    if (strs.length === 1){
-      let s = strs[0].trim();
-      if (s==="") return [];
-      else return [s];
-    }
-    let ret:string[] = [];
-    for (let s of strs) ret.push(s.trim());
-    return ret;
-  }
-
-  // Ex1: cp(L0,cp(L1,L2)) => [L0,L1,L2]
-  // Ex2: L0 => [L0]
-  // Ex3: rm => []
-  function parseAbsArg(str:string):string[]{
-    str = str.trim();
-    let res = str.match(/^.+?(?=\()/);
-    if (res===null){
-      if(str === "rm") return [];
-      else return [str];
-    }
-    let atom = res[0].trim();
-    let args = parseArg(str.match(/\(.+$/)[0]);
-    if (atom==="rm"){
-      if (args.length!==0)
-        throw new LambdaParseError("Malformed LMNtal Lambda Term. rm() should have 0 args.");
-      return [];
-    } else if (atom==="cp"){
-      if (args.length!==2)
-        throw new LambdaParseError("Malformed LMNtal Lambda Term. cp(A,B) should have 2 args.");
-      return parseAbsArg(args[0].trim()).concat(parseAbsArg(args[1].trim()));
-    } else {
-      throw new LambdaParseError("Malformed LMNtal Lambda Term. Unexpected atom name: "+atom);
-    }
-  }
-}
-
-// チャーチ数を表すExpressionの生成
-function makeChurchNum(n:number,typed:boolean):Expression{
-  let str = "\\sz.";
-  let content = (n===0?"z":"sz");
-  for (let i=1; i<n; i++){
-    content = "s("+content+")";
-  }
-  return makeAST(str+content,typed);
-}
-
-export function makeTerms(depth:number):Expression[]{
-  return sub([],depth);
-  function sub(vs:Variable[], depth:number):Expression[]{
-    let ret:Expression[] = [].concat(vs);
-    if (depth === 0) return ret;
-    let res = sub(vs,depth-1);
-    // Application
-    for (let i=0; i<res.length; i++)
-      for (let j=0; j<res.length; j++)
-        ret.push(new Application(res[i],res[j]));
-    // Lambda Abstraction
-    let newVar = Variable.getNew(vs);
-    let res1 = sub(vs.concat(newVar),depth-1);
-    for (let r of res1) ret.push(new LambdaAbstraction(newVar,r));
-    return ret;
-  }
-}
-
-function htmlEscape(str:string):string{
-  return str.replace(/[&'`"<>]/g, function(match) {
-    return {
-      '&': '&amp;',
-      "'": '&#x27;',
-      '`': '&#x60;',
-      '"': '&quot;',
-      '<': '&lt;',
-      '>': '&gt;',
-    }[match]
-  });
-}
-
-// 簡約基
-export abstract class Redex{
-  type: string;
-  left: string;
-  right: string;
-  texLeft: string;
-  texRight: string;
-  abstract rule: string;
-  abstract content: Expression;
-  abstract next: Expression;
-  constructor(type:string){
-    this.left = "";
-    this.right = "";
-    this.texLeft = "";
-    this.texRight = "";
-    this.type = type;
-  }
-  public addLeft(s:string){
-    this.left = s + this.left;
-  }
-  public addRight(s:string){
-    this.right += s;
-  }
-  public addTexLeft(s:string){
-    this.texLeft = s + this.texLeft;
-  }
-  public addTexRight(s:string){
-    this.texRight += s;
-  }
-  public static makeNext(es:Redex[],prefix:string,suffix:string,prefixTex:string,suffixTex:string,func: (prev:Expression)=>Expression):Redex[]{
-    let ret:Redex[] = [].concat(es);
-    for (let e of ret){
-      e.next = func(e.next);
-      e.addLeft(prefix);
-      e.addRight(suffix);
-      e.addTexLeft(prefixTex);
-      e.addTexRight(suffixTex);
-    }
-    return ret;
-  }
-  public getName():string{
-    return this.type;
-  }
-  public getPos():number{
-    return this.left.length;
-  }
-  public abstract toString():string;
-  public abstract toTexString():string;
-  public abstract toHTMLString():string;
-  public abstract getTexRule():string;
-  // aの方が優先度高い → 負, 同等 → 0, bの方が優先度高い → 正
-  public static compare(a:Redex, b:Redex):number{
-    let ap = a.getPos();
-    let bp = b.getPos();
-    if (ap===bp) return 0;
-    else return ap-bp;
-  }
-}
-
-// β基 : (\x.M)N
-class BetaRedex extends Redex{
-  content:Application;
-  next:Expression;
-  la:LambdaAbstraction;
-  arg:Expression;
-  rule:string;
-  constructor(e:Application){
-    super("beta");
-    this.content = e;
-    this.la = <LambdaAbstraction>e.left;
-    this.next = this.la.expr.substitute(this.la.boundvar,e.right);
-    this.arg = e.right;
-    this.rule = "beta";
-  }
-  public toString():string{
-    let boundvars:string[] = [];
-    let expr = this.la.expr;
-    while(expr instanceof LambdaAbstraction){
-      boundvars.push(expr.boundvar.toString(false));
-      expr = expr.expr;
-    }
-    let str = boundvars.join("")+"."+expr.toString(true);
-    return this.left+"(\\["+this.la.boundvar.toString(false)+"]"+str+")["+this.arg.toString(false)+"]"+this.right;
-  }
-  public toTexString():string{
-    let boundvars:string[] = [];
-    let expr = this.la.expr;
-    while(expr instanceof LambdaAbstraction){
-      boundvars.push(expr.boundvar.toTexString(false));
-      expr = expr.expr;
-    }
-    let str = boundvars.join("")+"."+expr.toTexString(true);
-    return this.texLeft+"(\\strut \\lambda{\\underline{"+this.la.boundvar.toTexString(false)+"}}"+str+")\\underline{\\strut "+this.arg.toTexString(false)+"}"+this.texRight;
-  }
-  public toHTMLString():string{
-    let boundvars:string[] = [];
-    let expr = this.la.expr;
-    while(expr instanceof LambdaAbstraction){
-      boundvars.push(expr.boundvar.toString(false));
-      expr = expr.expr;
-    }
-    let str = boundvars.join("")+"."+expr.toString(true);
-    return htmlEscape(this.left)+'(\\<span class="lf-beta lf-boundvar">'+htmlEscape(this.la.boundvar.toString(false))+'</span>'+htmlEscape(str)+')<span class="lf-beta lf-arg">'+htmlEscape(this.arg.toString(false))+'</span>'+htmlEscape(this.right);
-  }
-  public getTexRule():string{
-    return "\\beta";
-  }
-}
-
-// η基 : (\x.Mx)
-class EtaRedex extends Redex{
-  content:LambdaAbstraction;
-  next:Expression;
-  app:Application;
-  rule:string;
-  constructor(e:LambdaAbstraction){
-    super("eta");
-    this.content = e;
-    this.app = <Application>e.expr;
-    this.next = this.app.left;
-    this.rule = "eta";
-  }
-  public toString():string{
-    return this.left+"["+this.content+"]"+this.right;
-  }
-  public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.content.toTexString(this.left+this.right==="")+"}"+this.texRight;
-  }
-  public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-eta">'+htmlEscape(this.content.toString(this.left+this.right===""))+'</span>'+htmlEscape(this.right);
-  }
-  public getTexRule():string{
-    return "\\eta";
-  }
-}
-
-// マクロ : <macro>
-class MacroRedex extends Redex{
-  next:Expression;
-  content:Macro;
-  rule:string;
-  constructor(e:Macro){
-    super("macro");
-    this.content = e;
-    this.next = e.expr;
-    this.rule = "macro";
-  }
-  public toString():string{
-    return this.left+"[<"+this.content.name+">]"+this.right;
-  }
-  public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.content.toTexString(false)+"}"+this.texRight;
-  }
-  public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-macro">&lt;'+htmlEscape(this.content.name)+'&gt;</span>'+htmlEscape(this.right);
-  }
-  public getTexRule():string{
-    return "{\\rm m}";
-  }
-}
-
-// 型付きの簡約基（マクロ以外）
-class TypedRedex extends Redex{
-  content:Expression;
-  next:Expression;
-  rule:string;
-  constructor(e:Expression, next:Expression, rule:string){
-    super("typed");
-    this.content = e;
-    this.next = next;
-    this.rule = rule;
-  }
-  public toString():string{
-    return this.left+"["+this.content.toString(this.left+this.right==="")+"]"+this.right;
-  }
-  public toTexString():string{
-    return this.texLeft+"\\underline{\\strut "+this.content.toTexString(false)+"}"+this.texRight;
-  }
-  public toHTMLString():string{
-    return htmlEscape(this.left)+'<span class="lf-typed">'+htmlEscape(this.content.toString(this.left+this.right===""))+'</span>'+htmlEscape(this.right);
-  }
-  public getTexRule():string{
-    return "{\\rm ("+this.rule+")}";
-  }
-}
+import { Redex, MacroRedex, EtaRedex, TypedRedex, BetaRedex } from "./redex";
+import * as Util from "./util";
 
 // 型の連立方程式と証明木の組
 class TypeResult{
@@ -517,6 +48,10 @@ export abstract class Expression{
     throw new TypeError("Expression '"+this+"' cannot be converted into LMNtal (untyped only).");
   }
 
+  public toSKI():Expression{
+    throw new TypeError("Expression '"+this+"' cannot be converted to SKI combinators (untyped only).")
+  }
+
   public abstract toString(noParens:boolean):string;
   public abstract toTexString(noParens:boolean):string;
   public abstract getFV():Variable[];
@@ -530,7 +65,7 @@ export abstract class Expression{
 }
 
 // 終端記号（未解析）
-class Symbol extends Expression{
+export class Symbol extends Expression{
   name: string;
 
   constructor(name:string, className?:string){
@@ -571,7 +106,7 @@ class Symbol extends Expression{
 }
 
 // 変数 x
-class Variable extends Symbol{
+export class Variable extends Symbol{
   type:Type;
   constructor(name:string){
     super(name, "Variable");
@@ -663,10 +198,13 @@ class Variable extends Symbol{
   public toLMNtal():string{
     return "fv("+this.name+")";
   }
+  public toSKI():Expression{
+    return this;
+  }
 }
 
 // 定数 c
-abstract class Const extends Symbol {
+export abstract class Const extends Symbol {
   abstract value;
   abstract type:Type;
   constructor(name:string, className:string){
@@ -709,7 +247,7 @@ abstract class Const extends Symbol {
 }
 
 // int型定数 c^{int}
-class ConstInt extends Const{
+export class ConstInt extends Const{
   value:number;
   type:TypeInt;
   constructor(value:number){
@@ -720,7 +258,7 @@ class ConstInt extends Const{
 }
 
 // bool型定数 c^{bool}
-class ConstBool extends Const{
+export class ConstBool extends Const{
   value:boolean;
   type:TypeBool;
   constructor(value:boolean){
@@ -731,7 +269,7 @@ class ConstBool extends Const{
 }
 
 // 関数型定数 c^{op} （前置記法・2項演算）
-class ConstOp extends Const{
+export class ConstOp extends Const{
   value: Function;
   type: TypeFunc;
   constructor(funcName:string){
@@ -816,7 +354,7 @@ class ConstOp extends Const{
 }
 
 // 空リスト nil
-class Nil extends Symbol{
+export class Nil extends Symbol{
   public substitute(x:Variable, expr:Expression):Expression{
     return this;
   }
@@ -901,16 +439,13 @@ export class Macro extends Symbol{
     }
     if (ret === undefined){
       // 組み込みマクロ。typeがundefでいいかは疑問の余地あり
-      if (name.match(/^\d+$/)!==null){
-        return new Macro(name,makeChurchNum(parseInt(name),typed),typed,undefined);
-      } else {
-        let f = (term)=>(new Macro(name,makeAST(term,typed),typed,undefined));
-        if (name==="true") return f("\\xy.x");
-        if (name==="false") return f("\\xy.y");
-        if (name==="S") return f("\\fgx.fx(gx)");
-        if (name==="K") return f("\\xy.x");
-        if (name==="I") return f("\\x.x");
-      }
+      let f = (term)=>(new Macro(name,Util.makeAST(term,typed),typed,undefined));
+      if (name.match(/^\d+$/)!==null) return f(Util.makeChurchNum(parseInt(name)));
+      if (name==="true") return f("\\xy.x");
+      if (name==="false") return f("\\xy.y");
+      if (name==="S") return f("\\fgx.fx(gx)");
+      if (name==="K") return f("\\xy.x");
+      if (name==="I") return f("\\x.x");
 
       // 発展の余地あり。typeを指定したundefマクロを許す？
       return new Macro(name,undefined,typed, undefined);
@@ -959,10 +494,14 @@ export class Macro extends Symbol{
     if (this.expr === undefined) return "fv("+this.name+")";
     else return this.expr.toLMNtal();
   }
+  // 改善の余地有り。ユーザ定義マクロを現仕様では展開しない
+  public toSKI():Expression{
+    return this;
+  }
 }
 
 // ラムダ抽象 \x.M
-class LambdaAbstraction extends Expression{
+export class LambdaAbstraction extends Expression{
   boundvar: Variable;
   expr: Expression;
 
@@ -977,7 +516,7 @@ class LambdaAbstraction extends Expression{
     while (tokens.length>0){
       let t:Symbol = tokens.shift();
       if (t.name==="."){
-        let expr = parseSymbols(tokens,typed);
+        let expr = Util.parseSymbols(tokens,typed);
         while (boundvars.length>0){
           expr = new LambdaAbstraction(boundvars.pop(),expr);
         }
@@ -1162,13 +701,29 @@ class LambdaAbstraction extends Expression{
         }
       }
     }
-
     return "lambda("+connect(links)+","+str+")";
+  }
+  public toSKI():Expression{
+    if (!Variable.contains(this.expr.getFV(),this.boundvar)){
+      return new Application(Macro.get("K",false),this.expr.toSKI());
+    }
+    if (this.boundvar.equals(this.expr)){
+      return Macro.get("I",false);
+    }
+    if (this.expr instanceof Application){
+      let f = (e:Expression)=>new LambdaAbstraction(this.boundvar,e).toSKI();
+      return new Application(new Application(Macro.get("S",false),f(this.expr.left)),f(this.expr.right));
+    }
+    if (this.expr instanceof LambdaAbstraction){
+      let inner = this.expr.toSKI();
+      return new LambdaAbstraction(this.boundvar,inner).toSKI();
+    }
+    throw new TranslateError("Unknown kind of expression.");
   }
 }
 
 // 関数適用 MN
-class Application extends Expression{
+export class Application extends Expression{
   left: Expression;
   right: Expression;
 
@@ -1424,10 +979,13 @@ class Application extends Expression{
   public toLMNtal():string{
     return "apply("+this.left.toLMNtal()+","+this.right.toLMNtal()+")";
   }
+  public toSKI():Expression{
+    return new Application(this.left.toSKI(),this.right.toSKI());
+  }
 }
 
 // リスト M::M
-class List extends Expression{
+export class List extends Expression{
   head: Expression;
   tail: Expression;
 
@@ -1490,7 +1048,7 @@ class List extends Expression{
 }
 
 // if
-class If extends Expression{
+export class If extends Expression{
   state:Expression;
   ifTrue:Expression;
   ifFalse:Expression;
@@ -1597,7 +1155,7 @@ class If extends Expression{
       if (i_num===e_num && t_num===i_num+1) break;
       state.push(t);
     }
-    let stateExpr = parseSymbols(state,typed);
+    let stateExpr = Util.parseSymbols(state,typed);
     let ifTrue:Symbol[] = [];
     i_num=0, t_num=0, e_num=0;
     while (true){
@@ -1617,8 +1175,8 @@ class If extends Expression{
       if (i_num===t_num && e_num===i_num+1) break;
       ifTrue.push(t);
     }
-    let ifTrueExpr = parseSymbols(ifTrue,typed);
-    let ifFalseExpr = parseSymbols(tokens,typed);
+    let ifTrueExpr = Util.parseSymbols(ifTrue,typed);
+    let ifFalseExpr = Util.parseSymbols(tokens,typed);
     return new If(stateExpr,ifTrueExpr,ifFalseExpr);
   }
   public extractMacros():Expression{
@@ -1627,7 +1185,7 @@ class If extends Expression{
 }
 
 // let in
-class Let extends Expression{
+export class Let extends Expression{
   boundvar:Variable;
   left:Expression;
   right:Expression;
@@ -1726,8 +1284,8 @@ class Let extends Expression{
       if (i==0) break;
       content.push(t);
     }
-    let contentExpr:Expression = parseSymbols(content,typed);
-    let restExpr:Expression = parseSymbols(tokens,typed);
+    let contentExpr:Expression = Util.parseSymbols(content,typed);
+    let restExpr:Expression = Util.parseSymbols(tokens,typed);
     return new Let(boundvar,contentExpr,restExpr);
   }
   public extractMacros():Expression{
@@ -1736,7 +1294,7 @@ class Let extends Expression{
 }
 
 // case文 [case] M [of] [nil] -> M | x::x -> M
-class Case extends Expression{
+export class Case extends Expression{
   state:Expression;
   ifNil:Expression;
   head:Variable;
@@ -1868,7 +1426,7 @@ class Case extends Expression{
       if (i==0) break;
       state.push(t);
     }
-    let stateExpr:Expression = parseSymbols(state,typed);
+    let stateExpr:Expression = Util.parseSymbols(state,typed);
     let t = tokens.shift();
     if (t.name!=="nil")
       throw new LambdaParseError("Unexpected token: '"+t+"'");
@@ -1888,7 +1446,7 @@ class Case extends Expression{
       if (i==0) break;
       ifNil.push(t);
     }
-    let ifNilExpr:Expression = parseSymbols(ifNil,typed);
+    let ifNilExpr:Expression = Util.parseSymbols(ifNil,typed);
     let head = new Variable(tokens.shift().name);
     if (head.name.match(/^[A-Za-z]$/)===null)
       throw new LambdaParseError("Unexpected token: '"+head.name+"'");
@@ -1907,7 +1465,7 @@ class Case extends Expression{
     t = tokens.shift();
     if (t.name!==">")
       throw new LambdaParseError("Unexpected token: '"+t+"'");
-    let ifElseExpr = parseSymbols(tokens,typed);
+    let ifElseExpr = Util.parseSymbols(tokens,typed);
     return new Case(stateExpr,ifNilExpr,head,tail,ifElseExpr);
   }
   public extractMacros():Expression{
@@ -1916,7 +1474,7 @@ class Case extends Expression{
 }
 
 // 不動点演算子 [fix] x.M
-class Fix extends Expression{
+export class Fix extends Expression{
   boundvar:Variable;
   expr:Expression;
   constructor(boundvar:Variable, expr:Expression){
@@ -2000,7 +1558,7 @@ class Fix extends Expression{
     if (tokens.shift().name!==".")
       throw new LambdaParseError("'.' is expected");
 
-    let contentExpr:Expression = parseSymbols(tokens,typed);
+    let contentExpr:Expression = Util.parseSymbols(tokens,typed);
     return new Fix(boundvar,contentExpr);
   }
   public extractMacros():Expression{

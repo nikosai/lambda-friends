@@ -23,6 +23,7 @@ commander
   .option('-g,--graph','Reverse search from reduction graph (tentative)')
   .option('-t,--trace','Show reduction trace')
   .option('-L,--lmnout','Translate lambda term to LMNtal code')
+  .option('-c,--skiout','Translate lambda term to SKI combinators')
   .option('-m,--macro <filename>','Load macros from textfile')
   .option('-s,--steps <n>','Set continuation steps',parseInt)
   .option('-T,--typed','Use Typed mode')
@@ -96,6 +97,10 @@ if (commander.lmnin){
   try{
     if (commander.lmnout){
       console.log(new LambdaFriends(input,false,etaAllowed,allowMultipleEdges).toLMNtal());
+      return;
+    }
+    if (commander.skiout){
+      console.log(new LambdaFriends(input,false,etaAllowed,allowMultipleEdges).toSKI());
       return;
     }
     let lf = new LambdaFriends(input,typed,etaAllowed,allowMultipleEdges);

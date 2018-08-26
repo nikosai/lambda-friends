@@ -1,6 +1,7 @@
-import { Redex, Expression } from "./expression";
+import { Expression } from "./expression";
 import { GraphParseError } from "./error";
 import { LambdaFriends } from "./lambda-friends";
+import { Redex } from "./redex";
 
 export class GraphNode{
   info:Info;

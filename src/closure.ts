@@ -1,5 +1,5 @@
 import { LambdaFriends } from "./lambda-friends";
-import { makeTerms } from "./expression";
+import { makeTerms } from "./util";
 
 outputInfo(5,100,true);
 

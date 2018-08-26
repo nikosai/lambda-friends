@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
-import { makeTerms, parseLMNtal } from "./expression";
+import { makeTerms, parseLMNtal } from "./util";
 
 let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
 let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);
