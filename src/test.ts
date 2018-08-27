@@ -1,18 +1,20 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
-import { makeTerms, parseLMNtal } from "./util";
+import { makeTerms, parseLMNtal, makeAST } from "./util";
 
-let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
-let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);
+console.log(makeAST("\\xx.x",false).equalsAlpha(makeAST("\\xy.x",false)));
 
-for (let i=0; i<50; i++){
-  if (lf1.deepen()===null) break;
-}
-for (let i=0; i<50; i++){
-  if (lf2.deepen()===null) break;
-}
+// let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
+// let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);
 
-console.log(lf1.root.equalsShape(lf2.root), lf2.root.equalsShape(lf1.root));
+// for (let i=0; i<50; i++){
+//   if (lf1.deepen()===null) break;
+// }
+// for (let i=0; i<50; i++){
+//   if (lf2.deepen()===null) break;
+// }
+
+// console.log(lf1.root.equalsShape(lf2.root), lf2.root.equalsShape(lf1.root));
 
 // graphParseTest();
 // outputInfo();

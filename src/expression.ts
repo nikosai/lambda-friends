@@ -566,11 +566,13 @@ export class LambdaAbstraction extends Expression{
     let m = this.expr;
     let y = expr.boundvar;
     let n = expr.expr;
-    if (Variable.contains(m.getFV(),y)){
-      return n.equalsAlpha(m);
-    } else {
-      return n.equalsAlpha(m.substitute(x,y));
-    }
+    let v = Variable.getNew(Variable.union(m.getFV(),n.getFV()));
+    return m.substitute(x,v).equalsAlpha(n.substitute(y,v));
+    // if (Variable.contains(m.getFV(),y)){
+    //   return n.equalsAlpha(m);
+    // } else {
+    //   return n.equalsAlpha(m.substitute(x,y));
+    // }
   }
   public getEquations(gamma:Variable[],type:Type,noParens:boolean):TypeResult{
     // (abs)
