@@ -1,6 +1,8 @@
-import { Expression, Macro, makeAST, Redex, parseLMNtal } from "./expression";
+import { Expression, Macro } from "./expression";
 import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 import { ReductionNode, GraphNode } from "./graph";
+import { Redex } from "./redex";
+import { makeAST, parseLMNtal } from "./util";
 
 export class LambdaFriends{
   expr:Expression;
@@ -228,6 +230,12 @@ export class LambdaFriends{
     if (this.typed) return null;
     else return this.original.toLMNtal();
   }
+
+  // typedだったらとりあえずnullを返すことにする
+  public toSKI():string{
+    if (this.typed) return null;
+    else return this.original.toSKI().toString(true);
+  }
   
   public toString():string{
     let ret = this.expr.toString(true)+" : "+this.type;
@@ -243,7 +251,7 @@ export class LambdaFriends{
   }
 
   public getOriginalString():string{
-    return this.original+" : "+this.type;
+    return this.original.toString(true)+" : "+this.type;
   }
 
   public parseChurchNum():number{

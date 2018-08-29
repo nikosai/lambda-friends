@@ -69,3 +69,10 @@ export class GraphParseError extends LambdaFriendsError{
     super("GraphParseError",message);
   }
 }
+
+// 他言語との変換時のエラー
+export class TranslateError extends LambdaFriendsError{
+  constructor(message:string){
+    super("TranslateError",message);
+  }
+}

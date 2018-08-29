@@ -82,7 +82,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 ## LMNtalコードへの変換について
 型なしモードで入力されたラムダ式を、[階層グラフ書き換え言語 LMNtal](http://www.ueda.info.waseda.ac.jp/lmntal/)の式に自動的に変換する。エンコーディング方式は以下の論文のものを採用。
 
-1. 上田和紀, 純粋λ計算の階層グラフ書換えへのエンコーディング, 第9回プログラミングおよびプログラミング言語ワークショップ論文集, 2007.
+1. Kazunori Ueda, Encoding the Pure Lambda Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008, LNCS 5117, Springer, 2008, pp.392-408.
 
 ## CLIモードの動かし方
 ```bash
