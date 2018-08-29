@@ -217,7 +217,7 @@ export class Variable extends Symbol{
         return new deBrujinIndex(i);
       }
     }
-    throw new TranslateError("Unexpected error.");
+    return new deBrujinFreeVar(this.name);
   }
 }
 
