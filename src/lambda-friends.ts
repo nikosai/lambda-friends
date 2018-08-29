@@ -3,6 +3,7 @@ import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 import { ReductionNode, GraphNode } from "./graph";
 import { Redex } from "./redex";
 import { makeAST, parseLMNtal } from "./util";
+import { deBrujinExpression } from "./deBrujin";
 
 export class LambdaFriends{
   expr:Expression;
@@ -224,6 +225,10 @@ export class LambdaFriends{
     return new LambdaFriends(parseLMNtal(str).toString(true),false,false,false);
   }
 
+  public static deBrujin2LF(str:string){
+    return new LambdaFriends(deBrujinExpression.parse(str).toLambda().toString(true),false,false,false);
+  }
+
   // typedだったらとりあえずnullを返すことにする
   public toLMNtal():string{
     LambdaFriends.nextLinkID = 0;
@@ -235,6 +240,12 @@ export class LambdaFriends{
   public toSKI():string{
     if (this.typed) return null;
     else return this.original.toSKI().toString(true);
+  }
+
+  // typedだったらとりあえずnullを返すことにする
+  public toDeBrujin():string{
+    if (this.typed) return null;
+    else return this.original.toDeBrujin().toString();
   }
   
   public toString():string{

@@ -3,6 +3,7 @@ import { LambdaParseError, SubstitutionError, ReductionError, MacroError, TypeEr
 import { LambdaFriends } from "./lambda-friends";
 import { Redex, MacroRedex, EtaRedex, TypedRedex, BetaRedex } from "./redex";
 import * as Util from "./util";
+import { deBrujinExpression, deBrujinLambda, deBrujinIndex, deBrujinApplication, deBrujinFreeVar } from "./deBrujin";
 
 // 型の連立方程式と証明木の組
 class TypeResult{
@@ -51,6 +52,14 @@ export abstract class Expression{
 
   public toSKI():Expression{
     throw new TypeError("Expression '"+this+"' cannot be converted to SKI combinators (untyped only).")
+  }
+
+  public getDeBrujin(vars:Variable[]):deBrujinExpression{
+    throw new TypeError("Expression '"+this+"' cannot be converted to de Brujin indexes (untyped only).")
+  }
+
+  public toDeBrujin():deBrujinExpression{
+    return this.getDeBrujin([]);
   }
 
   public abstract toString(noParens:boolean):string;
@@ -201,6 +210,14 @@ export class Variable extends Symbol{
   }
   public toSKI():Expression{
     return this;
+  }
+  public getDeBrujin(vars:Variable[]):deBrujinExpression{
+    for (let i=0; i<vars.length; i++){
+      if (vars[i].equals(this)){
+        return new deBrujinIndex(i);
+      }
+    }
+    throw new TranslateError("Unexpected error.");
   }
 }
 
@@ -499,6 +516,10 @@ export class Macro extends Symbol{
   public toSKI():Expression{
     return this;
   }
+  public getDeBrujin(vars:Variable[]):deBrujinExpression{
+    if (this.expr === undefined) return new deBrujinFreeVar(this.name);
+    else return this.expr.getDeBrujin(vars);
+  }
 }
 
 // ラムダ抽象 \x.M
@@ -724,6 +745,12 @@ export class LambdaAbstraction extends Expression{
     }
     throw new TranslateError("Unknown kind of expression.");
   }
+  public getDeBrujin(vars:Variable[]):deBrujinExpression{
+    vars.unshift(this.boundvar);
+    let ret = this.expr.getDeBrujin(vars);
+    vars.shift();
+    return new deBrujinLambda(ret);
+  }
 }
 
 // 関数適用 MN
@@ -852,7 +879,7 @@ export class Application extends Expression{
           "",
           t.right.toTexString(false),
           (prev) => (new Application(prev,t.right)));
-        let lstr = t.left.toString(true);
+        let lstr = t.left.toString(t.left instanceof Application);
         let ret2 = Redex.makeNext(
           t.right.getRedexes(false,etaAllowed,false),
           lstr,
@@ -985,6 +1012,9 @@ export class Application extends Expression{
   }
   public toSKI():Expression{
     return new Application(this.left.toSKI(),this.right.toSKI());
+  }
+  public getDeBrujin(vars:Variable[]):deBrujinExpression{
+    return new deBrujinApplication(this.left.getDeBrujin(vars),this.right.getDeBrujin(vars));
   }
 }
 
