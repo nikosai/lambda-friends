@@ -42,14 +42,24 @@ export abstract class deBrujinExpression{
         case " ":
           break;
         default:{
-          if (t.match(/^[0-9]$/)===null)
+          let ret:deBrujinExpression;
+          if (t.match(/^[0-9]$/)!==null){
+            let content = t;
+            while (cs.length>0){
+              if (cs[0].match(/^[0-9]$/)===null) break;
+              content += cs.shift();
+            }
+            ret = new deBrujinIndex(parseInt(content));
+          } else if (t.match(/^[a-zA-Z]$/)!==null){
+            let content = t;
+            while (cs.length>0){
+              if (cs[0].match(/^[a-zA-Z0-9]$/)===null) break;
+              content += cs.shift();
+            }
+            ret = new deBrujinFreeVar(content);
+          } else {
             throw new LambdaParseError("Unexpected token: '"+t+"'");
-          let content = t;
-          while (cs.length>0){
-            if (cs[0].match(/^[0-9]$/)===null) break;
-            content += cs.shift();
           }
-          let ret = new deBrujinIndex(parseInt(content));
           if (left===null) left = ret;
           else left = new deBrujinApplication(left, ret);
         }
@@ -64,7 +74,7 @@ export abstract class deBrujinExpression{
   public abstract getLambda(vars:Variable[]):Expression;
 }
 
-class deBrujinLambda extends deBrujinExpression{
+export class deBrujinLambda extends deBrujinExpression{
   expr:deBrujinExpression;
   constructor(expr:deBrujinExpression){
     super("deBrujinLambda");
@@ -82,7 +92,7 @@ class deBrujinLambda extends deBrujinExpression{
   }
 }
 
-class deBrujinApplication extends deBrujinExpression{
+export class deBrujinApplication extends deBrujinExpression{
   left:deBrujinExpression;
   right:deBrujinExpression;
   constructor(left:deBrujinExpression,right:deBrujinExpression){
@@ -98,7 +108,7 @@ class deBrujinApplication extends deBrujinExpression{
   }
 }
 
-class deBrujinIndex extends deBrujinExpression{
+export class deBrujinIndex extends deBrujinExpression{
   index:number;
   constructor(index:number){
     super("deBrujinIndex");
@@ -110,5 +120,19 @@ class deBrujinIndex extends deBrujinExpression{
   public getLambda(vars:Variable[]):Expression{
     if (this.index < vars.length) return vars[this.index];
     else throw new TranslateError("de Brujin Index must be less than # of ancestor lambdas.");
+  }
+}
+
+export class deBrujinFreeVar extends deBrujinExpression{
+  name:string;
+  constructor(name:string){
+    super("deBrujinFreeVar");
+    this.name = name;
+  }
+  public getString(noParens:boolean):string{
+    return this.name;
+  }
+  public getLambda(vars:Variable[]):Expression{
+    return new Variable(this.name);
   }
 }

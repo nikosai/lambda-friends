@@ -95,6 +95,9 @@ let tabDbtn = document.getElementById("tabDbtn");
 let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
 let lmnSubmitBtn = document.getElementById("lmnSubmit");
 let lmnOutput = document.getElementById("lmnOutput");
+let deBrujinInput = <HTMLInputElement>document.getElementById("deBrujinInput");
+let deBrujinSubmitBtn = document.getElementById("deBrujinSubmit");
+let deBrujinOutput = document.getElementById("deBrujinOutput");
 let graphInput = <HTMLInputElement>document.getElementById("graphInput");
 let graphSubmitBtn = document.getElementById("graphSubmit");
 let graphOutput = document.getElementById("graphOutput");
@@ -390,6 +393,23 @@ function submitLMNtal(){
   }
 }
 
+deBrujinInput.onkeydown = function(e){
+  if (e.keyCode===13){
+    submitDeBrujin();
+    e.preventDefault();
+  }
+}
+deBrujinSubmitBtn.onclick = submitLMNtal;
+function submitDeBrujin(){
+  let input = deBrujinInput.value;
+  try {
+    let ret = LambdaFriends.deBrujin2LF(input);
+    deBrujinOutput.innerText = "Found: "+ret.expr.toString(true);
+  } catch (e){
+    deBrujinOutput.innerText = e.toString();
+  }
+}
+
 graphInput.onkeydown = function(e){
   if (e.keyCode===13){
     submitGraph();
@@ -465,6 +485,7 @@ function refreshTex(){
   else {
     translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
     translateDiv.appendChild(makeTexDiv("SKIコンビネータ", curlf.toSKI()));
+    translateDiv.appendChild(makeTexDiv("de Brujin Index", curlf.toDeBrujin()));
   }
 }
 function makeTexDiv(title:string, content:string){

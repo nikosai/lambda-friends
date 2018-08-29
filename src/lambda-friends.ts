@@ -241,6 +241,12 @@ export class LambdaFriends{
     if (this.typed) return null;
     else return this.original.toSKI().toString(true);
   }
+
+  // typedだったらとりあえずnullを返すことにする
+  public toDeBrujin():string{
+    if (this.typed) return null;
+    else return this.original.toDeBrujin().toString();
+  }
   
   public toString():string{
     let ret = this.expr.toString(true)+" : "+this.type;
