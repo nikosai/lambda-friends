@@ -251,7 +251,7 @@ export class LambdaFriends{
   }
 
   public getOriginalString():string{
-    return this.original+" : "+this.type;
+    return this.original.toString(true)+" : "+this.type;
   }
 
   public parseChurchNum():number{

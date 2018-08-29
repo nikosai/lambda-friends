@@ -26,6 +26,7 @@ export abstract class Expression{
     let n = 0;
     if (!(e instanceof LambdaAbstraction)) return null;
     const x = e.boundvar;
+    if (f.equals(x)) return null;
     e = e.expr;
     while (e instanceof Application) {
       n++;
@@ -516,6 +517,7 @@ export class LambdaAbstraction extends Expression{
     while (tokens.length>0){
       let t:Symbol = tokens.shift();
       if (t.name==="."){
+        if (boundvars.length===0) throw new LambdaParseError("Bound variables are expected.");
         let expr = Util.parseSymbols(tokens,typed);
         while (boundvars.length>0){
           expr = new LambdaAbstraction(boundvars.pop(),expr);

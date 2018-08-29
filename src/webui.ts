@@ -89,7 +89,8 @@ let imgGraph = document.getElementById("imgGraph");
 let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
 let tabAbtn = document.getElementById("tabAbtn");
 let tabBbtn = document.getElementById("tabBbtn");
-let tabCbtn = document.getElementById("tabCbtn");
+let tabC1btn = document.getElementById("tabC1btn");
+let tabC2btn = document.getElementById("tabC2btn");
 let tabDbtn = document.getElementById("tabDbtn");
 let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
 let lmnSubmitBtn = document.getElementById("lmnSubmit");
@@ -359,7 +360,11 @@ tabBbtn.addEventListener("click",()=>{
   graphActive = false;
 });
 
-tabCbtn.addEventListener("click",()=>{
+tabC1btn.addEventListener("click",()=>{
+  graphActive = false;
+});
+
+tabC2btn.addEventListener("click",()=>{
   graphActive = false;
 });
 
@@ -451,9 +456,16 @@ function refreshTex(){
   translateDiv.textContent = null;
   if (curlf === undefined) return;
 
+  let header = document.createElement("h4");
+  header.innerText = curlf.getOriginalString();
+  translateDiv.appendChild(header);
+
   translateDiv.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
   if (typed) translateDiv.appendChild(makeTexDiv("型付けの証明木", curlf.getProofTree()));
-  else translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
+  else {
+    translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
+    translateDiv.appendChild(makeTexDiv("SKIコンビネータ", curlf.toSKI()));
+  }
 }
 function makeTexDiv(title:string, content:string){
   let p = document.createElement("p");
