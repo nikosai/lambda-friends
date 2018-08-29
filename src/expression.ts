@@ -843,6 +843,7 @@ export class Application extends Expression{
       // apps = [abc, ab]
       // right = ["","c","bc"]
       let ret = apps[apps.length-1].left.getRedexes(false,etaAllowed,false);
+      console.log(ret);
       while (apps.length>0) {
         let t = apps.pop();
         let ret1 = Redex.makeNext(
@@ -852,7 +853,7 @@ export class Application extends Expression{
           "",
           t.right.toTexString(false),
           (prev) => (new Application(prev,t.right)));
-        let lstr = t.left.toString(true);
+        let lstr = t.left.toString(t.left instanceof Application);
         let ret2 = Redex.makeNext(
           t.right.getRedexes(false,etaAllowed,false),
           lstr,

@@ -3,6 +3,7 @@ import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 import { ReductionNode, GraphNode } from "./graph";
 import { Redex } from "./redex";
 import { makeAST, parseLMNtal } from "./util";
+import { deBrujinExpression } from "./deBrujin";
 
 export class LambdaFriends{
   expr:Expression;
@@ -222,6 +223,10 @@ export class LambdaFriends{
 
   public static lmntal2LF(str:string){
     return new LambdaFriends(parseLMNtal(str).toString(true),false,false,false);
+  }
+
+  public static deBrujin2LF(str:string){
+    return new LambdaFriends(deBrujinExpression.parse(str).toLambda().toString(true),false,false,false);
   }
 
   // typedだったらとりあえずnullを返すことにする

@@ -88,11 +88,11 @@ export function parseSymbols(tokens: Symbol[], typed:boolean):Expression{
         let content:Symbol[] = [];
         let i=1;
         while (true){
-          if (tokens.length==0) throw new LambdaParseError("Too many LPAREN '('");
+          if (tokens.length===0) throw new LambdaParseError("Too many LPAREN '('");
           let t = tokens.shift();
           if (t.name==="(") i++;
           else if (t.name===")") i--;
-          if (i==0) break;
+          if (i===0) break;
           content.push(t);
         }
         let contentExpr:Expression = parseSymbols(content,typed);
@@ -284,4 +284,9 @@ export function htmlEscape(str:string):string{
       '>': '&gt;',
     }[match]
   });
+}
+
+export function putParens(str:string,noParens?:boolean){
+  if (noParens) return str;
+  else return "("+str+")";
 }

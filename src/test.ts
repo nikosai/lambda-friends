@@ -1,8 +1,10 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
 import { makeTerms, parseLMNtal, makeAST } from "./util";
+import { deBrujinExpression } from "./deBrujin";
 
-console.log(makeAST("\\xx.x",false).equalsAlpha(makeAST("\\xy.x",false)));
+// console.log(makeAST("\\xx.x",false).equalsAlpha(makeAST("\\xy.x",false)));
+console.log(LambdaFriends.deBrujin2LF("\\ 0").toString())
 
 // let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
 // let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);
