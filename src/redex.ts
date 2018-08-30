@@ -55,8 +55,15 @@ export abstract class Redex{
   public static compare(a:Redex, b:Redex):number{
     let ap = a.getPos();
     let bp = b.getPos();
-    if (ap===bp) return 0;
-    else return ap-bp;
+    if (ap===bp) {
+      const f = (r:Redex)=>{
+        if (r instanceof BetaRedex) return 0;
+        if (r instanceof EtaRedex) return 1;
+        if (r instanceof MacroRedex) return 2;
+        if (r instanceof TypedRedex) return 3;
+      };
+      return f(a)-f(b);
+    } else return ap-bp;
   }
 }
 

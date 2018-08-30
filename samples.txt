@@ -1,9 +1,13 @@
 # This is a sample macro definition file of LambdaFriends.
-# Lines which start with '#' are regarded as comments.
 # These macros are designed for untyped lambda-calculus,
-# so some work correctly in typed mode, while others don't.
+# so some may go wrong in typed mode.
 
-# Note: Church numerals/booleans are supported as built-in macros.
+# Lines which start with '#' are regarded as comments.
+
+# Note: Following Combinators are supported as built-in macros.
+# * Church Numerals : <0>, <1>, <2>, ...
+# * Church Booleans : <true>, <false>
+# * SKI Combinators : <S>, <K>, <I>
 
 # Logical operators on Church booleans
 not    = \p.p<false><true>
@@ -32,10 +36,7 @@ tail   = <false>
 fst    = \p.p<true>
 snd    = \p.p<false>
 
-# Combinators
-S      = \xyz.(xz)(yz)
-K      = \xy.x
-I      = \x.x
+# Fixpoint Combinator
 Y      = \f.(\x.f(xx))(\x.f(xx)) # this is a kind of fixed-point combinator
 
 # Sample of recursion using Y combinator
