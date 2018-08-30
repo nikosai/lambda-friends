@@ -1,6 +1,6 @@
 import { putParens } from "./util";
 import { LambdaParseError, TranslateError } from "./error";
-import { Expression, Variable, LambdaAbstraction, Application } from "./expression";
+import { Expression, Variable, LambdaAbstraction, Application, Macro } from "./expression";
 
 export abstract class deBrujinExpression{
   className:string;
@@ -69,9 +69,10 @@ export abstract class deBrujinExpression{
     return left;
   }
   public toLambda():Expression{
-    return this.getLambda([]);
+    return this.getLambda(deBrujinFreeVar.toVariables(this.getFV()));
   }
   public abstract getLambda(vars:Variable[]):Expression;
+  public abstract getFV():deBrujinFreeVar[];
 }
 
 export class deBrujinLambda extends deBrujinExpression{
@@ -90,6 +91,9 @@ export class deBrujinLambda extends deBrujinExpression{
     vars.shift();
     return new LambdaAbstraction(v,ret);
   }
+  public getFV():deBrujinFreeVar[]{
+    return this.expr.getFV();
+  }
 }
 
 export class deBrujinApplication extends deBrujinExpression{
@@ -106,6 +110,9 @@ export class deBrujinApplication extends deBrujinExpression{
   public getLambda(vars:Variable[]):Expression{
     return new Application(this.left.getLambda(vars),this.right.getLambda(vars));
   }
+  public getFV():deBrujinFreeVar[]{
+    return this.left.getFV().concat(this.right.getFV());
+  }
 }
 
 export class deBrujinIndex extends deBrujinExpression{
@@ -121,6 +128,9 @@ export class deBrujinIndex extends deBrujinExpression{
     if (this.index < vars.length) return vars[this.index];
     else throw new TranslateError("de Brujin Index must be less than # of ancestor lambdas.");
   }
+  public getFV():deBrujinFreeVar[]{
+    return [];
+  }
 }
 
 export class deBrujinFreeVar extends deBrujinExpression{
@@ -133,6 +143,20 @@ export class deBrujinFreeVar extends deBrujinExpression{
     return this.name;
   }
   public getLambda(vars:Variable[]):Expression{
+    if (this.name.length===1) return this.toVariable();
+    else return Macro.get(this.name,false);
+  }
+  public toVariable():Variable{
     return new Variable(this.name);
+  }
+  public static toVariables(fvs:deBrujinFreeVar[]):Variable[]{
+    let ret:Variable[] = [];
+    for (let fv of fvs){
+      ret.push(fv.toVariable());
+    }
+    return ret;
+  }
+  public getFV():deBrujinFreeVar[]{
+    return [this];
   }
 }
