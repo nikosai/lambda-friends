@@ -399,7 +399,7 @@ deBrujinInput.onkeydown = function(e){
     e.preventDefault();
   }
 }
-deBrujinSubmitBtn.onclick = submitLMNtal;
+deBrujinSubmitBtn.onclick = submitDeBrujin;
 function submitDeBrujin(){
   let input = deBrujinInput.value;
   try {
