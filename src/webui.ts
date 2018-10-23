@@ -342,7 +342,13 @@ stopGraph.onclick = function(){
 }
 
 imgGraph.onclick = function(){
-  window.open(cy.png());
+  let a = document.createElement("a");
+  a.download = "lambda-friends.png";
+  a.href = cy.png();
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // console.log(a);
 }
 
 maxDepth.addEventListener("change",function(){
