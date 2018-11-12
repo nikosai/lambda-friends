@@ -344,7 +344,9 @@ stopGraph.onclick = function(){
 imgGraph.onclick = function(){
   let a = document.createElement("a");
   a.download = "lambda-friends.png";
-  a.href = cy.png();
+  a.href = cy.png({
+    full: true
+  });
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
