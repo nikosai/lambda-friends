@@ -48,15 +48,19 @@ export class LambdaFriends{
     this.nextRedexes = undefined;
   }
 
-  public getRedexes(){
+  public getRedexes():Redex[]{
     if (this.nextRedexes) return this.nextRedexes;
-    return this.nextRedexes = this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
+    if (this.typed){
+      let r = this.expr.getTypedRedex(true);
+      return this.nextRedexes = (r ? [r] : []);
+    }
+    return this.nextRedexes = this.expr.getRedexes(this.etaAllowed, true).sort(Redex.compare);
   }
   
   public getLeftMostRedex(){
-    if (this.typed) return (this.getRedexes()[0] || null);
+    if (this.typed) return this.expr.getTypedRedex(true);
     if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
-    return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
+    return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.etaAllowed,true);
   }
 
   public reduction(redex?:Redex):string{
