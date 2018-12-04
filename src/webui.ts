@@ -343,7 +343,8 @@ stopGraph.onclick = function(){
 
 imgGraph.onclick = function(){
   let a = document.createElement("a");
-  a.download = "lambda-friends.png";
+  a.download = (curlf ? curlf.original.toString(true) :"lambda-friends")+".png";
+  console.log(a.download);
   a.href = cy.png({
     full: true
   });
