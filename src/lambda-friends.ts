@@ -60,7 +60,7 @@ export class LambdaFriends{
   public getLeftMostRedex(){
     if (this.typed) return this.expr.getTypedRedex(true);
     if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
-    return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.etaAllowed,true);
+    return this.nextLeftMostRedex = this.expr.getUnTypedRedex(this.etaAllowed,false,false,false,false,true);
   }
 
   public reduction(redex?:Redex):string{

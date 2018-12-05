@@ -71,7 +71,7 @@ export abstract class Expression{
   public abstract getEquations(gamma:Variable[], type:Type, noParens:boolean):TypeResult;
   public abstract getRedexes(etaAllowed:boolean, noParens:boolean):Redex[];
   public abstract getTypedRedex(noParens:boolean):Redex;
-  public abstract getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex;
+  public abstract getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex;
   public abstract extractMacros():Expression;
 }
 
@@ -111,7 +111,7 @@ export class Symbol extends Expression{
   public getTypedRedex(noParens:boolean):Redex{
     throw new ReductionError("Symbols must not appear in parsed Expression")
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Symbols must not appear in parsed Expression")
   }
   public extractMacros():Expression{
@@ -206,7 +206,7 @@ export class Variable extends Symbol{
   public getTypedRedex(noParens:boolean):Redex{
     return null;
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     return null;
   }
   public extractMacros():Expression{
@@ -258,7 +258,7 @@ export abstract class Const extends Symbol {
   public getTypedRedex(noParens:boolean):Redex{
     return null;
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
   public extractMacros():Expression{
@@ -400,7 +400,7 @@ export class Nil extends Symbol{
   public getRedexes(etaAllowed:boolean, noParens:boolean):Redex[]{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
-  public getLeftMostRedex(etaAllowed:boolean, noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
   public extractMacros():Expression{
@@ -498,7 +498,7 @@ export class Macro extends Symbol{
     if (next.expr === undefined) return null;
     else return new MacroRedex(next);
   }
-  public getLeftMostRedex(etaAllowed:boolean, noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     let next = Macro.get(this.name,false);
     if (next.expr === undefined) return null;
     else return new MacroRedex(next);
@@ -660,15 +660,18 @@ export class LambdaAbstraction extends Expression{
   public getTypedRedex(noParens:boolean):Redex{
     return null;
   }
-  public getLeftMostRedex(etaAllowed:boolean, noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     if (etaAllowed===undefined){
       console.error("etaAllowed is undefined.");
       etaAllowed = false;
     }
+    // this is eta-redex
+    let thisRedex:Redex = null;
     if (etaAllowed && this.isEtaRedex()){
-      return new EtaRedex(this);
+      thisRedex = new EtaRedex(this);
     }
-    
+    if (weak || (thisRedex && !innermost)) return thisRedex;
+
     let boundvars = [this.boundvar];
     let expr = this.expr;
     while(expr instanceof LambdaAbstraction){
@@ -680,7 +683,8 @@ export class LambdaAbstraction extends Expression{
       lParen = "(";
       rParen = ")";
     }
-    let ret = expr.getLeftMostRedex(etaAllowed,true);
+    // inner-redex
+    let ret = expr.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,true);
     if (ret === null) return null;
 
     ret.next = ((prev)=>{
@@ -696,7 +700,9 @@ export class LambdaAbstraction extends Expression{
     ret.addRight(rParen);
     ret.addTexLeft(lParen+"\\lambda{"+boundvars.join("")+"}.");
     ret.addTexRight(rParen);
-    return ret;
+
+    if (thisRedex && ret) return ret;
+    return thisRedex || ret;
   }
   public extractMacros():Expression{
     return new LambdaAbstraction(this.boundvar,this.expr.extractMacros());
@@ -901,47 +907,166 @@ export class Application extends Expression{
       return ret;
     }
   }
-  public getLeftMostRedex(etaAllowed:boolean, noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     // untyped
+    // let apps:Application[] = [this];
+    // let right:string[] = [""];
+    // let texRight:string[] = [""];
+    // while (true){
+    //   let t = apps[apps.length-1];
+    //   if (!(t.left instanceof Application)) break;
+    //   apps.push(t.left);
+    // }
+    // // apps = [abc, ab]
+    // // right = ["","c","bc"]
+    // let ret = apps[apps.length-1].left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
+    // while (apps.length>0) {
+    //   let t = apps.pop();
+    //   if (t.isBetaRedex()){
+    //     ret = new BetaRedex(t);
+    //   } else if (ret === null){
+    //     // 右から次を作る
+    //     ret = t.right.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
+    //     if (ret !== null){
+    //       let lstr = t.left.toString(true);
+    //       ret.next = new Application(t.left,ret.next);
+    //       ret.addLeft(lstr);
+    //       ret.addRight("");
+    //       ret.addTexLeft(t.left.toTexString(false));
+    //       ret.addTexRight("");
+    //     }
+    //   } else {
+    //     // 前のから次を作る
+    //     ret.next = new Application(ret.next,t.right);
+    //     ret.addLeft("");
+    //     ret.addRight(t.right.toString(false));
+    //     ret.addTexLeft("");
+    //     ret.addTexRight(t.right.toTexString(false));
+    //   }
+    //   right.pop();
+    //   texRight.pop();
+    // }
+    // if (ret === null) return null;
+    // if (!noParens){
+    //   ret.addLeft("(");
+    //   ret.addRight(")");
+    //   ret.addTexLeft("(");
+    //   ret.addTexRight(")");
+    // }
+    // return ret;
+    let arr:Expression[] = [this.right];
     let apps:Application[] = [this];
-    let right:string[] = [""];
-    let texRight:string[] = [""];
-    while (true){
-      let t = apps[apps.length-1];
-      right.push(t.right.toString(false)+right[right.length-1]);
-      texRight.push(t.right.toTexString(false)+right[texRight.length-1]);
-      if (!(t.left instanceof Application)) break;
-      apps.push(t.left);
+    let cur:Application = this;
+    while (cur.left instanceof Application){
+      cur = cur.left;
+      apps.push(cur);
+      arr.unshift(cur.right);
     }
-    // apps = [abc, ab]
-    // right = ["","c","bc"]
-    let ret = apps[apps.length-1].left.getLeftMostRedex(etaAllowed,false);
-    while (apps.length>0) {
-      let t = apps.pop();
-      if (t.isBetaRedex()){
-        ret = new BetaRedex(t);
-      } else if (ret === null){
-        // 右から次を作る
-        ret = t.right.getLeftMostRedex(etaAllowed,false);
-        if (ret !== null){
-          let lstr = t.left.toString(true);
-          ret.next = new Application(t.left,ret.next);
-          ret.addLeft(lstr);
-          ret.addRight("");
-          ret.addTexLeft(t.left.toTexString(false));
-          ret.addTexRight("");
-        }
+    let addL = (ret:Redex,t:Expression)=>{
+      if (ret === null) return null;
+      let b = t instanceof Application;
+      ret.next = new Application(t,ret.next);
+      ret.addLeft(t.toString(b));
+      ret.addTexLeft(t.toTexString(b));
+      return ret;
+    };
+    let addR = (ret:Redex,t:Expression)=>{
+      if (ret === null) return null;
+      ret.next = new Application(ret.next,t);
+      ret.addRight(t.toString(false));
+      ret.addTexRight(t.toTexString(false));
+      return ret;
+    };
+    // let f = (es:Expression[])=>{
+    //   es = [].concat(es);
+    //   let strs:string[]=[];
+    //   for (let e of es){
+    //     strs.push(e.toString(true));
+    //   }
+    //   return strs;
+    // }
+    // console.log("arr:  "+f(arr));
+    // console.log("cur:  "+cur.toString(true));
+    // console.log("apps: "+f(apps));
+    // ex. this = abcd 
+    // ==> arr = [b,c,d], cur = ab, apps = [abcd,abc,ab]
+    let ret:Redex = null;
+    if (head){
+      if (cur.isBetaRedex()){
+        ret = new BetaRedex(cur);
+        arr.shift();
+        for (let e of arr) ret = addR(ret,e);
       } else {
-        // 前のから次を作る
-        ret.next = new Application(ret.next,t.right);
-        ret.addLeft("");
-        ret.addRight(t.right.toString(false));
-        ret.addTexLeft("");
-        ret.addTexRight(t.right.toTexString(false));
+        ret = cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
+        for (let e of arr) ret = addR(ret,e);
       }
-      right.pop();
-      texRight.pop();
+    } else if (rightmost){
+      // rightmost
+      apps.shift();
+      let queue:Expression[] = [];
+      while (apps.length>0){
+        let e = arr.pop(); // d => [b,c]
+        let app = apps.shift(); // abc => [ab]
+        ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),app);
+        if (ret!==null){
+          for (let q of queue) ret = addR(ret,q);
+          break;
+        }
+        queue.unshift(e);
+      }
+      if (ret===null){
+        let e = queue.shift();
+        ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.left);
+        if (ret===null && cur.isBetaRedex()){
+          // head reduction
+          if (innermost){
+            ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
+            if (ret === null){
+              ret = new BetaRedex(cur);
+            }
+          } else {
+            // leftmost outermost
+            ret = new BetaRedex(cur);
+          }
+        }
+        if (ret===null){
+          ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
+        }
+        for (let e of queue) ret = addR(ret,e);
+      }
+    } else {
+      // leftmost
+      if (cur.isBetaRedex()){
+        // head reduction
+        if (innermost){
+          ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
+          if (ret === null){
+            ret = addL(cur.right.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,cur.right instanceof Application),cur.left);
+          }
+          if (ret === null){
+            ret = new BetaRedex(cur);
+          }
+        } else {
+          // leftmost outermost
+          ret = new BetaRedex(cur);
+        }
+        arr.shift();
+      } else {
+        // head normal form
+        let e = arr.shift();
+        ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
+        if (ret===null) ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.left);
+      }
+      for (let e of arr){
+        let app = apps.pop();
+        if (ret === null){
+          ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),app);
+        } else {
+          ret = addR(ret,e);
+        }
+      }
     }
+
     if (ret === null) return null;
     if (!noParens){
       ret.addLeft("(");
@@ -1018,7 +1143,7 @@ export class List extends Expression{
   public getRedexes(etaAllowed:boolean,noParens:boolean):Redex[]{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
   }
   public getTypedRedex(noParens:boolean):Redex{
@@ -1075,7 +1200,7 @@ export class If extends Expression{
   public getRedexes(etaAllowed:boolean,noParens:boolean):Redex[]{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className)
   }
   public getTypedRedex(noParens:boolean):Redex{
@@ -1221,7 +1346,7 @@ export class Let extends Expression{
   public getRedexes(etaAllowed:boolean,noParens:boolean):Redex[]{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
   public getTypedRedex(noParens:boolean):Redex{
@@ -1341,7 +1466,7 @@ export class Case extends Expression{
   public getRedexes(etaAllowed:boolean,noParens:boolean):Redex[]{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
   public getTypedRedex(noParens:boolean):Redex{
@@ -1489,7 +1614,7 @@ export class Fix extends Expression{
   public getRedexes(etaAllowed:boolean,noParens:boolean):Redex[]{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
-  public getLeftMostRedex(etaAllowed:boolean,noParens:boolean):Redex{
+  public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
     throw new ReductionError("Untyped Reduction cannot handle typeof "+this.className);
   }
   public getTypedRedex(noParens:boolean):Redex{
