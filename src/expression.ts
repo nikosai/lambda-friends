@@ -811,43 +811,14 @@ export class Application extends Expression{
     return str;
   }
   public getRedexes(etaAllowed:boolean, noParens:boolean):Redex[]{
-    // untyped
-    let apps:Application[] = [this];
-    let right:string[] = [""];
-    let texRight:string[] = [""];
-    while (true){
-      let t = apps[apps.length-1];
-      right.push(t.right.toString(false)+right[right.length-1]);
-      texRight.push(t.right.toTexString(false)+right[texRight.length-1]);
-      if (!(t.left instanceof Application)) break;
-      apps.push(t.left);
-    }
-    // apps = [abc, ab]
-    // right = ["","c","bc"]
-    let ret = apps[apps.length-1].left.getRedexes(etaAllowed,false);
-    while (apps.length>0) {
-      let t = apps.pop();
-      let ret1 = Redex.makeNext(
-        ret,
-        "",
-        t.right.toString(false),
-        "",
-        t.right.toTexString(false),
-        (prev) => (new Application(prev,t.right)));
-      let lstr = t.left.toString(t.left instanceof Application);
-      let ret2 = Redex.makeNext(
-        t.right.getRedexes(etaAllowed,false),
-        lstr,
-        "",
-        t.left.toTexString(false),
-        "",
-        (prev) => (new Application(t.left,prev)));
-      ret = ret1.concat(ret2);
-      right.pop();
-      texRight.pop();
-      if (t.isBetaRedex()){
-        ret.push(new BetaRedex(t));
-      }
+    let b = this.left instanceof Application
+    let leftRedexes = this.left.getRedexes(etaAllowed,b);
+    let left = Redex.makeNext(leftRedexes,"",this.right.toString(false),"",this.right.toTexString(false),(prev)=>new Application(prev,this.right));
+    let rightRedexes = this.right.getRedexes(etaAllowed,false);
+    let right = Redex.makeNext(rightRedexes,this.left.toString(b),"",this.left.toTexString(b),"",(prev)=>new Application(this.left,prev));
+    let ret = left.concat(right);
+    if (this.isBetaRedex()){
+      ret.push(new BetaRedex(this));
     }
     if (!noParens){
       ret = Redex.makeNext(ret,"(",")","(",")",(prev)=>(prev));
@@ -908,172 +879,42 @@ export class Application extends Expression{
     }
   }
   public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
-    // untyped
-    // let apps:Application[] = [this];
-    // let right:string[] = [""];
-    // let texRight:string[] = [""];
-    // while (true){
-    //   let t = apps[apps.length-1];
-    //   if (!(t.left instanceof Application)) break;
-    //   apps.push(t.left);
-    // }
-    // // apps = [abc, ab]
-    // // right = ["","c","bc"]
-    // let ret = apps[apps.length-1].left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
-    // while (apps.length>0) {
-    //   let t = apps.pop();
-    //   if (t.isBetaRedex()){
-    //     ret = new BetaRedex(t);
-    //   } else if (ret === null){
-    //     // 右から次を作る
-    //     ret = t.right.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
-    //     if (ret !== null){
-    //       let lstr = t.left.toString(true);
-    //       ret.next = new Application(t.left,ret.next);
-    //       ret.addLeft(lstr);
-    //       ret.addRight("");
-    //       ret.addTexLeft(t.left.toTexString(false));
-    //       ret.addTexRight("");
-    //     }
-    //   } else {
-    //     // 前のから次を作る
-    //     ret.next = new Application(ret.next,t.right);
-    //     ret.addLeft("");
-    //     ret.addRight(t.right.toString(false));
-    //     ret.addTexLeft("");
-    //     ret.addTexRight(t.right.toTexString(false));
-    //   }
-    //   right.pop();
-    //   texRight.pop();
-    // }
-    // if (ret === null) return null;
-    // if (!noParens){
-    //   ret.addLeft("(");
-    //   ret.addRight(")");
-    //   ret.addTexLeft("(");
-    //   ret.addTexRight(")");
-    // }
-    // return ret;
-    let arr:Expression[] = [this.right];
-    let apps:Application[] = [this];
-    let cur:Application = this;
-    while (cur.left instanceof Application){
-      cur = cur.left;
-      apps.push(cur);
-      arr.unshift(cur.right);
-    }
-    let addL = (ret:Redex,t:Expression)=>{
-      if (ret === null) return null;
-      let b = t instanceof Application;
-      ret.next = new Application(t,ret.next);
-      ret.addLeft(t.toString(b));
-      ret.addTexLeft(t.toTexString(b));
-      return ret;
+    const b = this.left instanceof Application;
+    const p = (r:Redex)=>{
+      if (r !== null && !noParens){
+        r.addLeft("("); r.addRight(")");
+        r.addTexLeft("("); r.addTexRight(")");
+      }
+      return r;
     };
-    let addR = (ret:Redex,t:Expression)=>{
+    const searchL = ()=>{
+      let ret = this.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,b);
       if (ret === null) return null;
-      ret.next = new Application(ret.next,t);
-      ret.addRight(t.toString(false));
-      ret.addTexRight(t.toTexString(false));
-      return ret;
+      ret.next = new Application(ret.next,this.right);
+      ret.addRight(this.right.toString(false));
+      ret.addTexRight(this.right.toTexString(false));
+      return p(ret);
     };
-    // let f = (es:Expression[])=>{
-    //   es = [].concat(es);
-    //   let strs:string[]=[];
-    //   for (let e of es){
-    //     strs.push(e.toString(true));
-    //   }
-    //   return strs;
-    // }
-    // console.log("arr:  "+f(arr));
-    // console.log("cur:  "+cur.toString(true));
-    // console.log("apps: "+f(apps));
-    // ex. this = abcd 
-    // ==> arr = [b,c,d], cur = ab, apps = [abcd,abc,ab]
+    const searchR = ()=>{
+      let ret = this.right.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
+      if (ret === null) return null;
+      ret.next = new Application(this.left,ret.next);
+      ret.addRight(this.left.toString(b));
+      ret.addTexRight(this.left.toTexString(b));
+      return p(ret);
+    };
     let ret:Redex = null;
+    if (this.isBetaRedex()){
+      ret = p(new BetaRedex(this));
+      if (head || !innermost) return ret;
+    }
     if (head){
-      if (cur.isBetaRedex()){
-        ret = new BetaRedex(cur);
-        arr.shift();
-        for (let e of arr) ret = addR(ret,e);
-      } else {
-        ret = cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
-        for (let e of arr) ret = addR(ret,e);
-      }
-    } else if (rightmost){
-      // rightmost
-      apps.shift();
-      let queue:Expression[] = [];
-      while (apps.length>0){
-        let e = arr.pop(); // d => [b,c]
-        let app = apps.shift(); // abc => [ab]
-        ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),app);
-        if (ret!==null){
-          for (let q of queue) ret = addR(ret,q);
-          break;
-        }
-        queue.unshift(e);
-      }
-      if (ret===null){
-        let e = queue.shift();
-        ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.left);
-        if (ret===null && cur.isBetaRedex()){
-          // head reduction
-          if (innermost){
-            ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
-            if (ret === null){
-              ret = new BetaRedex(cur);
-            }
-          } else {
-            // leftmost outermost
-            ret = new BetaRedex(cur);
-          }
-        }
-        if (ret===null){
-          ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
-        }
-        for (let e of queue) ret = addR(ret,e);
-      }
-    } else {
-      // leftmost
-      if (cur.isBetaRedex()){
-        // head reduction
-        if (innermost){
-          ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
-          if (ret === null){
-            ret = addL(cur.right.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,cur.right instanceof Application),cur.left);
-          }
-          if (ret === null){
-            ret = new BetaRedex(cur);
-          }
-        } else {
-          // leftmost outermost
-          ret = new BetaRedex(cur);
-        }
-        arr.shift();
-      } else {
-        // head normal form
-        let e = arr.shift();
-        ret = addR(cur.left.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.right);
-        if (ret===null) ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),cur.left);
-      }
-      for (let e of arr){
-        let app = apps.pop();
-        if (ret === null){
-          ret = addL(e.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false),app);
-        } else {
-          ret = addR(ret,e);
-        }
-      }
+      return searchL();
     }
-
-    if (ret === null) return null;
-    if (!noParens){
-      ret.addLeft("(");
-      ret.addRight(")");
-      ret.addTexLeft("(");
-      ret.addTexRight(")");
-    }
+    let res = (rightmost?searchR():searchL());
+    if (res !== null) return res;
+    res = (rightmost?searchL():searchR());
+    if (res !== null) return res;
     return ret;
   }
   public extractMacros():Expression{
