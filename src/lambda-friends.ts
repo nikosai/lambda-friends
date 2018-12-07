@@ -18,7 +18,6 @@ export class LambdaFriends{
   root:ReductionNode;
   curNodes:ReductionNode[];
   nextRedexes:Redex[];
-  nextLeftMostRedex:Redex;
   static nextLinkID:number;
   constructor(str:string,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
     let l = str.split("#")[0].trim();
@@ -59,8 +58,7 @@ export class LambdaFriends{
   
   public getLeftMostRedex(){
     if (this.typed) return this.expr.getTypedRedex(true);
-    if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
-    return this.nextLeftMostRedex = this.expr.getUnTypedRedex(this.etaAllowed,false,false,false,false,true);
+    return this.expr.getUnTypedRedex(this.etaAllowed,false,false,false,false,true);
   }
 
   public reduction(redex?:Redex):string{
@@ -71,7 +69,6 @@ export class LambdaFriends{
     }
     this.expr = redex.next;
     this.nextRedexes = undefined;
-    this.nextLeftMostRedex = undefined;
     this.processTex += redex.toTexString();
     let ret:string;
     if (redex.type === "macro"){

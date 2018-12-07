@@ -67,6 +67,7 @@ let curlf:LambdaFriends = undefined;
 
 let input = <HTMLInputElement>document.getElementById("input");
 let oel = document.getElementById("output");
+let settingButton = document.getElementById("settingBtn");
 let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
 let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
@@ -166,6 +167,14 @@ fileReader.addEventListener("load", function (){
     awaitCloseAnimation: true
   });
 });
+
+settingButton.onclick = function(){
+  MicroModal.show('modal-2',{
+    debugMode: true,
+    disableScroll: true,
+    awaitCloseAnimation: true
+  });
+}
 
 untypedButton.onclick = function(){
   untypedButton.className = "btn btn-primary";
