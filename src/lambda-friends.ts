@@ -18,7 +18,6 @@ export class LambdaFriends{
   root:ReductionNode;
   curNodes:ReductionNode[];
   nextRedexes:Redex[];
-  nextLeftMostRedex:Redex;
   static nextLinkID:number;
   constructor(str:string,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
     let l = str.split("#")[0].trim();
@@ -48,26 +47,37 @@ export class LambdaFriends{
     this.nextRedexes = undefined;
   }
 
-  public getRedexes(){
+  public getRedexes():Redex[]{
     if (this.nextRedexes) return this.nextRedexes;
-    return this.nextRedexes = this.expr.getRedexes(this.typed,this.etaAllowed, true).sort(Redex.compare);
+    if (this.typed){
+      let r = this.expr.getTypedRedex(true);
+      return this.nextRedexes = (r ? [r] : []);
+    }
+    return this.nextRedexes = this.expr.getRedexes(this.etaAllowed, true).sort(Redex.compare);
   }
   
   public getLeftMostRedex(){
-    if (this.typed) return (this.getRedexes()[0] || null);
-    if (this.nextLeftMostRedex) return this.nextLeftMostRedex;
-    return this.nextLeftMostRedex = this.expr.getLeftMostRedex(this.typed,this.etaAllowed,true);
+    if (this.typed) return this.expr.getTypedRedex(true);
+    return this.expr.getUnTypedRedex(this.etaAllowed,false,false,false,false,true);
+  }
+
+  public getRedex(rightmost:boolean,innermost:boolean,weak:boolean,head:boolean){
+    if (this.typed) return this.expr.getTypedRedex(true);
+    return this.expr.getUnTypedRedex(this.etaAllowed,rightmost,innermost,weak,head,true);
+  }
+
+  public reductionByStrategy(rightmost:boolean,innermost:boolean,weak:boolean,head:boolean){
+    return this.reduction(this.getRedex(rightmost,innermost,weak,head));
   }
 
   public reduction(redex?:Redex):string{
     if (redex === undefined){
-      // 簡約基指定のない場合、最左簡約
+      // 簡約基指定のない場合、
       redex = this.getLeftMostRedex();
       if (!redex) return null;
     }
     this.expr = redex.next;
     this.nextRedexes = undefined;
-    this.nextLeftMostRedex = undefined;
     this.processTex += redex.toTexString();
     let ret:string;
     if (redex.type === "macro"){
@@ -109,6 +119,10 @@ export class LambdaFriends{
 
   public hasNext():boolean{
     return this.getLeftMostRedex() !== null;
+  }
+
+  public isNormalForm(rightmost:boolean,innermost:boolean,weak:boolean,head:boolean):boolean{
+    return this.getRedex(rightmost,innermost,weak,head) === null;
   }
 
   // 未展開のノードがまだあるか

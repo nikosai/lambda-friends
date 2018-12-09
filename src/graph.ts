@@ -178,7 +178,12 @@ export class ReductionNode extends GraphNode{
     this.parent = parent;
     if (parent===null) this.depth = 0;
     else this.depth = parent.depth + 1;
-    this.nextrs = this.expr.getRedexes(info.typed,info.etaAllowed,true);
+    if (info.typed){
+      let r = this.expr.getTypedRedex(true);
+      this.nextrs = (r ? [r] : []);
+    } else {
+      this.nextrs = this.expr.getRedexes(info.etaAllowed,true);
+    }
     this.isNormalForm = (this.nextrs.length===0);
   }
 
