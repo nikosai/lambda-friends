@@ -171,7 +171,23 @@
           <button type="button" id="etaEnable" class="btn btn-default">η簡約あり</button>
           <button type="button" id="etaDisable" class="btn btn-primary">η簡約なし</button>
         </div>
-        <div class="form-inline" style="margin:7px; display:inline-table">
+        <div class="btn-group" role="group">
+          <button type="button" id="leftmostBtn" class="btn btn-default">最左</button>
+          <button type="button" id="rightmostBtn" class="btn btn-primary">最右</button>
+        </div>
+        <div class="btn-group" role="group">
+          <button type="button" id="outermostBtn" class="btn btn-default">最外</button>
+          <button type="button" id="innermostBtn" class="btn btn-primary">最内</button>
+        </div>
+        <div class="btn-group" role="group">
+          <button type="button" id="strongBtn" class="btn btn-default">強</button>
+          <button type="button" id="weakBtn" class="btn btn-primary">弱</button>
+        </div>
+        <div class="btn-group" role="group">
+          <button type="button" id="headBtn" class="btn btn-default">頭部</button>
+          <button type="button" id="nonheadBtn" class="btn btn-primary"> - </button>
+        </div>
+        <div class="form-inline" style="margin:7px; display:inline-block">
           <div class="input-group">
             <span class="input-group-addon">連続ステップ数</span>
             <input type="text" class="form-control" placeholder="100" id="stepInput" style="width: 60px; text-align:center" autocomplete="off">

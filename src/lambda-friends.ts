@@ -61,9 +61,18 @@ export class LambdaFriends{
     return this.expr.getUnTypedRedex(this.etaAllowed,false,false,false,false,true);
   }
 
+  public getRedex(rightmost:boolean,innermost:boolean,weak:boolean,head:boolean){
+    if (this.typed) return this.expr.getTypedRedex(true);
+    return this.expr.getUnTypedRedex(this.etaAllowed,rightmost,innermost,weak,head,true);
+  }
+
+  public reductionByStrategy(rightmost:boolean,innermost:boolean,weak:boolean,head:boolean){
+    return this.reduction(this.getRedex(rightmost,innermost,weak,head));
+  }
+
   public reduction(redex?:Redex):string{
     if (redex === undefined){
-      // 簡約基指定のない場合、最左簡約
+      // 簡約基指定のない場合、
       redex = this.getLeftMostRedex();
       if (!redex) return null;
     }
@@ -110,6 +119,10 @@ export class LambdaFriends{
 
   public hasNext():boolean{
     return this.getLeftMostRedex() !== null;
+  }
+
+  public isNormalForm(rightmost:boolean,innermost:boolean,weak:boolean,head:boolean):boolean{
+    return this.getRedex(rightmost,innermost,weak,head) === null;
   }
 
   // 未展開のノードがまだあるか

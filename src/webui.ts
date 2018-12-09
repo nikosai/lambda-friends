@@ -59,7 +59,8 @@ MicroModal.init({
   awaitCloseAnimation: true
 });
 
-let steps:number = undefined;
+const defaultSteps = 100;
+let steps:number = defaultSteps;
 let typed = true;
 let etaAllowed = false;
 let allowMultipleEdges = false;
@@ -74,6 +75,14 @@ let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
 let etaDisableButton = <HTMLButtonElement>document.getElementById("etaDisable");
 let multiEdgeEnableButton = <HTMLButtonElement>document.getElementById("multiEdgeEnable");
 let multiEdgeDisableButton = <HTMLButtonElement>document.getElementById("multiEdgeDisable");
+let leftmostButton = <HTMLButtonElement>document.getElementById("leftmostBtn");
+let rightmostButton = <HTMLButtonElement>document.getElementById("rightmostBtn");
+let outermostButton = <HTMLButtonElement>document.getElementById("outermostBtn");
+let innermostButton = <HTMLButtonElement>document.getElementById("innermostBtn");
+let strongButton = <HTMLButtonElement>document.getElementById("strongBtn");
+let weakButton = <HTMLButtonElement>document.getElementById("weakBtn");
+let headButton = <HTMLButtonElement>document.getElementById("headBtn");
+let nonheadButton = <HTMLButtonElement>document.getElementById("nonheadBtn");
 let fileInput = <HTMLInputElement>document.getElementById("fileInput");
 let fileReader = new FileReader();
 let clearMacroButton = <HTMLButtonElement>document.getElementById("clearMacroBtn");
@@ -222,6 +231,58 @@ multiEdgeDisableButton.onclick = function(){
   allowMultipleEdges = false;
 }
 
+let rightmost = false;
+leftmostButton.onclick = function(){
+  leftmostButton.className = "btn btn-primary";
+  rightmostButton.className = "btn btn-default";
+  rightmost = false;
+}
+
+rightmostButton.onclick = function(){
+  rightmostButton.className = "btn btn-primary";
+  leftmostButton.className = "btn btn-default";
+  rightmost = true;
+}
+
+let innermost = false;
+outermostButton.onclick = function(){
+  outermostButton.className = "btn btn-primary";
+  innermostButton.className = "btn btn-default";
+  innermost = false;
+}
+
+innermostButton.onclick = function(){
+  innermostButton.className = "btn btn-primary";
+  outermostButton.className = "btn btn-default";
+  innermost = true;
+}
+
+let weak = false;
+strongButton.onclick = function(){
+  strongButton.className = "btn btn-primary";
+  weakButton.className = "btn btn-default";
+  weak = false;
+}
+
+weakButton.onclick = function(){
+  weakButton.className = "btn btn-primary";
+  strongButton.className = "btn btn-default";
+  weak = true;
+}
+
+let head = false;
+headButton.onclick = function(){
+  headButton.className = "btn btn-primary";
+  nonheadButton.className = "btn btn-default";
+  head = true;
+}
+
+nonheadButton.onclick = function(){
+  nonheadButton.className = "btn btn-primary";
+  headButton.className = "btn btn-default";
+  head = false;
+}
+
 clearMacroButton.onclick = function(){
   LambdaFriends.clearMacro(typed);
   refreshMacroList();
@@ -232,7 +293,7 @@ stepInput.addEventListener("change",function(){
   if (!isNaN(new_s)){
     steps = new_s;
   } else {
-    steps = undefined;
+    steps = defaultSteps;
   }
 });
 
@@ -547,13 +608,13 @@ function doContinual(){
       continualRunning = false;
       return;
     }
-    let res = curlf.reduction();
+    let res = curlf.reductionByStrategy(rightmost,innermost,weak,head);
     outputNextLine(res);
     tabA.scrollTop = oel.offsetHeight-15;
     refreshTex();
     f(n-1);
   }, 1);
-  f(steps===undefined?100:steps);
+  f(steps);
 }
 function showContinueBtn(){
   // 「さらに続ける」ボタンを表示
@@ -561,13 +622,19 @@ function showContinueBtn(){
     outputButtons.textContent = null;
     return;
   }
-  let b = document.createElement("button");
-  b.type = "button";
-  b.className = "btn btn-default btn-sm";
-  b.innerText = "最左簡約を続ける";
-  b.onclick = doContinual;
-  outputButtons.textContent = null;
-  outputButtons.appendChild(b);
+  if (curlf.isNormalForm(rightmost,innermost,weak,head)){
+    let s = document.createElement("span");
+    s.innerText = "指定の評価戦略ではこれが正規形です。";
+    outputButtons.appendChild(s);
+  } else {
+    let b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-default btn-sm";
+    b.innerText = steps+"ステップ簡約する";
+    b.onclick = doContinual;
+    outputButtons.textContent = null;
+    outputButtons.appendChild(b);
+  }
   if (typed) return;
   let span = document.createElement("span");
   span.innerText = "または、以下から簡約基を選ぶ：";
@@ -615,4 +682,8 @@ function makeLayout(){
 untypedButton.onclick(null);
 etaDisableButton.onclick(null);
 multiEdgeDisableButton.onclick(null);
+leftmostButton.onclick(null);
+outermostButton.onclick(null);
+strongButton.onclick(null);
+nonheadButton.onclick(null);
 refreshMacroList();
