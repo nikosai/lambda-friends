@@ -304,7 +304,7 @@ let submitInput = function(){
   let line = input.value;
   if (line==="" && curlf!==undefined){
     if (graphActive) launchGraph();
-    else doContinual();
+    else if (!curlf.isNormalForm(rightmost,innermost,weak,head)) doContinual();
     return;
   }
   history.unshift(line);
@@ -602,7 +602,7 @@ function doContinual(){
   continualRunning = true;
   outputButtons.textContent = null;
   let f = (n:number)=>setTimeout(() => {
-    if (n===0 || !curlf.hasNext()) {
+    if (n===0 || curlf.isNormalForm(rightmost,innermost,weak,head)) {
       showContinueBtn();
       tabA.scrollTop = oel.offsetHeight-15;
       continualRunning = false;
@@ -617,11 +617,10 @@ function doContinual(){
   f(steps);
 }
 function showContinueBtn(){
+  outputButtons.textContent = null;
+
   // 「さらに続ける」ボタンを表示
-  if (!curlf.hasNext()) {
-    outputButtons.textContent = null;
-    return;
-  }
+  if (!curlf.hasNext()) return;
   if (curlf.isNormalForm(rightmost,innermost,weak,head)){
     let s = document.createElement("span");
     s.innerText = "指定の評価戦略ではこれが正規形です。";
