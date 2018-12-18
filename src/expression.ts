@@ -899,8 +899,8 @@ export class Application extends Expression{
       let ret = this.right.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,false);
       if (ret === null) return null;
       ret.next = new Application(this.left,ret.next);
-      ret.addRight(this.left.toString(b));
-      ret.addTexRight(this.left.toTexString(b));
+      ret.addLeft(this.left.toString(b));
+      ret.addTexLeft(this.left.toTexString(b));
       return p(ret);
     };
     let ret:Redex = null;
