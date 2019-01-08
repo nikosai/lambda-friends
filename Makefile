@@ -3,7 +3,7 @@ ALLSRC := $(wildcard src/*.ts)
 
 all: js/cli.js docs/app.js
 
-js/cli.js: $(ALLSRC) tsconfig.json Makefile
+js/cli.js: $(ALLSRC) tsconfig.json Makefile webpack.config.js
 	tsc
 
 js/webui.js: js/cli.js
