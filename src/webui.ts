@@ -613,7 +613,7 @@ function doContinual(){
     let res = curlf.reductionByStrategy(rightmost,innermost,weak,head);
     outputNextLine(res);
     tabA.scrollTop = oel.offsetHeight-15;
-    refreshTex();
+    // refreshTex();
     f(n-1);
   }, 0);
   f(steps);
