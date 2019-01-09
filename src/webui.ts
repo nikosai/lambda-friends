@@ -307,6 +307,9 @@ let submitInput = function(){
     else if (!curlf.isNormalForm(rightmost,innermost,weak,head)) doContinual();
     return;
   }
+  if (continualRunning){
+    continualStop = true;
+  }
   history.unshift(line);
   historyNum = 0;
   workspace = [].concat(history);
@@ -404,7 +407,7 @@ function launchGraph(){
     cy.add(ans);
     f();
     makeLayout();
-  },1);
+  },0);
   f();
 }
 stopGraph.onclick = function(){
@@ -507,26 +510,20 @@ function submitGraph(){
   }
 }
 
-let outputBuffer = "";
 function output(str:string){
-  outputBuffer = str;
-  oel.innerHTML = htmlEscape(outputBuffer);
+  oel.innerText = str;
 }
 function outputLine(str:string){
-  outputBuffer = str + "\n";
-  oel.innerHTML = htmlEscape(outputBuffer);
+  oel.innerText = str + "\n";
 }
 function outputNext(str:string){
-  outputBuffer += str;
-  oel.innerHTML = htmlEscape(outputBuffer);
+  oel.insertAdjacentHTML('beforeend',htmlEscape(str));
 }
 function outputNextLine(str:string){
-  outputBuffer += str + "\n";
-  oel.innerHTML = htmlEscape(outputBuffer);
+  oel.insertAdjacentHTML('beforeend',htmlEscape(str + "\n"));
 }
 function outputClear(){
-  outputBuffer = "";
-  oel.innerHTML = htmlEscape(outputBuffer);
+  oel.innerText = "";
 }
 function refreshMacroList(){
   let tbody = document.getElementById("macroList");
@@ -597,23 +594,28 @@ function makeTexDiv(title:string, content:string){
   return div;
 }
 let continualRunning = false;
+let continualStop = false;
 function doContinual(){
   if (continualRunning) return;
   continualRunning = true;
+  continualStop = false;
   outputButtons.textContent = null;
+  let start = performance.now();
   let f = (n:number)=>setTimeout(() => {
-    if (n===0 || curlf.isNormalForm(rightmost,innermost,weak,head)) {
+    if (n===0 || curlf.isNormalForm(rightmost,innermost,weak,head) || continualStop) {
       showContinueBtn();
       tabA.scrollTop = oel.offsetHeight-15;
       continualRunning = false;
+      console.log(`Elapsed Time (Wall Clock): ${performance.now()-start} [ms]`);
+      refreshTex();
       return;
     }
     let res = curlf.reductionByStrategy(rightmost,innermost,weak,head);
     outputNextLine(res);
     tabA.scrollTop = oel.offsetHeight-15;
-    refreshTex();
+    // refreshTex();
     f(n-1);
-  }, 1);
+  }, 0);
   f(steps);
 }
 function showContinueBtn(){
