@@ -49,7 +49,7 @@ let cy = cytoscape({
       style: {
         'background-color': '#d17200'
       }
-    },    
+    },
   ]
 });
 declare let MicroModal:any;
@@ -119,7 +119,7 @@ fileInput.addEventListener("change",function (ev){
   // let size = file.size; // ファイル容量（byte）
   if (type !== "text/plain"){
     alert("プレーンテキストを選択してください");
-    fileInput.value = ""; 
+    fileInput.value = "";
     return;
   }
   fileReader.readAsText(file);
@@ -297,10 +297,12 @@ stepInput.addEventListener("change",function(){
   }
 });
 
-let history: string[] = [];
+let history: string[] = JSON.parse(localStorage.getItem("lf_history")) || [];
 let historyNum:number = 0;
-let workspace: string[] = [""];
+let workspace: string[] = [].concat(history);
+workspace.unshift("");
 let submitInput = function(){
+  console.log(localStorage.getItem("lf_history"));
   let line = input.value;
   if (line==="" && curlf!==undefined){
     if (graphActive) launchGraph();
@@ -311,6 +313,7 @@ let submitInput = function(){
     continualStop = true;
   }
   history.unshift(line);
+  localStorage.setItem("lf_history",JSON.stringify(history));
   historyNum = 0;
   workspace = [].concat(history);
   workspace.unshift("");
