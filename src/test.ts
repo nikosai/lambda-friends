@@ -4,7 +4,7 @@ import { makeTerms, parseLMNtal, makeAST } from "./util";
 import { deBrujinExpression } from "./deBrujin";
 
 // console.log(makeAST("\\xx.x",false).equalsAlpha(makeAST("\\xy.x",false)));
-console.log(LambdaFriends.deBrujin2LF("\\ 0 0").toDeBrujin().toString())
+// console.log(LambdaFriends.deBrujin2LF("\\ 0 0").toDeBrujin().toString())
 
 // let lf1 = new LambdaFriends("(\\ab.aa)((\\a.a)(\\a.aa))",false,false,true);
 // let lf2 = new LambdaFriends("(\\a.a)(\\a.a)(\\a.aa)((\\a.a)(\\a.aa))",false,false,true);
@@ -21,6 +21,8 @@ console.log(LambdaFriends.deBrujin2LF("\\ 0 0").toDeBrujin().toString())
 // graphParseTest();
 // outputInfo();
 // for (let i=0; i<6; i++) console.log(i+" : "+makeTerms(i).length)
+const terms = makeTerms(3);
+for (const t of terms) console.log(t.toString(true));
 
 function graphParseTest(){
   let file = "in.txt";
@@ -57,7 +59,7 @@ function outputInfo(){
   console.error("makeTerms() is done!");
   console.error("Result Length: "+len);
   let cnt = 0;
-  
+
   for (let r of res){
     if (cnt%100==0) console.error("processing... : "+cnt+"/"+len+" ("+Math.floor(cnt/len*100)+"%)");
     let lf = new LambdaFriends(r.toString(true),false,false,true);
@@ -74,7 +76,7 @@ function outputInfo(){
     let lf = lfs[i];
     let c = 1;
     let lflen = lf.expr.toString(true).length;
-    
+
     for (let j=i+1; j<lfs.length; j++){
       let lf1 = lfs[j];
       if (lf.root.equalsShape(lf1.root)) {
