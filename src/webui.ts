@@ -125,8 +125,9 @@ fileInput.addEventListener("change",function (ev){
   fileReader.readAsText(file);
 });
 
-fileReader.addEventListener("load", function (){
-  let ret = LambdaFriends.fileInput(<string>fileReader.result,typed);
+// マクロファイル読み込み終了時に呼ぶ
+function fileLoaded(result:string){
+  let ret = LambdaFriends.fileInput(result,typed);
   refreshMacroList();
   let div = document.getElementById("fileInputLog");
   div.textContent = null;
@@ -146,7 +147,7 @@ fileReader.addEventListener("load", function (){
         let name = names.shift();
         ret += " = <"+name+">";
       }
-      li.innerText = ret + " is defined as "+t.expr+" : "+t.type;
+      li.innerText = ret + " is defined as "+t.expr+"."; // +" : "+t.type;
       list1.appendChild(li);
     }
     div1.appendChild(title1);
@@ -175,7 +176,26 @@ fileReader.addEventListener("load", function (){
     disableScroll: true,
     awaitCloseAnimation: true
   });
-});
+}
+
+document.getElementById("sampleInputBtn").addEventListener("click",()=>{
+  let xhr = new XMLHttpRequest();
+  // xhr.open("GET","https://nikosai.ml/lambda-friends/samples.txt");
+  xhr.open("GET","https://nikosai.ml/lambda-friends/samples.txt");
+  xhr.setRequestHeader('Content-Type', 'text/plain');
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          fileLoaded(xhr.responseText);
+        } else {
+          console.error("An error has occurred loading the sample file.\nstatus = " + xhr.status);
+        }
+    }
+  };
+  xhr.send();
+})
+
+fileReader.addEventListener("load",()=>fileLoaded(<string>fileReader.result));
 
 settingButton.onclick = function(){
   MicroModal.show('modal-2',{
@@ -309,6 +329,7 @@ let submitInput = function(){
     else if (!curlf.isNormalForm(rightmost,innermost,weak,head)) doContinual();
     return;
   }
+  if (line.trim()==="") return;
   if (continualRunning){
     continualStop = true;
   }
@@ -327,7 +348,7 @@ let submitInput = function(){
       graphClear();
       cy.add(node2cyObj(curlf.root));
       makeLayout();
-      outputLine(curlf.toString());
+      outputLine(curlf.toUntypedString()); // !
       if (typed) doContinual();
       showContinueBtn();
     } else {
@@ -338,7 +359,7 @@ let submitInput = function(){
         let name = names.shift();
         str += " = <"+name+">";
       }
-      str += " is defined as "+ret.expr+" : "+ret.type;
+      str += " is defined as "+ret.expr+"."; // +" : "+ret.type;
       outputLine(str);
       outputButtons.textContent = null;
     }
@@ -514,10 +535,10 @@ function submitGraph(){
 }
 
 function output(str:string){
-  oel.innerText = str;
+  oel.innerHTML = htmlEscape(str);
 }
 function outputLine(str:string){
-  oel.innerText = str + "\n";
+  oel.innerHTML = htmlEscape(str + "\n");
 }
 function outputNext(str:string){
   oel.insertAdjacentHTML('beforeend',htmlEscape(str));
@@ -534,7 +555,9 @@ function refreshMacroList(){
   let ret = LambdaFriends.getMacroListAsObject(typed);
   for (let r in ret){
     let m = ret[r];
-    tbody.innerHTML += "<tr><th>"+htmlEscape(m.name)+"</th><td>"+htmlEscape(m.expr.toString(true))+"</td><td>"+htmlEscape(m.type.toString())+"</td></tr>";
+    tbody.innerHTML += "<tr><th>"+htmlEscape(m.name)+"</th><td>"+htmlEscape(m.expr.toString(true))+"</td>"
+                    // +"<td>"+htmlEscape(m.type.toString())+"</td>"
+                    +"</tr>";
   }
 }
 function htmlEscape(str:string):string{

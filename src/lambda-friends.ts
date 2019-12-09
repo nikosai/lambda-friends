@@ -275,6 +275,19 @@ export class LambdaFriends{
     return ret;
   }
 
+  public toUntypedString():string{
+    let ret = this.expr.toString(true);
+    if (!this.hasNext()){
+      ret += "    (normal form)\n";
+      let n = this.parseChurchNum();
+      if (n!==null) ret += "  = "+n+" (as nat)\n";
+      let b = this.parseChurchBool();
+      if (b!==null) ret += "  = "+b+" (as bool)\n";
+      ret = ret.slice(0,ret.length-1);
+    }
+    return ret;
+  }
+
   public getOriginalString():string{
     return this.original.toString(true)+" : "+this.type;
   }

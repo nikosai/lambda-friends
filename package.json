@@ -20,18 +20,18 @@
   },
   "homepage": "https://github.com/nikosai/lambda-friends#readme",
   "devDependencies": {
-    "@types/cytoscape": "^3.8.1",
-    "@types/node": "^12.7.2",
+    "@types/cytoscape": "^3.8.6",
+    "@types/node": "^12.12.14",
     "express": "^4.17.1",
     "lodash": "^4.17.15",
-    "typescript": "^3.6.2",
-    "webpack": "^4.39.3",
-    "webpack-cli": "^3.3.7",
-    "webpack-dev-server": "^3.8.0",
+    "typescript": "^3.7.3",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.9.0",
     "xhr2": "^0.2.0"
   },
   "dependencies": {
-    "commander": "^3.0.0",
-    "micromodal": "^0.4.0"
+    "commander": "^4.0.1",
+    "micromodal": "^0.4.2"
   }
 }

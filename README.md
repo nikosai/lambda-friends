@@ -5,6 +5,8 @@
 
 純粋型なしλ計算と、型付きλ計算（FL）のインタプリタです。
 
+***※現在メンテナンスのため、GUIの型付きモードを一時的に無効化しています。***
+
 言語は、Typescriptを用いています。
 git cloneすれば手元でも動かせますが、[GitHub Pages上にも置いてあります](https://nikosai.github.io/lambda-friends/)。
 
@@ -66,7 +68,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 また、型付きで定義したものは型付きでしか使用できない（逆も然り）。
 
 ### 組み込みマクロ
-以下の3つは、定義せずとも利用できる。ただし、ユーザ定義のマクロによって上書きされるので注意。
+以下の3つは、定義せずとも利用できる。ユーザ定義のマクロはこれらの名前を使用できない。
 * チャーチ数 ex. `<3>` `<5>`
 * チャーチ真理値 `<true>` `<false>`
 * SKIコンビネータ `<S>` `<K>` `<I>`
@@ -110,5 +112,5 @@ $ ./run.sh
 * このプロジェクトは、MITライセンスでコードを公開しています。
 * このプロジェクトは、[Lambda*Magica](https://github.com/YuukiARIA/LambdaMagica)に影響を受けて始動しました。
 * 上記のロゴは、[けものフレンズ ロゴジェネレータ](https://aratama.github.io/kemonogen/)で作成しました。
-* 動作報告を歓迎します → Twitter: [@nikosai2531](https://twitter.com/nikosai2531)
+* 動作報告・フィードバックを歓迎します → Twitter: [@nikosai2531](https://twitter.com/nikosai2531)
 * バグ報告はIssueを投げてください。

@@ -1,19 +1,39 @@
 # This is a sample macro definition file of LambdaFriends.
-# These macros are designed for untyped lambda-calculus,
-# so some may go wrong in typed mode.
+# These macros are designed for untyped lambda-calculus.
 
-# Lines which start with '#' are regarded as comments.
+# '#' and following characters are regarded as comments.
 
 # Note: Following Combinators are supported as built-in macros.
 # * Church Numerals : <0>, <1>, <2>, ...
 # * Church Booleans : <true>, <false>
 # * SKI Combinators : <S>, <K>, <I>
 
+# Note 2: In the current version of LambdaFriends,
+# once you redefine a macro,
+# the previous version of the macro will be "shadowed".
+# For example, if you input the following two lines:
+#   M = \x.x
+#   M = <M><M>
+# then <M> is syntactically equivalent to (\x.x)(\x.x).
+
 # Logical operators on Church booleans
 not    = \p.p<false><true>
 and    = \xy.xy<false>
 or     = \xy.x<true>y
 if     = \ctf.ctf
+
+# Pairs
+pair   = \xy.\p.pxy
+head   = <true>
+tail   = <false>
+fst    = \p.p<true>
+snd    = \p.p<false>
+
+# Predecessor
+prefn  = \f.\p.<pair>(f(<fst>p))(<fst>p)
+pre    = \nfx.<snd>(n(<prefn>f)(<pair>xx))
+pre2   = \nfx.n(\p.\y.y(f(p(\tf.t)))(p(\tf.t)))(\p.pxx)(\tf.f)
+pre3   = \nfx.n(\g.\h.h(gf))(\u.x)(\u.u)
 
 # Arithmetic operators on Church numerals
 succ   = \n.\sz.s(nsz)
@@ -22,19 +42,8 @@ sub    = \mn.n<pre>m
 mul    = \mn.\sz.m(ns)z
 exp    = \mn.nm
 is0    = \n.n(\x.<false>)<true>
-prefn  = \f.\p.<pair>(f(<fst>p))(<fst>p)
-pre    = \nfx.<snd>(n(<prefn>f)(<pair>xx))
-pre2   = \nfx.n(\p.\y.y(f(p(\tf.t)))(p(\tf.t)))(\p.pxx)(\tf.f)
-pre3   = \nfx.n(\g.\h.h(gf))(\u.x)(\u.u)
 eq     = <Y>(\f.\nm.(<or>(<is0>n)(<is0>m))(<and>(<is0>n)(<is0>m))(f(<pre>n)(<pre>m)))
 one?   = \n.n(\x.\p.p(\tf.f)(x(\tf.t)))(\p.p(\tf.t)(\tf.t))(\tf.f)
-
-# Pairs
-pair   = \xy.\p.pxy
-head   = <true>
-tail   = <false>
-fst    = \p.p<true>
-snd    = \p.p<false>
 
 # Fixpoint Combinator
 Y      = \f.(\x.f(xx))(\x.f(xx)) # this is a kind of fixed-point combinator

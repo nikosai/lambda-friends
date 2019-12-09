@@ -4,22 +4,22 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
-  <meta name="description" content="単純ラムダ計算のインタプリタです。">
+  <meta name="description" content="ラムダ計算のインタプリタです。">
   <meta name="format-detection" content="email=no,telephone=no,address=no">
   <meta name="google" content="notranslate">
   <meta name="author" content="nikosai">
   <title>らむだフレンズ</title>
-  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" rel="stylesheet">
-  <link rel="stylesheet" type="text/css"  href="//mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
-  <link rel="stylesheet" type="text/css"  href="//mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
+  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
   <link href="main.css" rel="stylesheet">
 </head>
 <body>
 <div id="wrapper">
   <div class="container-fluid">
     <header>
-      <a class="logo" href="//github.com/nikosai/lambda-friends"></a>
+      <a class="logo" href="https://github.com/nikosai/lambda-friends" target="_blank"></a>
       <button type="button" id="settingBtn" class="btn btn-default">設定</button>
     </header>
 
@@ -49,11 +49,20 @@
           <div id="outputBtns"></div>
         </div>
         <div class="tab-pane" id="tabB">
-          <label class="btn btn-info" id="fileInputBtn">
-            <span>
-              マクロファイル読み込み<input type="file" style="display:none" id="fileInput">
-            </span>
-          </label>
+          <div class="btn-group" style="margin:0; margin-top:5px">
+            <label class="btn btn-info" id="fileInputBtn">
+              <span>
+                ファイル読み込み<input type="file" style="display:none" id="fileInput">
+              </span>
+            </label>
+            <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+              <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+              <li role="presentation"><a role="menuitem" tabindex="-1" href="https://nikosai.ml/lambda-friends/samples.txt" target="_blank">サンプルファイルを表示</a></li>
+              <li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:void(0)" id="sampleInputBtn">サンプルファイルを読み込み</a></li>
+            </ul>
+          </div>
           <button type="button" id="clearMacroBtn" class="btn btn-danger">全マクロ消去</button>
           <!-- <div class="form-inline">
             <input type="text" class="form-control code" id="macroNameInput" placeholder="マクロ名">
@@ -64,7 +73,7 @@
             <thead><tr>
               <th style="width:20%">マクロ名</th>
               <th style="width:50%">定義</th>
-              <th style="width:30%">型</th>
+              <!-- <th style="width:30%">型</th> -->
             </tr></thead>
             <tbody id="macroList" class="code"></tbody>
           </table>
@@ -72,10 +81,10 @@
         <div class="tab-pane" id="tabC1">
           <div id="translate">
             <p>
-              これまでの簡約過程と、型付けの証明木（bussproofs.sty形式）をLaTeX形式で表示します。
+              これまでの簡約過程<!--と、型付けの証明木（bussproofs.sty形式）-->をLaTeX形式で表示します。
             </p>
             <p>
-              また、型なしのラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
+              また、<!--型なしの-->ラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
             </p>
             <h5>参考文献</h5>
             <p>
@@ -163,7 +172,7 @@
         <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
       </header>
       <main class="modal__content" id="modal-2-content">
-        <div class="btn-group" role="group">
+        <div style="display:none" class="btn-group" role="group">
           <button type="button" id="untyped" class="btn btn-default">型なし</button>
           <button type="button" id="typed" class="btn btn-primary">型付き</button>
         </div>
@@ -200,13 +209,13 @@
     </div>
   </div>
 </div>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
   <!-- for 'layout: "dagre"' -->
-  <script src="//cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-  <script src="//cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
-  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
