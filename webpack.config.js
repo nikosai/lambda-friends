@@ -4,6 +4,7 @@ module.exports = {
     path: `${__dirname}/docs`,
     filename: 'app.js'
   },
-  mode: 'development',
+  // mode: 'development',
+  mode: 'production',
   target: "node",
 };

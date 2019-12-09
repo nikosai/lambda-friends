@@ -292,6 +292,10 @@ export class LambdaFriends{
     return this.original.toString(true)+" : "+this.type;
   }
 
+  public getOriginalUntypedString():string{
+    return this.original.toString(true);
+  }
+
   public parseChurchNum():number{
     return this.expr.parseChurchNum();
   }

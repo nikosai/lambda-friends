@@ -579,7 +579,7 @@ function refreshTex(){
   if (curlf === undefined) return;
 
   let header = document.createElement("h4");
-  header.innerText = curlf.getOriginalString();
+  header.innerText = curlf.getOriginalUntypedString();
   translateDiv.appendChild(header);
 
   translateDiv.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
