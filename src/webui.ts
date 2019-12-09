@@ -125,8 +125,9 @@ fileInput.addEventListener("change",function (ev){
   fileReader.readAsText(file);
 });
 
-fileReader.addEventListener("load", function (){
-  let ret = LambdaFriends.fileInput(<string>fileReader.result,typed);
+// マクロファイル読み込み終了時に呼ぶ
+function fileLoaded(result:string){
+  let ret = LambdaFriends.fileInput(result,typed);
   refreshMacroList();
   let div = document.getElementById("fileInputLog");
   div.textContent = null;
@@ -175,7 +176,26 @@ fileReader.addEventListener("load", function (){
     disableScroll: true,
     awaitCloseAnimation: true
   });
-});
+}
+
+document.getElementById("sampleInputBtn").addEventListener("click",()=>{
+  let xhr = new XMLHttpRequest();
+  // xhr.open("GET","https://nikosai.ml/lambda-friends/samples.txt");
+  xhr.open("GET","https://nikosai.ml/lambda-friends/samples.txt");
+  xhr.setRequestHeader('Content-Type', 'text/plain');
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          fileLoaded(xhr.responseText);
+        } else {
+          console.error("An error has occurred loading the sample file.\nstatus = " + xhr.status);
+        }
+    }
+  };
+  xhr.send();
+})
+
+fileReader.addEventListener("load",()=>fileLoaded(<string>fileReader.result));
 
 settingButton.onclick = function(){
   MicroModal.show('modal-2',{
