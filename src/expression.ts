@@ -427,6 +427,15 @@ export class Macro extends Symbol{
     if (!(/^[a-zA-Z0-9!?]+$/.test(name))){
       throw new MacroError("<"+name+"> cannot be used as a name of macro. Available characters: [a-zA-Z0-9!?]");
     }
+    if (name.match(/^\d+$/)!==null){
+      throw new MacroError("<"+name+"> is already defined as a built-in macro.");
+    }
+    const builtins = ["true","false","S","K","I"];
+    for (let b of builtins){
+      if (b === name){
+        throw new MacroError("<"+name+"> is already defined as a built-in macro.");
+      }
+    }
     let map = (typed?Macro.map:Macro.mapUntyped);
     if (expr.getFV().length !== 0){
       throw new MacroError("<"+name+"> contains free variables: "+expr.getFV());
@@ -489,19 +498,19 @@ export class Macro extends Symbol{
     return "\\,\\overline{\\bf "+this.name+"}\\,";
   }
   public getRedexes(etaAllowed:boolean, noParens:boolean):Redex[]{
-    let next = Macro.get(this.name,false);
-    if (next.expr === undefined) return [];
-    else return [new MacroRedex(next)];
+    // let next = Macro.get(this.name,false);
+    // if (next.expr === undefined) return [];
+    // else return [new MacroRedex(next)];
+    if (this.expr === undefined) return [];
+    else return [new MacroRedex(this)];
   }
   public getTypedRedex(noParens:boolean):Redex{
-    let next = Macro.get(this.name,true);
-    if (next.expr === undefined) return null;
-    else return new MacroRedex(next);
+    if (this.expr === undefined) return null;
+    else return new MacroRedex(this);
   }
   public getUnTypedRedex(etaAllowed:boolean,rightmost:boolean,innermost:boolean,weak:boolean,head:boolean,noParens:boolean):Redex{
-    let next = Macro.get(this.name,false);
-    if (next.expr === undefined) return null;
-    else return new MacroRedex(next);
+    if (this.expr === undefined) return null;
+    else return new MacroRedex(this);
   }
   public extractMacros(){
     if (this.expr === undefined) return this;
@@ -511,9 +520,16 @@ export class Macro extends Symbol{
     if (this.expr === undefined) return "fv("+this.name+")";
     else return this.expr.toLMNtal();
   }
-  // 改善の余地有り。ユーザ定義マクロを現仕様では展開しない
   public toSKI():Expression{
-    return this;
+    if (this.expr === undefined) return this;
+    switch (this.name){
+      case "S":
+      case "K":
+      case "I":
+        return this;
+      default:
+        return this.expr.toSKI();
+    }
   }
   public getDeBrujin(vars:Variable[]):deBrujinExpression{
     if (this.expr === undefined) return new deBrujinFreeVar(this.name);

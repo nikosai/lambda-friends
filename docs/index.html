@@ -9,17 +9,17 @@
   <meta name="google" content="notranslate">
   <meta name="author" content="nikosai">
   <title>らむだフレンズ</title>
-  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" rel="stylesheet">
-  <link rel="stylesheet" type="text/css"  href="//mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
-  <link rel="stylesheet" type="text/css"  href="//mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
+  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
   <link href="main.css" rel="stylesheet">
 </head>
 <body>
 <div id="wrapper">
   <div class="container-fluid">
     <header>
-      <a class="logo" href="//github.com/nikosai/lambda-friends"></a>
+      <a class="logo" href="https://github.com/nikosai/lambda-friends"></a>
       <button type="button" id="settingBtn" class="btn btn-default">設定</button>
     </header>
 
@@ -64,7 +64,7 @@
             <thead><tr>
               <th style="width:20%">マクロ名</th>
               <th style="width:50%">定義</th>
-              <th style="width:30%">型</th>
+              <!-- <th style="width:30%">型</th> -->
             </tr></thead>
             <tbody id="macroList" class="code"></tbody>
           </table>
@@ -72,10 +72,10 @@
         <div class="tab-pane" id="tabC1">
           <div id="translate">
             <p>
-              これまでの簡約過程と、型付けの証明木（bussproofs.sty形式）をLaTeX形式で表示します。
+              これまでの簡約過程<!--と、型付けの証明木（bussproofs.sty形式）-->をLaTeX形式で表示します。
             </p>
             <p>
-              また、型なしのラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
+              また、<!--型なしの-->ラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
             </p>
             <h5>参考文献</h5>
             <p>
@@ -163,7 +163,7 @@
         <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
       </header>
       <main class="modal__content" id="modal-2-content">
-        <div class="btn-group" role="group">
+        <div style="display:none" class="btn-group" role="group">
           <button type="button" id="untyped" class="btn btn-default">型なし</button>
           <button type="button" id="typed" class="btn btn-primary">型付き</button>
         </div>
@@ -200,13 +200,13 @@
     </div>
   </div>
 </div>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
   <!-- for 'layout: "dagre"' -->
-  <script src="//cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-  <script src="//cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
-  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
