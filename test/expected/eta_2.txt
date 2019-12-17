@@ -1,0 +1,2 @@
+\mnsz.m(ns)z : Untyped
+1: (eta) --> \mns.m(ns)    (normal form)

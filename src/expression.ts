@@ -638,17 +638,43 @@ export class LambdaAbstraction extends Expression{
     return (this.expr instanceof Application) && (this.expr.right.equals(this.boundvar)) && (!Variable.contains(this.expr.left.getFV(),this.boundvar));
   }
   public getRedexes(etaAllowed:boolean, noParens:boolean):Redex[]{
-    let boundvars = [this.boundvar];
-    let expr = this.expr;
-    while(expr instanceof LambdaAbstraction){
-      boundvars.push(expr.boundvar);
-      expr = expr.expr;
-    }
     let lParen = "", rParen = "";
     if (!noParens){
       lParen = "(";
       rParen = ")";
     }
+    let boundvars = [];
+    let la:LambdaAbstraction = this;
+    while(la.expr instanceof LambdaAbstraction){
+      boundvars.push(la.boundvar);
+      la = la.expr;
+    }
+    if (etaAllowed===undefined){
+      console.error("etaAllowed is undefined.");
+      etaAllowed = false;
+    }
+    let eta:EtaRedex = null;
+    if (etaAllowed && la.isEtaRedex()){
+      eta = new EtaRedex(la);
+
+      eta.next = ((prev)=>{
+        let bvs:Variable[] = [].concat(boundvars);
+        let ret=prev;
+        while (bvs.length>0){
+          let t = bvs.pop();
+          ret = new LambdaAbstraction(t,ret);
+        }
+        return ret;
+      })(eta.next);
+      eta.addLeft(lParen+"\\"+boundvars.join("")+".");
+      eta.addRight(rParen);
+      eta.addTexLeft(lParen+"\\lambda{"+boundvars.join("")+"}.");
+      eta.addTexRight(rParen);
+    }
+
+    let expr = la.expr;
+    boundvars.push(la.boundvar);
+
     let ret = Redex.makeNext(
       expr.getRedexes(etaAllowed,true),
       lParen+"\\"+boundvars.join("")+".",
@@ -664,13 +690,7 @@ export class LambdaAbstraction extends Expression{
         }
         return ret;
       });
-    if (etaAllowed===undefined){
-      console.error("etaAllowed is undefined.");
-      etaAllowed = false;
-    }
-    if (etaAllowed && this.isEtaRedex()){
-      ret.push(new EtaRedex(this));
-    }
+    if (eta!==null) ret.push(eta);
     return ret;
   }
   public getTypedRedex(noParens:boolean):Redex{
@@ -682,26 +702,49 @@ export class LambdaAbstraction extends Expression{
       etaAllowed = false;
     }
     // this is eta-redex
-    let thisRedex:Redex = null;
-    if (etaAllowed && this.isEtaRedex()){
-      thisRedex = new EtaRedex(this);
+    if (weak){
+      if (etaAllowed && this.isEtaRedex()){
+        return new EtaRedex(this);
+      } else {
+        return null;
+      }
     }
-    if (weak || (thisRedex && !innermost)) return thisRedex;
 
-    let boundvars = [this.boundvar];
-    let expr = this.expr;
-    while(expr instanceof LambdaAbstraction){
-      boundvars.push(expr.boundvar);
-      expr = expr.expr;
+    let boundvars = [];
+    let la:LambdaAbstraction = this;
+    while(la.expr instanceof LambdaAbstraction){
+      boundvars.push(la.boundvar);
+      la = la.expr;
     }
     let lParen = "", rParen = "";
     if (!noParens){
       lParen = "(";
       rParen = ")";
     }
-    // inner-redex
-    let ret = expr.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,true);
-    if (ret === null) return null;
+    // la is eta-redex
+    let outerRedex:Redex = null;
+    if (etaAllowed && la.isEtaRedex()){
+      outerRedex = new EtaRedex(la);
+    }
+    // console.log(`outer:${outerRedex}`);
+    let innerRedex:Redex = null;
+    if (!outerRedex || innermost){
+      let expr = la.expr;
+
+      // inner-redex
+      innerRedex = expr.getUnTypedRedex(etaAllowed,rightmost,innermost,weak,head,true);
+      // console.log(`inner:${innerRedex}`);
+      if (innerRedex === null) return outerRedex;
+    }
+    let ret:Redex = null;
+    if (innerRedex && (innermost || !outerRedex)){
+      ret = innerRedex;
+      boundvars.push(la.boundvar);
+    } else if (outerRedex) {
+      ret = outerRedex;
+    } // else { ret = null; }
+
+    if (ret===null) return null;
 
     ret.next = ((prev)=>{
       let bvs:Variable[] = [].concat(boundvars);
@@ -717,8 +760,7 @@ export class LambdaAbstraction extends Expression{
     ret.addTexLeft(lParen+"\\lambda{"+boundvars.join("")+"}.");
     ret.addTexRight(rParen);
 
-    if (thisRedex && ret) return ret;
-    return thisRedex || ret;
+    return ret;
   }
   public extractMacros():Expression{
     return new LambdaAbstraction(this.boundvar,this.expr.extractMacros());
