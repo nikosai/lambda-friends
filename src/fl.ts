@@ -2,14 +2,6 @@ import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
 
 declare let cytoscape:any;
-declare let MicroModal:any;
-
-// ===== MAKESHIFT =====
-(()=>{
-if (window.location.pathname.split("/").slice(-1)[0] === "fl.html"){
-  
-  return;
-}
 
 let cy = cytoscape({
   container: document.getElementById('graph'),
@@ -61,6 +53,7 @@ let cy = cytoscape({
     },
   ]
 });
+declare let MicroModal:any;
 // Initial config for setting up modals
 MicroModal.init({
   disableScroll: false,
@@ -722,4 +715,3 @@ outermostButton.onclick(null);
 strongButton.onclick(null);
 nonheadButton.onclick(null);
 refreshMacroList();
-})();

@@ -27,7 +27,7 @@
     </header>
 
     <div class="input-group">
-      <input type="text" class="form-control code" id="input" placeholder="ラムダ式を入力……" autocomplete="off">
+      <input type="text" class="form-control code" id="input" placeholder="プログラムを入力……" autocomplete="off">
       <span class="input-group-btn">
         <button type="button" id="submit" class="btn btn-default">送信</button>
       </span>
@@ -38,8 +38,8 @@
         <li class="active"><a id="tabAbtn" href="#tabA" data-toggle="tab">出力</a></li>
         <li><a id="tabBbtn" href="#tabB" data-toggle="tab">マクロ</a></li>
         <li><a id="tabC1btn" href="#tabC1" data-toggle="tab">Export</a></li>
-        <li><a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a></li>
-        <li><a id="tabDbtn" href="#tabD" data-toggle="tab">グラフ</a></li>
+        <!-- <li><a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a></li>
+        <li><a id="tabDbtn" href="#tabD" data-toggle="tab">グラフ</a></li> -->
       </ul>
 
       <!-- タブ内容 -->
@@ -80,18 +80,18 @@
         <div class="tab-pane" id="tabC1">
           <div id="translate">
             <p>
-              これまでの簡約過程<!--と、型付けの証明木（bussproofs.sty形式）-->をLaTeX形式で表示します。
+              これまでの簡約過程と、型付けの証明木（bussproofs.sty形式）をLaTeX形式で表示します。
             </p>
-            <p>
-              また、<!--型なしの-->ラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
+            <!-- <p>
+              また、型なしのラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
             </p>
             <h5>参考文献</h5>
             <p>
               <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008, LNCS 5117, Springer, 2008, pp.392-408.
-            </p>
+            </p> -->
           </div>
         </div>
-        <div class="tab-pane" id="tabC2">
+        <!-- <div class="tab-pane" id="tabC2">
           <div class="input-output">
             <div class="input-group">
               <input type="text" class="form-control code" id="lmnInput" placeholder="LMNtalコードを入力" autocomplete="off">
@@ -137,7 +137,7 @@
             </div>
           </div>
           <div id="graph"></div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
