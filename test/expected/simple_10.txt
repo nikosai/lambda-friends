@@ -1,2 +1,2 @@
-(\x.y)((\x.xx)(\x.xx)) : Untyped
+(\x.y)((\x.xx)(\x.xx))
 1: (beta) --> y    (normal form)

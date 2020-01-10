@@ -1,4 +1,4 @@
-(\p.p(\xy.x))((\xyf.fxy)ab) : Untyped
+(\p.p(\xy.x))((\xyf.fxy)ab)
 1: (beta) --> (\xyf.fxy)ab(\xy.x)
 2: (beta) --> (\yf.fay)b(\xy.x)
 3: (beta) --> (\f.fab)(\xy.x)

@@ -1,4 +1,4 @@
-(\fx.x(ffx))(\fx.x(ffx)) : Untyped
+(\fx.x(ffx))(\fx.x(ffx))
 1: (beta) --> \x.x((\fx.x(ffx))(\fx.x(ffx))x)
 2: (beta) --> \x.x((\x.x((\fx.x(ffx))(\fx.x(ffx))x))x)
 3: (beta) --> \x.x(x((\fx.x(ffx))(\fx.x(ffx))x))

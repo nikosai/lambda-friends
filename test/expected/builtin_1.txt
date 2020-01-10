@@ -1,4 +1,4 @@
-<3>(\x.xx)y : Untyped
+<3>(\x.xx)y
 -: (macro) = (\sz.s(s(sz)))(\x.xx)y
 1: (beta) --> (\z.(\x.xx)((\x.xx)((\x.xx)z)))y
 2: (beta) --> (\x.xx)((\x.xx)((\x.xx)y))
