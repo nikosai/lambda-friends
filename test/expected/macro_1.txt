@@ -1,4 +1,4 @@
-<S><K><K> : Untyped
+<S><K><K>
 -: (macro) = (\fgx.fx(gx))<K><K>
 1: (beta) --> (\gx.<K>x(gx))<K>
 2: (beta) --> \x.<K>x(<K>x)

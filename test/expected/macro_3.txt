@@ -1,4 +1,4 @@
-<fact><5> : Untyped
+<fact><5>
 -: (macro) = <Y>(\gn.<if>(<is0>n)<1>(<mul>n(g(<pre>n))))<5>
 -: (macro) = (\f.(\x.f(xx))(\x.f(xx)))(\gn.<if>(<is0>n)<1>(<mul>n(g(<pre>n))))<5>
 1: (beta) --> (\x.(\gn.<if>(<is0>n)<1>(<mul>n(g(<pre>n))))(xx))(\x.(\gn.<if>(<is0>n)<1>(<mul>n(g(<pre>n))))(xx))<5>

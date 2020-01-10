@@ -1,4 +1,4 @@
-(\fx.f(f(fx)))(\fx.f(f(fx))) : Untyped
+(\fx.f(f(fx)))(\fx.f(f(fx)))
 1: (beta) --> \x.(\fx.f(f(fx)))((\fx.f(f(fx)))((\fx.f(f(fx)))x))
 2: (beta) --> \xa.(\fx.f(f(fx)))((\fx.f(f(fx)))x)((\fx.f(f(fx)))((\fx.f(f(fx)))x)((\fx.f(f(fx)))((\fx.f(f(fx)))x)a))
 3: (beta) --> \xa.(\a.(\fx.f(f(fx)))x((\fx.f(f(fx)))x((\fx.f(f(fx)))xa)))((\fx.f(f(fx)))((\fx.f(f(fx)))x)((\fx.f(f(fx)))((\fx.f(f(fx)))x)a))

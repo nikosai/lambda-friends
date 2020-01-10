@@ -1,0 +1,20 @@
+# This is a sample macro definition file of LambdaFriends.
+# These macros are designed for untyped lambda-calculus.
+
+# '#' and following characters are regarded as comments.
+
+# Note: Following Combinators are supported as built-in macros.
+# * Church Numerals : <0>, <1>, <2>, ...
+# * Church Booleans : <true>, <false>
+# * SKI Combinators : <S>, <K>, <I>
+
+# Note 2: In the current version of LambdaFriends,
+# once you redefine a macro,
+# the previous version of the macro will be "shadowed".
+# For example, if you input the following two lines:
+#   M = \x.x
+#   M = <M><M>
+# then <M> is syntactically equivalent to (\x.x)(\x.x).
+
+fact = [fix]f.\n.[if][=]n[0][then][1][else][*]n(f([-]n[1]))
+fib  = [fix]f.\n.[if][<=]n[1][then]n[else][+](f([-]n[1]))(f([-]n[2]))

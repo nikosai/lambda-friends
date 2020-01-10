@@ -1,4 +1,4 @@
-<2>(\x.xx)s : Untyped
+<2>(\x.xx)s
 -: (macro) = (\sz.s(sz))(\x.xx)s
 1: (beta) --> (\z.(\x.xx)((\x.xx)z))s
 2: (beta) --> (\x.xx)((\x.xx)s)

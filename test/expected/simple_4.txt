@@ -1,2 +1,2 @@
-(\xy.xy)y : Untyped
+(\xy.xy)y
 1: (beta) --> \a.ya    (normal form)

@@ -1,6 +1,8 @@
 import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
+
 declare let cytoscape:any;
+declare let MicroModal:any;
 
 let cy = cytoscape({
   container: document.getElementById('graph'),
@@ -52,7 +54,6 @@ let cy = cytoscape({
     },
   ]
 });
-declare let MicroModal:any;
 // Initial config for setting up modals
 MicroModal.init({
   disableScroll: false,
@@ -317,12 +318,18 @@ stepInput.addEventListener("change",function(){
   }
 });
 
-let history: string[] = JSON.parse(localStorage.getItem("lf_history")) || [];
+let historyName = "lf_history"
+// ===== MAKESHIFT =====
+if (window.location.pathname.split("/").slice(-1)[0] === "fl.html"){
+  historyName = "lf_history_fl";
+}
+
+let history: string[] = JSON.parse(localStorage.getItem(historyName)) || [];
 let historyNum:number = 0;
 let workspace: string[] = [].concat(history);
 workspace.unshift("");
 let submitInput = function(){
-  console.log(localStorage.getItem("lf_history"));
+  // console.log(localStorage.getItem(historyName));
   let line = input.value;
   if (line==="" && curlf!==undefined){
     if (graphActive) launchGraph();
@@ -334,7 +341,7 @@ let submitInput = function(){
     continualStop = true;
   }
   history.unshift(line);
-  localStorage.setItem("lf_history",JSON.stringify(history));
+  localStorage.setItem(historyName,JSON.stringify(history));
   historyNum = 0;
   workspace = [].concat(history);
   workspace.unshift("");
@@ -348,9 +355,9 @@ let submitInput = function(){
       graphClear();
       cy.add(node2cyObj(curlf.root));
       makeLayout();
-      outputLine(curlf.toUntypedString()); // !
+      outputLine(curlf.toString());
       if (typed) doContinual();
-      showContinueBtn();
+      else showContinueBtn();
     } else {
       let names = [].concat(ret.names);
       let name = names.shift();
@@ -359,7 +366,7 @@ let submitInput = function(){
         let name = names.shift();
         str += " = <"+name+">";
       }
-      str += " is defined as "+ret.expr+"."; // +" : "+ret.type;
+      str += " is defined as "+ret.expr+(typed?" : "+ret.type:"")+".";
       outputLine(str);
       outputButtons.textContent = null;
     }
@@ -556,7 +563,7 @@ function refreshMacroList(){
   for (let r in ret){
     let m = ret[r];
     tbody.innerHTML += "<tr><th>"+htmlEscape(m.name)+"</th><td>"+htmlEscape(m.expr.toString(true))+"</td>"
-                    // +"<td>"+htmlEscape(m.type.toString())+"</td>"
+                    +(typed?"<td>"+htmlEscape(m.type.toString())+"</td>":"")
                     +"</tr>";
   }
 }
@@ -579,7 +586,7 @@ function refreshTex(){
   if (curlf === undefined) return;
 
   let header = document.createElement("h4");
-  header.innerText = curlf.getOriginalUntypedString();
+  header.innerText = curlf.getOriginalString();
   translateDiv.appendChild(header);
 
   translateDiv.appendChild(makeTexDiv("これまでの簡約過程", curlf.getProcessTex()));
@@ -714,3 +721,8 @@ outermostButton.onclick(null);
 strongButton.onclick(null);
 nonheadButton.onclick(null);
 refreshMacroList();
+
+// ===== MAKESHIFT =====
+if (window.location.pathname.split("/").slice(-1)[0] === "fl.html"){
+  typedButton.onclick(null);
+}

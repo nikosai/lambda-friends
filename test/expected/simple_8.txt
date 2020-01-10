@@ -1,4 +1,4 @@
-(\fx.f(fx))(\x.x) : Untyped
+(\fx.f(fx))(\x.x)
 1: (beta) --> \x.(\x.x)((\x.x)x)
 2: (beta) --> \x.(\x.x)x
 3: (beta) --> \x.x    (normal form)

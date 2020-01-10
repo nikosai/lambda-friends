@@ -1,2 +1,2 @@
-\x.Mx : Untyped
+\x.Mx
 1: (eta) --> M    (normal form)

@@ -666,9 +666,9 @@ export class LambdaAbstraction extends Expression{
         }
         return ret;
       })(eta.next);
-      eta.addLeft(lParen+"\\"+boundvars.join("")+".");
+      eta.addLeft(lParen+(boundvars.length>0?"\\"+boundvars.join("")+".":""));
       eta.addRight(rParen);
-      eta.addTexLeft(lParen+"\\lambda{"+boundvars.join("")+"}.");
+      eta.addTexLeft(lParen+(boundvars.length>0?"\\lambda{"+boundvars.join("")+"}.":""));
       eta.addTexRight(rParen);
     }
 
@@ -677,9 +677,9 @@ export class LambdaAbstraction extends Expression{
 
     let ret = Redex.makeNext(
       expr.getRedexes(etaAllowed,true),
-      lParen+"\\"+boundvars.join("")+".",
+      lParen+(boundvars.length>0?"\\"+boundvars.join("")+".":""),
       rParen,
-      lParen+"\\lambda{"+boundvars.join("")+"}.",
+      lParen+(boundvars.length>0?"\\lambda{"+boundvars.join("")+"}.":""),
       rParen,
       (prev)=>{
         let bvs:Variable[] = [].concat(boundvars);
@@ -755,9 +755,9 @@ export class LambdaAbstraction extends Expression{
       }
       return ret;
     })(ret.next);
-    ret.addLeft(lParen+"\\"+boundvars.join("")+".");
+    ret.addLeft(lParen+(boundvars.length>0?"\\"+boundvars.join("")+".":""));
     ret.addRight(rParen);
-    ret.addTexLeft(lParen+"\\lambda{"+boundvars.join("")+"}.");
+    ret.addTexLeft(lParen+(boundvars.length>0?"\\lambda{"+boundvars.join("")+"}.":""));
     ret.addTexRight(rParen);
 
     return ret;
@@ -926,9 +926,9 @@ export class Application extends Expression{
       return ret;
     } else {
       // (app1)
-      let ret = this.right.getTypedRedex(false);
+      let ret = this.left.getTypedRedex(false);
       if (ret === null) return null;
-      ret.next = new Application(this.left,ret.next);
+      ret.next = new Application(ret.next,this.right);
       ret.addLeft(lParen);
       ret.addRight(rParen+this.right.toString(false));
       ret.addTexLeft(lParen);

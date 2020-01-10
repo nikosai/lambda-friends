@@ -1,4 +1,4 @@
-(\x.xx)(\x.xx) : Untyped
+(\x.xx)(\x.xx)
 1: (beta) --> (\x.xx)(\x.xx)
 2: (beta) --> (\x.xx)(\x.xx)
 3: (beta) --> (\x.xx)(\x.xx)

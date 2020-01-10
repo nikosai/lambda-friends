@@ -263,20 +263,7 @@ export class LambdaFriends{
   }
   
   public toString():string{
-    let ret = this.expr.toString(true)+" : "+this.type;
-    if (!this.hasNext()){
-      ret += "    (normal form)\n";
-      let n = this.parseChurchNum();
-      if (n!==null) ret += "  = "+n+" (as nat)\n";
-      let b = this.parseChurchBool();
-      if (b!==null) ret += "  = "+b+" (as bool)\n";
-      ret = ret.slice(0,ret.length-1);
-    }
-    return ret;
-  }
-
-  public toUntypedString():string{
-    let ret = this.expr.toString(true);
+    let ret = this.expr.toString(true)+(this.typed?" : "+this.type:"");
     if (!this.hasNext()){
       ret += "    (normal form)\n";
       let n = this.parseChurchNum();
@@ -289,11 +276,7 @@ export class LambdaFriends{
   }
 
   public getOriginalString():string{
-    return this.original.toString(true)+" : "+this.type;
-  }
-
-  public getOriginalUntypedString():string{
-    return this.original.toString(true);
+    return this.original.toString(true)+(this.typed?" : "+this.type:"");
   }
 
   public parseChurchNum():number{
