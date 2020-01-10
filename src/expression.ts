@@ -926,9 +926,9 @@ export class Application extends Expression{
       return ret;
     } else {
       // (app1)
-      let ret = this.right.getTypedRedex(false);
+      let ret = this.left.getTypedRedex(false);
       if (ret === null) return null;
-      ret.next = new Application(this.left,ret.next);
+      ret.next = new Application(ret.next,this.right);
       ret.addLeft(lParen);
       ret.addRight(rParen+this.right.toString(false));
       ret.addTexLeft(lParen);
