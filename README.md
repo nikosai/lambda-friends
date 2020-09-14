@@ -84,7 +84,7 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
   + `int -> int -> bool`型 ： `[<]` `[>]` `[<=]` `[>=]` `[==]` `[!=]`
   + `bool -> bool -> bool`型 ： `[eq]` `[and]` `[or]` `[xor]` `[nand]` `[nor]`
 * 空リスト `[nil]`
-* 文（statement）
+* 式（expression）
   + `[if] M [then] M [else] M`
   + `[let] x=M [in] M`
   + `[case] M [of] [nil] -> M | x::x -> M`
