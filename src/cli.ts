@@ -31,12 +31,14 @@ import { REPL } from "./repl";
     .option("-M,--multiedge", "Enable multiple-edges")
     .parse(process.argv);
 
+  const options = commander.opts();
+
   // 入力を受け取る
   // オプションの優先度はstring, stdinの順
   // それらがなければ、FILEを読みに行くが、それもなければnull
   function getInput() {
-    if (commander.string) return commander.string;
-    if (commander.stdin) return fs.readFileSync("/dev/stdin", "utf8");
+    if (options.string) return options.string;
+    if (options.stdin) return fs.readFileSync("/dev/stdin", "utf8");
     if (commander.args[0]) {
       let file = getFileInput(commander.args[0]);
       if (file) return file;
@@ -50,20 +52,20 @@ import { REPL } from "./repl";
   let etaAllowed = false;
   let allowMultipleEdges = false;
 
-  if (commander.steps) {
-    if (isNaN(commander.steps)) {
+  if (options.steps) {
+    if (isNaN(options.steps)) {
       console.error("-s,--steps <n>: n is not a number");
     } else {
-      steps = commander.steps;
+      steps = options.steps;
     }
   }
 
-  if (commander.typed) typed = true;
-  if (commander.eta) etaAllowed = true;
-  if (commander.multiedge) allowMultipleEdges = true;
+  if (options.typed) typed = true;
+  if (options.eta) etaAllowed = true;
+  if (options.multiedge) allowMultipleEdges = true;
 
   // 実行モードを決める。優先順位はlmnin > graph
-  if (commander.lmnin) {
+  if (options.lmnin) {
     // Translate LMNtal code to lambda term
     try {
       if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
@@ -72,7 +74,7 @@ import { REPL } from "./repl";
     } catch (e) {
       console.error(e.toString());
     }
-  } else if (commander.graph) {
+  } else if (options.graph) {
     // Reverse search from reduction graph (tentative)
     try {
       if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
@@ -84,8 +86,8 @@ import { REPL } from "./repl";
     }
   } else {
     // normal mode
-    if (commander.macro) {
-      let macro = getFileInput(commander.macro);
+    if (options.macro) {
+      let macro = getFileInput(options.macro);
       if (macro) {
         LambdaFriends.fileInput(macro, typed);
       }
@@ -95,7 +97,7 @@ import { REPL } from "./repl";
       return;
     }
     try {
-      if (commander.lmnout) {
+      if (options.lmnout) {
         console.log(
           new LambdaFriends(
             input,
@@ -106,7 +108,7 @@ import { REPL } from "./repl";
         );
         return;
       }
-      if (commander.skiout) {
+      if (options.skiout) {
         console.log(
           new LambdaFriends(
             input,
@@ -118,13 +120,13 @@ import { REPL } from "./repl";
         return;
       }
       let lf = new LambdaFriends(input, typed, etaAllowed, allowMultipleEdges);
-      if (commander.trace) console.log(lf.toString());
+      if (options.trace) console.log(lf.toString());
       for (let i = 0; i < steps; i++) {
         let res = lf.reduction();
         if (res === null) break;
-        if (commander.trace) console.log(res);
+        if (options.trace) console.log(res);
       }
-      if (!commander.trace) console.log(lf.toString());
+      if (!options.trace) console.log(lf.toString());
     } catch (e) {
       console.error(e.toString());
     }
