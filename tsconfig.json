@@ -1,11 +1,15 @@
 {
     "compilerOptions": {
+        "sourceMap": true,
         "module": "commonjs",
         "target": "es2017",
         "types": ["node"],
-		"outDir": "js"
+		"outDir": "js",
+        "jsx": "react",
+        "moduleResolution": "node",
     },
 	"include": [
-		"src/*.ts"
-	]
+		"src/*.ts",
+        "src/webui.tsx"
+    ]
 }

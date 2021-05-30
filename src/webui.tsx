@@ -1,8 +1,220 @@
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
 import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
 
 declare let cytoscape: any;
 declare let MicroModal: any;
+
+
+const defaultSteps = 100;
+let steps: number = defaultSteps;
+let typed = true;
+let etaAllowed = false;
+let allowMultipleEdges = false;
+let curlf: LambdaFriends = undefined;
+
+class App extends React.Component{
+  render(){
+    return (
+      <div>
+        <div className="container-fluid">
+          <header>
+            <a className="logo" href="https://github.com/nikosai/lambda-friends" target="_blank"></a>
+            <button type="button" id="settingBtn" className="btn btn-default">設定</button>
+          </header>
+
+          <div className="input-group">
+            <input type="text" className="form-control code" id="input" placeholder="ラムダ式を入力……" autoComplete="off"/>
+            <span className="input-group-btn">
+              <button type="button" id="submit" className="btn btn-default">送信</button>
+            </span>
+          </div>
+          <div id="output-group">
+            {/* タブ・メニュー */}
+            <ul className="nav nav-tabs">
+              <li className="active"><a id="tabAbtn" href="#tabA" data-toggle="tab">出力</a></li>
+              <li><a id="tabBbtn" href="#tabB" data-toggle="tab">マクロ</a></li>
+              <li><a id="tabC1btn" href="#tabC1" data-toggle="tab">Export</a></li>
+              <li><a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a></li>
+              <li><a id="tabDbtn" href="#tabD" data-toggle="tab">グラフ</a></li>
+            </ul>
+
+            {/* タブ内容 */}
+            <div className="tab-content">
+              <div className="tab-pane active form-group" id="tabA">
+                <div className="code" id="output">
+                  出力はここに表示されます。<br/>
+                  ヘルプが必要な場合、<a href="https://github.com/nikosai/lambda-friends">README.md</a>を読んでください。
+                </div>
+                <div id="outputBtns"></div>
+              </div>
+              <div className="tab-pane" id="tabB">
+                <div className="btn-group" style={{margin:0, marginTop:"5px"}}>
+                  <label className="btn btn-info" id="fileInputBtn">
+                    <span>
+                      ファイル読み込み<input type="file" style={{display:"none"}} id="fileInput"/>
+                    </span>
+                  </label>
+                  <button type="button" className="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                    <span className="caret"></span>
+                  </button>
+                  <ul className="dropdown-menu" role="menu">
+                    <li role="presentation"><a role="menuitem" tabIndex={-1} href="https://nikosai.ml/lambda-friends/samples.txt" target="_blank">サンプルファイルを表示</a></li>
+                    <li role="presentation"><a role="menuitem" tabIndex={-1} href="javascript:void(0)" id="sampleInputBtn">サンプルファイルを読み込み</a></li>
+                  </ul>
+                </div>
+                <button type="button" id="clearMacroBtn" className="btn btn-danger">全マクロ消去</button>
+                {/* <div className="form-inline">
+                  <input type="text" className="form-control code" id="macroNameInput" placeholder="マクロ名"/>
+                  <input type="text" className="form-control code" id="macroInput" placeholder="定義"/>
+                  <button type="button" id="submitMacro" className="btn btn-default">登録</button>
+                </div> */}
+                <table className="table table-hover">
+                  <thead><tr>
+                    <th style={{width:"20%"}}>マクロ名</th>
+                    <th style={{width:"50%"}}>定義</th>
+                    {/* <th style={{width:"30%"}}>型</th> */}
+                  </tr></thead>
+                  <tbody id="macroList" className="code"></tbody>
+                </table>
+              </div>
+              <div className="tab-pane" id="tabC1">
+                <div id="translate">
+                  <p>
+                    これまでの簡約過程{/*と、型付けの証明木（bussproofs.sty形式）*/}をLaTeX形式で表示します。 
+                  </p>
+                  <p>
+                    また、{/*型なしの*/}ラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
+                  </p>
+                  <h5>参考文献</h5>
+                  <p>
+                    <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008, LNCS 5117, Springer, 2008, pp.392-408.
+                  </p>
+                </div>
+              </div>
+              <div className="tab-pane" id="tabC2">
+                <div className="input-output">
+                  <div className="input-group">
+                    <input type="text" className="form-control code" id="lmnInput" placeholder="LMNtalコードを入力" autoComplete="off"/>
+                    <span className="input-group-btn">
+                      <button type="button" id="lmnSubmit" className="btn btn-default">変換</button>
+                    </span>
+                  </div>
+                  <div id="lmnOutput" className="code output">LMNtalコードをラムダ式に変換します</div>
+                </div>
+                <div className="input-output">
+                  <div className="input-group">
+                    <input type="text" className="form-control code" id="deBrujinInput" placeholder="de Brujin Indexを入力" autoComplete="off"/>
+                    <span className="input-group-btn">
+                      <button type="button" id="deBrujinSubmit" className="btn btn-default">変換</button>
+                    </span>
+                  </div>
+                  <div id="deBrujinOutput" className="code output">de Brujin Indexをラムダ式に変換します</div>
+                </div>
+                <div className="input-output">
+                  <div className="input-group">
+                    <input type="text" className="form-control code" id="graphInput" placeholder="簡約グラフを入力" autoComplete="off"/>
+                    <span className="input-group-btn">
+                      <button type="button" id="graphSubmit" className="btn btn-default">逆引き</button>
+                    </span>
+                  </div>
+                  <div id="graphOutput" className="code output">簡約グラフからラムダ式を逆引きします（実験機能）</div>
+                </div>
+              </div>
+              <div className="tab-pane" id="tabD">
+                <div id="graphSettings">
+                  <button type="button" id="startGraph" className="btn btn-info">start</button>
+                  <button type="button" id="stopGraph" className="btn btn-danger">stop</button>
+                  <button type="button" id="imgGraph" className="btn btn-default">PNG</button>
+                  <div className="btn-group" role="group">
+                    <button type="button" id="multiEdgeEnable" className="btn btn-default">多重辺あり</button>
+                    <button type="button" id="multiEdgeDisable" className="btn btn-primary">多重辺なし</button>
+                  </div>
+                  <div className="form-inline" style={{margin:"7px", display:"inline-table"}}>
+                    <div className="input-group">
+                      <span className="input-group-addon">深さ</span>
+                      <input type="text" className="form-control" placeholder="10" id="maxDepth" style={{width: "60px", textAlign:"center"}} autoComplete="off"/>
+                    </div>
+                  </div>
+                </div>
+                <div id="graph"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="modal micromodal-slide" id="modal-1" aria-hidden="true">
+          <div className="modal__overlay" tabIndex={-1} data-micromodal-close>
+            <div className="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-1-title">
+              <header className="modal__header">
+                <h2 className="modal__title" id="modal-1-title">
+                  File Input Completed.
+                </h2>
+                <button className="modal__close" aria-label="Close modal" data-micromodal-close></button>
+              </header>
+              <main className="modal__content" id="modal-1-content">
+                <div id="fileInputLog">
+                </div>
+              </main>
+              <footer className="modal__footer">
+                <button className="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
+              </footer>
+            </div>
+          </div>
+        </div>
+        <div className="modal micromodal-slide" id="modal-2" aria-hidden="true">
+          <div className="modal__overlay" tabIndex={-1} data-micromodal-close>
+            <div className="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-2-title">
+              <header className="modal__header">
+                <h2 className="modal__title" id="modal-2-title">
+                  設定
+                </h2>
+                <button className="modal__close" aria-label="Close modal" data-micromodal-close></button>
+              </header>
+              <main className="modal__content" id="modal-2-content">
+                <div style={{display:"none"}} className="btn-group" role="group">
+                  <button type="button" id="untyped" className="btn btn-default">型なし</button>
+                  <button type="button" id="typed" className="btn btn-primary">型付き</button>
+                </div>
+                <div className="btn-group" role="group">
+                  <button type="button" id="etaEnable" className="btn btn-default">η簡約あり</button>
+                  <button type="button" id="etaDisable" className="btn btn-primary">η簡約なし</button>
+                </div>
+                <div className="btn-group" role="group">
+                  <button type="button" id="leftmostBtn" className="btn btn-default">最左</button>
+                  <button type="button" id="rightmostBtn" className="btn btn-primary">最右</button>
+                </div>
+                <div className="btn-group" role="group">
+                  <button type="button" id="outermostBtn" className="btn btn-default">最外</button>
+                  <button type="button" id="innermostBtn" className="btn btn-primary">最内</button>
+                </div>
+                <div className="btn-group" role="group">
+                  <button type="button" id="strongBtn" className="btn btn-default">強</button>
+                  <button type="button" id="weakBtn" className="btn btn-primary">弱</button>
+                </div>
+                <div className="btn-group" role="group">
+                  <button type="button" id="headBtn" className="btn btn-default">頭部</button>
+                  <button type="button" id="nonheadBtn" className="btn btn-primary"> - </button>
+                </div>
+                <div className="form-inline" style={{margin:"7px",display:"inline-block"}}>
+                  <div className="input-group">
+                    <span className="input-group-addon">連続ステップ数</span>
+                    <input type="text" className="form-control" placeholder="100" id="stepInput" style={{width: "60px", textAlign:"center"}} autoComplete="off"/>
+                  </div>
+                </div>
+              </main>
+              <footer className="modal__footer">
+                <button className="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
+              </footer>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+}
+
+ReactDOM.render(<App/>, document.getElementById('wrapper'));
 
 let cy = cytoscape({
   container: document.getElementById("graph"),
@@ -60,68 +272,54 @@ MicroModal.init({
   awaitCloseAnimation: true,
 });
 
-const defaultSteps = 100;
-let steps: number = defaultSteps;
-let typed = true;
-let etaAllowed = false;
-let allowMultipleEdges = false;
-let curlf: LambdaFriends = undefined;
 
-let input = <HTMLInputElement>document.getElementById("input");
+let input = document.getElementById("input") as HTMLInputElement;
 let oel = document.getElementById("output");
 let settingButton = document.getElementById("settingBtn");
 let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
-let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
-let etaDisableButton = <HTMLButtonElement>document.getElementById("etaDisable");
-let multiEdgeEnableButton = <HTMLButtonElement>(
-  document.getElementById("multiEdgeEnable")
-);
-let multiEdgeDisableButton = <HTMLButtonElement>(
-  document.getElementById("multiEdgeDisable")
-);
-let leftmostButton = <HTMLButtonElement>document.getElementById("leftmostBtn");
-let rightmostButton = <HTMLButtonElement>(
-  document.getElementById("rightmostBtn")
-);
-let outermostButton = <HTMLButtonElement>(
+let etaEnableButton = document.getElementById("etaEnable") as HTMLButtonElement;
+let etaDisableButton = document.getElementById("etaDisable") as HTMLButtonElement;
+let multiEdgeEnableButton = document.getElementById("multiEdgeEnable") as HTMLButtonElement;
+let multiEdgeDisableButton = document.getElementById("multiEdgeDisable") as HTMLButtonElement;
+let leftmostButton = document.getElementById("leftmostBtn") as HTMLButtonElement;
+let rightmostButton = document.getElementById("rightmostBtn") as HTMLButtonElement;
+let outermostButton = (
   document.getElementById("outermostBtn")
-);
-let innermostButton = <HTMLButtonElement>(
+) as HTMLButtonElement;
+let innermostButton = (
   document.getElementById("innermostBtn")
-);
-let strongButton = <HTMLButtonElement>document.getElementById("strongBtn");
-let weakButton = <HTMLButtonElement>document.getElementById("weakBtn");
-let headButton = <HTMLButtonElement>document.getElementById("headBtn");
-let nonheadButton = <HTMLButtonElement>document.getElementById("nonheadBtn");
-let fileInput = <HTMLInputElement>document.getElementById("fileInput");
+) as HTMLButtonElement;
+let strongButton = document.getElementById("strongBtn") as HTMLButtonElement;
+let weakButton = document.getElementById("weakBtn") as HTMLButtonElement;
+let headButton = document.getElementById("headBtn") as HTMLButtonElement;
+let nonheadButton = document.getElementById("nonheadBtn") as HTMLButtonElement;
+let fileInput = document.getElementById("fileInput") as HTMLInputElement;
 let fileReader = new FileReader();
-let clearMacroButton = <HTMLButtonElement>(
-  document.getElementById("clearMacroBtn")
-);
+let clearMacroButton = document.getElementById("clearMacroBtn") as HTMLButtonElement;
 let translateDiv = document.getElementById("translate");
 let tabA = document.getElementById("tabA");
-// let macroNameInput = <HTMLInputElement>document.getElementById("macroNameInput");
-// let macroInput = <HTMLInputElement>document.getElementById("macroInput");
-// let submitMacroBtn = <HTMLButtonElement>document.getElementById("submitMacro");
+// let macroNameInput = document.getElementById("macroNameInput")  as HTMLInputElement;
+// let macroInput = document.getElementById("macroInput") as HTMLInputElement;
+// let submitMacroBtn = document.getElementById("submitMacro") as HTMLButtonElement;
 let outputButtons = document.getElementById("outputBtns");
-let stepInput = <HTMLInputElement>document.getElementById("stepInput");
+let stepInput = document.getElementById("stepInput") as HTMLInputElement;
 let startGraph = document.getElementById("startGraph");
 let stopGraph = document.getElementById("stopGraph");
 let imgGraph = document.getElementById("imgGraph");
-let maxDepth = <HTMLInputElement>document.getElementById("maxDepth");
+let maxDepth = document.getElementById("maxDepth") as HTMLInputElement;
 let tabAbtn = document.getElementById("tabAbtn");
 let tabBbtn = document.getElementById("tabBbtn");
 let tabC1btn = document.getElementById("tabC1btn");
 let tabC2btn = document.getElementById("tabC2btn");
 let tabDbtn = document.getElementById("tabDbtn");
-let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
+let lmnInput = document.getElementById("lmnInput") as HTMLInputElement;
 let lmnSubmitBtn = document.getElementById("lmnSubmit");
 let lmnOutput = document.getElementById("lmnOutput");
-let deBrujinInput = <HTMLInputElement>document.getElementById("deBrujinInput");
+let deBrujinInput = document.getElementById("deBrujinInput") as HTMLInputElement;
 let deBrujinSubmitBtn = document.getElementById("deBrujinSubmit");
 let deBrujinOutput = document.getElementById("deBrujinOutput");
-let graphInput = <HTMLInputElement>document.getElementById("graphInput");
+let graphInput = document.getElementById("graphInput") as HTMLInputElement;
 let graphSubmitBtn = document.getElementById("graphSubmit");
 let graphOutput = document.getElementById("graphOutput");
 
@@ -216,7 +414,7 @@ document.getElementById("sampleInputBtn").addEventListener("click", () => {
 });
 
 fileReader.addEventListener("load", () =>
-  fileLoaded(<string>fileReader.result)
+  fileLoaded(fileReader.result as string)
 );
 
 settingButton.onclick = function () {
