@@ -1,7 +1,7 @@
-import { LambdaParseError } from "./error";
+import { LambdaParseError } from './error';
 import {
   Macro,
-  Symbol,
+  Token,
   Expression,
   Nil,
   ConstBool,
@@ -16,53 +16,52 @@ import {
   Fix,
   List,
   Variable,
-} from "./expression";
+} from './expression';
 
 // 字句解析
-function tokenize(str: string, typed: boolean): Symbol[] {
-  let strs: string[] = str.split("");
-  let tokens: Symbol[] = [];
+function tokenize(str: string, typed: boolean): Token[] {
+  const strs: string[] = str.split('');
+  const tokens: Token[] = [];
   while (strs.length > 0) {
     let c = strs.shift().trim();
-    if (c === "") {
-    } else if (c === "<") {
+    if (c === '<') {
       // <macro>
-      let content = "";
-      while (true) {
+      let content = '';
+      for (;;) {
         if (strs.length == 0) throw new LambdaParseError("Too many LANGLE '<'");
         c = strs.shift();
-        if (c === ">") break;
+        if (c === '>') break;
         else content += c;
       }
       tokens.push(Macro.get(content, typed));
-    } else if (typed && c === "[") {
+    } else if (typed && c === '[') {
       // [const]
-      let content = "";
-      while (true) {
+      let content = '';
+      for (;;) {
         if (strs.length == 0)
           throw new LambdaParseError("Too many LBRACKET '['");
         c = strs.shift();
-        if (c === "]") break;
+        if (c === ']') break;
         else content += c;
       }
-      let result: Symbol = null;
+      let result: Token = null;
       switch (content) {
-        case "nil":
+        case 'nil':
           result = new Nil();
           break;
-        case "false":
-        case "true":
-          result = new ConstBool(content === "true");
+        case 'false':
+        case 'true':
+          result = new ConstBool(content === 'true');
           break;
-        case "if":
-        case "then":
-        case "else":
-        case "let":
-        case "in":
-        case "case":
-        case "of":
-        case "fix":
-          result = new Symbol(content);
+        case 'if':
+        case 'then':
+        case 'else':
+        case 'let':
+        case 'in':
+        case 'case':
+        case 'of':
+        case 'fix':
+          result = new Token(content);
           break;
         default:
           if (content.match(/^\d+$|^-\d+$/) !== null) {
@@ -72,21 +71,21 @@ function tokenize(str: string, typed: boolean): Symbol[] {
           }
       }
       if (result === null)
-        throw new LambdaParseError("Unknown Const: [" + content + "]");
+        throw new LambdaParseError('Unknown Const: [' + content + ']');
       tokens.push(result);
     } else {
-      tokens.push(new Symbol(c));
+      tokens.push(new Token(c));
     }
   }
   return tokens;
 }
 
 // 構文解析
-export function parseSymbols(tokens: Symbol[], typed: boolean): Expression {
+export function parseTokens(tokens: Token[], typed: boolean): Expression {
   let left: Expression = null;
   while (tokens.length > 0) {
-    // 最初のSymbol
-    let first: Symbol = tokens.shift();
+    // 最初のToken
+    const first: Token = tokens.shift();
     if (
       first instanceof Const ||
       first instanceof Nil ||
@@ -98,28 +97,28 @@ export function parseSymbols(tokens: Symbol[], typed: boolean): Expression {
     }
 
     switch (first.name) {
-      case "\\":
-      case "\u00a5":
-      case "λ": {
+      case '\\':
+      case '\u00a5':
+      case 'λ': {
         // abst
         if (left === null) return LambdaAbstraction.parse(tokens, typed);
         else
           return new Application(left, LambdaAbstraction.parse(tokens, typed));
       }
-      case "(": {
+      case '(': {
         // application
-        let content: Symbol[] = [];
+        const content: Token[] = [];
         let i = 1;
-        while (true) {
+        for (;;) {
           if (tokens.length === 0)
             throw new LambdaParseError("Too many LPAREN '('");
-          let t = tokens.shift();
-          if (t.name === "(") i++;
-          else if (t.name === ")") i--;
+          const t = tokens.shift();
+          if (t.name === '(') i++;
+          else if (t.name === ')') i--;
           if (i === 0) break;
           content.push(t);
         }
-        let contentExpr: Expression = parseSymbols(content, typed);
+        const contentExpr: Expression = parseTokens(content, typed);
         if (left === null) left = contentExpr;
         else left = new Application(left, contentExpr);
         break;
@@ -127,28 +126,28 @@ export function parseSymbols(tokens: Symbol[], typed: boolean): Expression {
       default: {
         if (typed) {
           switch (first.name) {
-            case "if": {
+            case 'if': {
               // if statement
               return If.parse(tokens, typed);
             }
-            case "let": {
+            case 'let': {
               // let statement
               return Let.parse(tokens, typed);
             }
-            case "case": {
+            case 'case': {
               // case statement: [case] M [of] [nil] -> M | x::x -> M
               return Case.parse(tokens, typed);
             }
-            case "fix": {
+            case 'fix': {
               // fixed-point: [fix] x.M
               return Fix.parse(tokens, typed);
             }
-            case ":": {
+            case ':': {
               // list
-              let t = tokens.shift();
-              if (t.name !== ":")
+              const t = tokens.shift();
+              if (t.name !== ':')
                 throw new LambdaParseError("Unexpected token: '" + t + "'");
-              return new List(left, parseSymbols(tokens, typed));
+              return new List(left, parseTokens(tokens, typed));
             }
           }
         }
@@ -160,13 +159,13 @@ export function parseSymbols(tokens: Symbol[], typed: boolean): Expression {
       }
     }
   }
-  if (left === null) throw new LambdaParseError("No contents in Expression");
+  if (left === null) throw new LambdaParseError('No contents in Expression');
   return left;
 }
 
 // 字句解析と構文解析 return: root node
 export function makeAST(str: string, typed: boolean): Expression {
-  return parseSymbols(tokenize(str, typed), typed);
+  return parseTokens(tokenize(str, typed), typed);
 }
 
 // Input : lambda(cp(L0,L1),lambda(L2,apply(apply(L1,L0),L2)))
@@ -181,47 +180,47 @@ export function parseLMNtal(str: string): Expression {
     map: { [key: string]: string }
   ) {
     str = str.trim();
-    let res = str.match(/^.+?(?=\()/);
+    const res = str.match(/^.+?(?=\()/);
     if (res === null) {
-      let ret = map[str];
+      const ret = map[str];
       if (ret === undefined)
         throw new LambdaParseError(
-          "Malformed LMNtal Lambda Term. Unknown Token: " + str
+          'Malformed LMNtal Lambda Term. Unknown Token: ' + str
         );
       return new Variable(ret);
     }
 
-    let atom = res[0].trim();
-    let args = parseArg(str.match(/\(.+$/)[0]);
+    const atom = res[0].trim();
+    const args = parseArg(str.match(/\(.+$/)[0]);
 
     switch (atom) {
-      case "lambda": {
+      case 'lambda': {
         if (args.length !== 2)
           throw new LambdaParseError(
-            "Malformed LMNtal Lambda Term. lambda(X,A) should have 2 args."
+            'Malformed LMNtal Lambda Term. lambda(X,A) should have 2 args.'
           );
-        let v = Variable.getNew(usedVars);
-        let bvs = parseAbsArg(args[0]);
-        for (let bv of bvs) map[bv] = v.name;
+        const v = Variable.getNew(usedVars);
+        const bvs = parseAbsArg(args[0]);
+        for (const bv of bvs) map[bv] = v.name;
         return new LambdaAbstraction(
           v,
           parse(args[1], usedVars.concat(v), Object.assign({}, map))
         );
       }
-      case "apply": {
+      case 'apply': {
         if (args.length !== 2)
           throw new LambdaParseError(
-            "Malformed LMNtal Lambda Term. apply(A,B) should have 2 args."
+            'Malformed LMNtal Lambda Term. apply(A,B) should have 2 args.'
           );
         return new Application(
           parse(args[0], [].concat(usedVars), Object.assign({}, map)),
           parse(args[1], [].concat(usedVars), Object.assign({}, map))
         );
       }
-      case "fv": {
+      case 'fv': {
         if (args.length !== 1)
           throw new LambdaParseError(
-            "Malformed LMNtal Lambda Term. fv(X) should have 1 arg."
+            'Malformed LMNtal Lambda Term. fv(X) should have 1 arg.'
           );
         if (args[0].length !== 1 || !args[0].match(/[a-z]/))
           return Macro.get(args[0], false);
@@ -230,7 +229,7 @@ export function parseLMNtal(str: string): Expression {
       }
       default:
         throw new LambdaParseError(
-          "Malformed LMNtal Lambda Term. Unexpected atom name: " + atom
+          'Malformed LMNtal Lambda Term. Unexpected atom name: ' + atom
         );
     }
   }
@@ -240,36 +239,36 @@ export function parseLMNtal(str: string): Expression {
   // Ex3: ( ) => []
   function parseArg(str: string): string[] {
     str = str.trim();
-    if (str[0] !== "(" || str[str.length - 1] !== ")")
+    if (str[0] !== '(' || str[str.length - 1] !== ')')
       throw new LambdaParseError(
-        "Malformed LMNtal Lambda Term. Invalid Parentheses."
+        'Malformed LMNtal Lambda Term. Invalid Parentheses.'
       );
     let level = 0;
-    let content = "";
-    let strs: string[] = [];
+    let content = '';
+    const strs: string[] = [];
     for (let i = 1; i < str.length - 1; i++) {
-      let t = str[i];
-      if (t === "(") level++;
-      else if (t === ")") level--;
-      if (level === 0 && t === ",") {
+      const t = str[i];
+      if (t === '(') level++;
+      else if (t === ')') level--;
+      if (level === 0 && t === ',') {
         strs.push(content);
-        content = "";
+        content = '';
       } else {
         content += t;
       }
     }
     if (level !== 0)
       throw new LambdaParseError(
-        "Malformed LMNtal Lambda Term. Invalid Parentheses."
+        'Malformed LMNtal Lambda Term. Invalid Parentheses.'
       );
     strs.push(content);
     if (strs.length === 1) {
-      let s = strs[0].trim();
-      if (s === "") return [];
+      const s = strs[0].trim();
+      if (s === '') return [];
       else return [s];
     }
-    let ret: string[] = [];
-    for (let s of strs) ret.push(s.trim());
+    const ret: string[] = [];
+    for (const s of strs) ret.push(s.trim());
     return ret;
   }
 
@@ -278,28 +277,28 @@ export function parseLMNtal(str: string): Expression {
   // Ex3: rm => []
   function parseAbsArg(str: string): string[] {
     str = str.trim();
-    let res = str.match(/^.+?(?=\()/);
+    const res = str.match(/^.+?(?=\()/);
     if (res === null) {
-      if (str === "rm") return [];
+      if (str === 'rm') return [];
       else return [str];
     }
-    let atom = res[0].trim();
-    let args = parseArg(str.match(/\(.+$/)[0]);
-    if (atom === "rm") {
+    const atom = res[0].trim();
+    const args = parseArg(str.match(/\(.+$/)[0]);
+    if (atom === 'rm') {
       if (args.length !== 0)
         throw new LambdaParseError(
-          "Malformed LMNtal Lambda Term. rm() should have 0 args."
+          'Malformed LMNtal Lambda Term. rm() should have 0 args.'
         );
       return [];
-    } else if (atom === "cp") {
+    } else if (atom === 'cp') {
       if (args.length !== 2)
         throw new LambdaParseError(
-          "Malformed LMNtal Lambda Term. cp(A,B) should have 2 args."
+          'Malformed LMNtal Lambda Term. cp(A,B) should have 2 args.'
         );
       return parseAbsArg(args[0].trim()).concat(parseAbsArg(args[1].trim()));
     } else {
       throw new LambdaParseError(
-        "Malformed LMNtal Lambda Term. Unexpected atom name: " + atom
+        'Malformed LMNtal Lambda Term. Unexpected atom name: ' + atom
       );
     }
   }
@@ -307,10 +306,10 @@ export function parseLMNtal(str: string): Expression {
 
 // チャーチ数を表すExpression (string)の生成
 export function makeChurchNum(n: number): string {
-  let str = "\\sz.";
-  let content = n === 0 ? "z" : "sz";
+  const str = '\\sz.';
+  let content = n === 0 ? 'z' : 'sz';
   for (let i = 1; i < n; i++) {
-    content = "s(" + content + ")";
+    content = 's(' + content + ')';
   }
   return str + content;
 }
@@ -318,17 +317,17 @@ export function makeChurchNum(n: number): string {
 export function makeTerms(depth: number): Expression[] {
   return sub([], depth);
   function sub(vs: Variable[], depth: number): Expression[] {
-    let ret: Expression[] = [].concat(vs);
+    const ret: Expression[] = [].concat(vs);
     if (depth === 0) return ret;
-    let res = sub(vs, depth - 1);
+    const res = sub(vs, depth - 1);
     // Application
     for (let i = 0; i < res.length; i++)
       for (let j = 0; j < res.length; j++)
         ret.push(new Application(res[i], res[j]));
     // Lambda Abstraction
-    let newVar = Variable.getNew(vs);
-    let res1 = sub(vs.concat(newVar), depth - 1);
-    for (let r of res1) ret.push(new LambdaAbstraction(newVar, r));
+    const newVar = Variable.getNew(vs);
+    const res1 = sub(vs.concat(newVar), depth - 1);
+    for (const r of res1) ret.push(new LambdaAbstraction(newVar, r));
     return ret;
   }
 }
@@ -336,17 +335,17 @@ export function makeTerms(depth: number): Expression[] {
 export function htmlEscape(str: string): string {
   return str.replace(/[&'`"<>]/g, function (match) {
     return {
-      "&": "&amp;",
-      "'": "&#x27;",
-      "`": "&#x60;",
-      '"': "&quot;",
-      "<": "&lt;",
-      ">": "&gt;",
+      '&': '&amp;',
+      "'": '&#x27;',
+      '`': '&#x60;',
+      '"': '&quot;',
+      '<': '&lt;',
+      '>': '&gt;',
     }[match];
   });
 }
 
-export function putParens(str: string, noParens?: boolean) {
+export function putParens(str: string, noParens?: boolean): string {
   if (noParens) return str;
-  else return "(" + str + ")";
+  else return `(${str})`;
 }

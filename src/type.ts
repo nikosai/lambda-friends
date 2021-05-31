@@ -1,4 +1,4 @@
-import { TypeError } from "./error";
+import { TypeError } from './error';
 
 export abstract class Type {
   className: string;
@@ -10,7 +10,7 @@ export abstract class Type {
   public abstract toString(): string;
   public abstract equals(t: Type): boolean;
   public abstract contains(t: TypeVariable): boolean;
-  public abstract replace(from: TypeVariable, to: Type);
+  public abstract replace(from: TypeVariable, to: Type): void;
   public abstract getVariables(): TypeVariable[];
   public abstract toTexString(): string;
 }
@@ -41,31 +41,31 @@ export class TypeEquation {
     if (this.right.contains(this.left)) {
       // (e)
       throw new TypeError(
-        "Illegal type (" +
+        'Illegal type (' +
           this.right +
-          " contains " +
+          ' contains ' +
           this.left +
-          ". Self-application?)"
+          '. Self-application?)'
       );
     }
     // (f)
-    for (var e of eqs) {
+    for (const e of eqs) {
       e.replace(this.left, this.right);
     }
-    for (var e of next) {
+    for (const e of next) {
       e.replace(this.left, this.right);
     }
     return [this];
   }
   public static isEqual(a: TypeEquation[], b: TypeEquation[]): boolean {
     if (a.length !== b.length) return false;
-    for (var ai of a) {
+    for (const ai of a) {
       if (!TypeEquation.contains(ai, b)) return false;
     }
     return true;
   }
   public static contains(a: TypeEquation, b: TypeEquation[]): boolean {
-    for (var bi of b) {
+    for (const bi of b) {
       if (a.equals(bi)) return true;
     }
     return false;
@@ -74,15 +74,15 @@ export class TypeEquation {
     return e.left.equals(this.left) && e.right.equals(this.right);
   }
   public static get(t: TypeVariable, eqs: TypeEquation[]): Type {
-    for (var eq of eqs) {
+    for (const eq of eqs) {
       if (eq.left.equals(t)) return eq.right;
     }
-    throw new TypeError("Undefined TypeVariable: " + t);
+    throw new TypeError('Undefined TypeVariable: ' + t);
   }
   public toString(): string {
-    return this.left + " = " + this.right;
+    return this.left + ' = ' + this.right;
   }
-  public replace(from: TypeVariable, to: Type) {
+  public replace(from: TypeVariable, to: Type): void {
     if (this.left.equals(from)) {
       this.left = to;
     } else {
@@ -95,12 +95,12 @@ export class TypeEquation {
     }
   }
   public static solve(eqs: TypeEquation[]): TypeEquation[] {
-    while (true) {
-      var prev: TypeEquation[] = [].concat(eqs);
-      var next: TypeEquation[] = [];
+    for (;;) {
+      const prev: TypeEquation[] = [].concat(eqs);
+      let next: TypeEquation[] = [];
       while (eqs.length > 0) {
-        var e = eqs.shift();
-        var ans = e.transform(eqs, next);
+        const e = eqs.shift();
+        const ans = e.transform(eqs, next);
         next = next.concat(ans);
       }
       eqs = [].concat(next);
@@ -116,13 +116,13 @@ export abstract class TypeConstructor extends Type {
 
 export class TypeInt extends TypeConstructor {
   constructor() {
-    super("TypeInt");
+    super('TypeInt');
   }
   public toString(): string {
-    return "int";
+    return 'int';
   }
   public toTexString(): string {
-    return "{\\rm int}";
+    return '{\\rm int}';
   }
   public equals(t: Type): boolean {
     if (t instanceof TypeInt) return true;
@@ -132,13 +132,15 @@ export class TypeInt extends TypeConstructor {
     if (t instanceof TypeInt) {
       return [];
     } else {
-      throw new TypeError(this + " and " + t + " are not compatible.");
+      throw new TypeError(this + ' and ' + t + ' are not compatible.');
     }
   }
-  public contains(t: TypeVariable): boolean {
+  public contains(_t: TypeVariable): boolean {
     return false;
   }
-  public replace(from: TypeVariable, to: Type) {}
+  public replace(_from: TypeVariable, _to: Type): void {
+    // do nothing
+  }
   public getVariables(): TypeVariable[] {
     return [];
   }
@@ -146,13 +148,13 @@ export class TypeInt extends TypeConstructor {
 
 export class TypeBool extends TypeConstructor {
   constructor() {
-    super("TypeBool");
+    super('TypeBool');
   }
   public toString(): string {
-    return "bool";
+    return 'bool';
   }
   public toTexString(): string {
-    return "{\\rm bool}";
+    return '{\\rm bool}';
   }
   public equals(t: Type): boolean {
     if (t instanceof TypeBool) return true;
@@ -162,13 +164,15 @@ export class TypeBool extends TypeConstructor {
     if (t instanceof TypeBool) {
       return [];
     } else {
-      throw new TypeError(this + " and " + t + " are not compatible.");
+      throw new TypeError(this + ' and ' + t + ' are not compatible.');
     }
   }
-  public contains(t: TypeVariable): boolean {
+  public contains(_t: TypeVariable): boolean {
     return false;
   }
-  public replace(from: TypeVariable, to: Type) {}
+  public replace(_from: TypeVariable, _to: Type): void {
+    // do nothing
+  }
   public getVariables(): TypeVariable[] {
     return [];
   }
@@ -177,14 +181,14 @@ export class TypeBool extends TypeConstructor {
 export class TypeList extends TypeConstructor {
   content: Type;
   constructor(x: Type) {
-    super("TypeList");
+    super('TypeList');
     this.content = x;
   }
   public toString(): string {
-    return "list(" + this.content + ")";
+    return 'list(' + this.content + ')';
   }
   public toTexString(): string {
-    return "{\\rm list}(" + this.content.toTexString() + ")";
+    return '{\\rm list}(' + this.content.toTexString() + ')';
   }
   public equals(t: Type): boolean {
     if (t instanceof TypeList) return this.content.equals(t.content);
@@ -194,13 +198,13 @@ export class TypeList extends TypeConstructor {
     if (t instanceof TypeList) {
       return [new TypeEquation(this.content, t.content)];
     } else {
-      throw new TypeError(this + " and " + t + " are not compatible.");
+      throw new TypeError(this + ' and ' + t + ' are not compatible.');
     }
   }
   public contains(t: TypeVariable): boolean {
     return this.content.contains(t);
   }
-  public replace(from: TypeVariable, to: Type) {
+  public replace(from: TypeVariable, to: Type): void {
     if (this.content.equals(from)) {
       this.content = to;
     } else {
@@ -216,22 +220,22 @@ export class TypeFunc extends TypeConstructor {
   left: Type;
   right: Type;
   constructor(left: Type, right: Type) {
-    super("TypeFunc");
+    super('TypeFunc');
     this.left = left;
     this.right = right;
   }
   public toString(): string {
-    var ret: string;
-    if (this.left instanceof TypeFunc) ret = "(" + this.left + ")";
+    let ret: string;
+    if (this.left instanceof TypeFunc) ret = '(' + this.left + ')';
     else ret = this.left.toString();
-    return ret + " -> " + this.right;
+    return ret + ' -> ' + this.right;
   }
   public toTexString(): string {
-    var ret: string;
+    let ret: string;
     if (this.left instanceof TypeFunc)
-      ret = "(" + this.left.toTexString() + ")";
+      ret = '(' + this.left.toTexString() + ')';
     else ret = this.left.toTexString();
-    return ret + " \\rightarrow " + this.right.toTexString();
+    return ret + ' \\rightarrow ' + this.right.toTexString();
   }
   public equals(t: Type): boolean {
     if (t instanceof TypeFunc)
@@ -245,13 +249,13 @@ export class TypeFunc extends TypeConstructor {
         new TypeEquation(this.right, t.right),
       ];
     } else {
-      throw new TypeError(this + " and " + t + " are not compatible.");
+      throw new TypeError(this + ' and ' + t + ' are not compatible.');
     }
   }
   public contains(t: TypeVariable): boolean {
     return this.left.contains(t) || this.right.contains(t);
   }
-  public replace(from: TypeVariable, to: Type) {
+  public replace(from: TypeVariable, to: Type): void {
     if (this.left.equals(from)) {
       this.left = to;
     } else {
@@ -272,42 +276,42 @@ export class TypeVariable extends Type {
   id: number;
   static maxId: number;
   static alphabet: string[] =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   static texAlphabet: string[] = [
-    "\\alpha",
-    "\\beta",
-    "\\gamma",
-    "\\delta",
-    "\\varepsilon",
-    "\\zeta",
-    "\\eta",
-    "\\theta",
-    "\\iota",
-    "\\kappa",
-    "\\mu",
-    "\\nu",
-    "\\xi",
-    "\\pi",
-    "\\rho",
-    "\\sigma",
-    "\\upsilon",
-    "\\phi",
-    "\\chi",
-    "\\psi",
-    "\\omega",
-    "\\Gamma",
-    "\\Delta",
-    "\\Theta",
-    "\\Xi",
-    "\\Pi",
-    "\\Sigma",
-    "\\Phi",
-    "\\Psi",
-    "\\Omega",
+    '\\alpha',
+    '\\beta',
+    '\\gamma',
+    '\\delta',
+    '\\varepsilon',
+    '\\zeta',
+    '\\eta',
+    '\\theta',
+    '\\iota',
+    '\\kappa',
+    '\\mu',
+    '\\nu',
+    '\\xi',
+    '\\pi',
+    '\\rho',
+    '\\sigma',
+    '\\upsilon',
+    '\\phi',
+    '\\chi',
+    '\\psi',
+    '\\omega',
+    '\\Gamma',
+    '\\Delta',
+    '\\Theta',
+    '\\Xi',
+    '\\Pi',
+    '\\Sigma',
+    '\\Phi',
+    '\\Psi',
+    '\\Omega',
   ].concat(TypeVariable.alphabet);
 
   private constructor(id: number) {
-    super("TypeVariable");
+    super('TypeVariable');
     this.id = id;
   }
   public toString(): string {
@@ -316,7 +320,7 @@ export class TypeVariable extends Type {
   }
   public toTexString(): string {
     if (this.id < 0) return TypeVariable.texAlphabet[-this.id - 1];
-    return "\\tau_{" + this.id + "}";
+    return '\\tau_{' + this.id + '}';
   }
   public equals(t: Type): boolean {
     if (t instanceof TypeVariable) return this.id === t.id;
@@ -334,15 +338,17 @@ export class TypeVariable extends Type {
   public contains(t: TypeVariable): boolean {
     return this.equals(t);
   }
-  public replace(from: TypeVariable, to: Type) {}
+  public replace(_from: TypeVariable, _to: Type): void {
+    // do nothing
+  }
   public getVariables(): TypeVariable[] {
     return [this];
   }
-  public static getAlphabet(i: number) {
+  public static getAlphabet(i: number): TypeVariable {
     return new TypeVariable(-i - 1);
   }
-  static contains(a: TypeVariable[], b: TypeVariable) {
-    for (var ta of a) {
+  static contains(a: TypeVariable[], b: TypeVariable): boolean {
+    for (const ta of a) {
       if (ta.equals(b)) {
         return true;
       }
@@ -353,22 +359,24 @@ export class TypeVariable extends Type {
 
 export class TypeUntyped extends Type {
   constructor() {
-    super("TypeUntyped");
+    super('TypeUntyped');
   }
   public toString(): string {
-    return "Untyped";
+    return 'Untyped';
   }
   public toTexString(): string {
-    return "{\\rm Untyped}";
+    return '{\\rm Untyped}';
   }
   public equals(t: Type): boolean {
     if (t instanceof TypeUntyped) return true;
     else return false;
   }
-  public contains(t: TypeVariable): boolean {
+  public contains(_t: TypeVariable): boolean {
     return false;
   }
-  public replace(from: TypeVariable, to: Type) {}
+  public replace(_from: TypeVariable, _to: Type): void {
+    // do nothing
+  }
   public getVariables(): TypeVariable[] {
     return [];
   }

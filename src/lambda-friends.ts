@@ -1,9 +1,9 @@
-import { Expression, Macro } from "./expression";
-import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
-import { ReductionNode, GraphNode } from "./graph";
-import { Redex } from "./redex";
-import { makeAST, parseLMNtal } from "./util";
-import { deBrujinExpression } from "./deBrujin";
+import { Expression, Macro } from './expression';
+import { Type, TypeUntyped, TypeVariable, TypeEquation } from './type';
+import { ReductionNode, GraphNode } from './graph';
+import { Redex } from './redex';
+import { makeAST, parseLMNtal } from './util';
+import { deBrujinExpression } from './deBrujin';
 
 export class LambdaFriends {
   expr: Expression;
@@ -25,12 +25,12 @@ export class LambdaFriends {
     etaAllowed: boolean,
     allowMultipleEdges: boolean
   ) {
-    let l = str.split("#")[0].trim();
-    let names = [];
-    while (true) {
+    let l = str.split('#')[0].trim();
+    const names = [];
+    for (;;) {
       let ts = l.match(/^[^[]+?\s*=\s*/);
       if (ts === null) break;
-      let t = ts[0];
+      const t = ts[0];
       ts = l.split(t);
       ts.shift();
       l = ts.join(t);
@@ -39,13 +39,13 @@ export class LambdaFriends {
     this.expr = makeAST(l, typed);
     this.original = this.expr;
     this.type = this.getType(typed);
-    for (let name of names) {
+    for (const name of names) {
       Macro.add(name, this, typed);
     }
     this.typed = typed;
     this.etaAllowed = etaAllowed;
     this.allowMultipleEdges = allowMultipleEdges;
-    this.processTex = "\\begin{eqnarray*}\n&& ";
+    this.processTex = '\\begin{eqnarray*}\n&& ';
     this.curStep = 0;
     this.root = ReductionNode.makeRoot(
       this.expr,
@@ -60,7 +60,7 @@ export class LambdaFriends {
   public getRedexes(): Redex[] {
     if (this.nextRedexes) return this.nextRedexes;
     if (this.typed) {
-      let r = this.expr.getTypedRedex(true);
+      const r = this.expr.getTypedRedex(true);
       return (this.nextRedexes = r ? [r] : []);
     }
     return (this.nextRedexes = this.expr
@@ -68,7 +68,7 @@ export class LambdaFriends {
       .sort(Redex.compare));
   }
 
-  public getLeftMostRedex() {
+  public getLeftMostRedex(): Redex {
     if (this.typed) return this.expr.getTypedRedex(true);
     return this.expr.getUnTypedRedex(
       this.etaAllowed,
@@ -85,7 +85,7 @@ export class LambdaFriends {
     innermost: boolean,
     weak: boolean,
     head: boolean
-  ) {
+  ): Redex {
     if (this.typed) return this.expr.getTypedRedex(true);
     return this.expr.getUnTypedRedex(
       this.etaAllowed,
@@ -102,7 +102,7 @@ export class LambdaFriends {
     innermost: boolean,
     weak: boolean,
     head: boolean
-  ) {
+  ): string {
     return this.reduction(this.getRedex(rightmost, innermost, weak, head));
   }
 
@@ -116,25 +116,25 @@ export class LambdaFriends {
     this.nextRedexes = undefined;
     this.processTex += redex.toTexString();
     let ret: string;
-    if (redex.type === "macro") {
-      this.processTex += " \\\\\n&\\equiv& ";
-      ret = "-: (macro) = " + this.expr.toString(true);
+    if (redex.type === 'macro') {
+      this.processTex += ' \\\\\n&\\equiv& ';
+      ret = '-: (macro) = ' + this.expr.toString(true);
     } else {
       this.processTex +=
-        " \\\\\n&\\longrightarrow_{" + redex.getTexRule() + "}& ";
+        ' \\\\\n&\\longrightarrow_{' + redex.getTexRule() + '}& ';
       ret =
         ++this.curStep +
-        ": (" +
+        ': (' +
         redex.rule +
-        ") --> " +
+        ') --> ' +
         this.expr.toString(true);
     }
     if (!this.hasNext()) {
-      ret += "    (normal form)\n";
-      let n = this.parseChurchNum();
-      if (n !== null) ret += "  = " + n + " (as nat)\n";
-      let b = this.parseChurchBool();
-      if (b !== null) ret += "  = " + b + " (as bool)\n";
+      ret += '    (normal form)\n';
+      const n = this.parseChurchNum();
+      if (n !== null) ret += '  = ' + n + ' (as nat)\n';
+      const b = this.parseChurchBool();
+      if (b !== null) ret += '  = ' + b + ' (as bool)\n';
       ret = ret.slice(0, -1);
     }
     return ret;
@@ -149,14 +149,14 @@ export class LambdaFriends {
       // 展開完了
       return null;
     }
-    let t = this.curNodes.shift();
+    const t = this.curNodes.shift();
     if (maxDepth !== undefined && t.depth >= maxDepth) {
       // 限界深度に到達
       this.curNodes.push(t);
       return null;
     }
-    let ret = t.visit();
-    for (let n of ret.nodes) {
+    const ret = t.visit();
+    for (const n of ret.nodes) {
       this.curNodes.push(n);
     }
     return ret;
@@ -180,35 +180,35 @@ export class LambdaFriends {
     return this.curNodes.length > 0;
   }
 
-  public getProofTree() {
-    return "\\begin{prooftree}\n" + this.proofTree + "\\end{prooftree}";
+  public getProofTree(): string {
+    return '\\begin{prooftree}\n' + this.proofTree + '\\end{prooftree}';
   }
 
-  public getProcessTex() {
+  public getProcessTex(): string {
     return (
       this.processTex +
       this.expr.toTexString(true) +
-      (this.hasNext() ? "" : "\\not\\longrightarrow") +
-      "\n\\end{eqnarray*}"
+      (this.hasNext() ? '' : '\\not\\longrightarrow') +
+      '\n\\end{eqnarray*}'
     );
   }
 
   public getType(typed: boolean): Type {
     if (!typed) return new TypeUntyped();
     TypeVariable.maxId = undefined;
-    let target = TypeVariable.getNew();
-    let typeResult = this.expr.getEquations([], target, true);
-    let eqs = typeResult.eqs;
+    const target = TypeVariable.getNew();
+    const typeResult = this.expr.getEquations([], target, true);
+    const eqs = typeResult.eqs;
     this.proofTree = typeResult.proofTree;
-    let ret = TypeEquation.get(target, TypeEquation.solve(eqs));
-    let vs = ret.getVariables();
+    const ret = TypeEquation.get(target, TypeEquation.solve(eqs));
+    const vs = ret.getVariables();
     // 't0,'t1,'t2,... から 'a,'b,'c,... に変換
-    let vars: TypeVariable[] = [];
-    for (let v of vs) {
+    const vars: TypeVariable[] = [];
+    for (const v of vs) {
       if (!TypeVariable.contains(vars, v)) vars.push(v);
     }
     let i = 0;
-    for (let v of vars) {
+    for (const v of vars) {
       ret.replace(v, TypeVariable.getAlphabet(i));
       i++;
     }
@@ -219,20 +219,20 @@ export class LambdaFriends {
     str: string,
     typed: boolean
   ): { names: string[]; expr: string; type: string } {
-    let l = str.split("#")[0].trim();
-    let names = [];
-    while (true) {
+    let l = str.split('#')[0].trim();
+    const names = [];
+    for (;;) {
       let ts = l.match(/^[^[]+?\s*=\s*/);
       if (ts === null) break;
-      let t = ts[0];
+      const t = ts[0];
       ts = l.split(t);
       ts.shift();
       l = ts.join(t);
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     if (names.length === 0) return null;
-    let lf = new LambdaFriends(l, typed, false, false); // ????
-    for (let name of names) {
+    const lf = new LambdaFriends(l, typed, false, false); // ????
+    for (const name of names) {
       Macro.add(name, lf, typed);
     }
     // let name = names.shift();
@@ -257,18 +257,18 @@ export class LambdaFriends {
     defs: { names: string[]; expr: string; type: string }[];
     errs: string[];
   } {
-    let lines = textData.split("\n");
-    let errors: string[] = [];
-    let defs: { names: string[]; expr: string; type: string }[] = [];
-    for (let l of lines) {
+    const lines = textData.split('\n');
+    const errors: string[] = [];
+    const defs: { names: string[]; expr: string; type: string }[] = [];
+    for (const l of lines) {
       try {
-        let ret = LambdaFriends.parseMacroDef(l, typed);
+        const ret = LambdaFriends.parseMacroDef(l, typed);
         if (ret !== null) defs.push(ret);
       } catch (e) {
         errors.push(e.toString());
       }
     }
-    let indent = "* ";
+    // const indent = '* ';
     // let ret = "# File input completed.\n";
     // if (defs.length !== 0){
     //   ret += "## Finally, "+defs.length+" macros are successfully added.\n";
@@ -282,35 +282,38 @@ export class LambdaFriends {
   }
 
   public static getMacroList(typed: boolean): string {
-    let str = "";
-    let map = Macro.getMap(typed);
-    for (let key in map) {
-      let e = map[key];
+    let str = '';
+    const map = Macro.getMap(typed);
+    for (const key in map) {
+      const e = map[key];
       str +=
-        "<" +
+        '<' +
         e.name +
-        "> is defined as " +
+        '> is defined as ' +
         e.expr.toString(true) +
-        " : " +
+        ' : ' +
         e.type +
-        "\n";
+        '\n';
     }
     return str;
   }
 
-  public static getMacroListAsObject(typed: boolean) {
+  public static getMacroListAsObject(typed: boolean): { [key: string]: Macro } {
     return Macro.getMap(typed);
   }
 
-  public static clearMacro(typed: boolean) {
-    return Macro.clear(typed);
+  public static clearMacro(typed: boolean): void {
+    Macro.clear(typed);
   }
 
-  public static graph2LF(str: string, allowMultipleEdges: boolean) {
+  public static graph2LF(
+    str: string,
+    allowMultipleEdges: boolean
+  ): LambdaFriends {
     return GraphNode.search(GraphNode.parse(str), allowMultipleEdges);
   }
 
-  public static lmntal2LF(str: string) {
+  public static lmntal2LF(str: string): LambdaFriends {
     return new LambdaFriends(
       parseLMNtal(str).toString(true),
       false,
@@ -319,7 +322,7 @@ export class LambdaFriends {
     );
   }
 
-  public static deBrujin2LF(str: string) {
+  public static deBrujin2LF(str: string): LambdaFriends {
     return new LambdaFriends(
       deBrujinExpression.parse(str).toLambda().toString(true),
       false,
@@ -348,20 +351,20 @@ export class LambdaFriends {
   }
 
   public toString(): string {
-    let ret = this.expr.toString(true) + (this.typed ? " : " + this.type : "");
+    let ret = this.expr.toString(true) + (this.typed ? ' : ' + this.type : '');
     if (!this.hasNext()) {
-      ret += "    (normal form)\n";
-      let n = this.parseChurchNum();
-      if (n !== null) ret += "  = " + n + " (as nat)\n";
-      let b = this.parseChurchBool();
-      if (b !== null) ret += "  = " + b + " (as bool)\n";
+      ret += '    (normal form)\n';
+      const n = this.parseChurchNum();
+      if (n !== null) ret += '  = ' + n + ' (as nat)\n';
+      const b = this.parseChurchBool();
+      if (b !== null) ret += '  = ' + b + ' (as bool)\n';
       ret = ret.slice(0, ret.length - 1);
     }
     return ret;
   }
 
   public getOriginalString(): string {
-    return this.original.toString(true) + (this.typed ? " : " + this.type : "");
+    return this.original.toString(true) + (this.typed ? ' : ' + this.type : '');
   }
 
   public parseChurchNum(): number {
@@ -373,6 +376,6 @@ export class LambdaFriends {
   }
 
   public static getNewLink(): string {
-    return "R" + LambdaFriends.nextLinkID++;
+    return 'R' + LambdaFriends.nextLinkID++;
   }
 }

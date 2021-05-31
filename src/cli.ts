@@ -1,34 +1,34 @@
-import * as fs from "fs";
-import * as commander from "commander";
-import { LambdaFriends } from "./lambda-friends";
-import { REPL } from "./repl";
+import * as fs from 'fs';
+import * as commander from 'commander';
+import { LambdaFriends } from './lambda-friends';
+import { REPL } from './repl';
 
 (() => {
   function getFileInput(file: string): string {
     try {
       fs.statSync(file);
     } catch (e) {
-      console.error("File Not Found: " + file);
+      console.error('File Not Found: ' + file);
       return undefined;
     }
-    return fs.readFileSync(file, "utf8");
+    return fs.readFileSync(file, 'utf8');
   }
 
   commander
-    .name("lambda-friends")
-    .usage("[options] [FILE]")
-    .option("-i,--string <input>", "Read from string <input>")
-    .option("-I,--stdin", "Read from standard input")
-    .option("-l,--lmnin", "Translate LMNtal code to lambda term")
-    .option("-g,--graph", "Reverse search from reduction graph (tentative)")
-    .option("-t,--trace", "Show reduction trace")
-    .option("-L,--lmnout", "Translate lambda term to LMNtal code")
-    .option("-c,--skiout", "Translate lambda term to SKI combinators")
-    .option("-m,--macro <filename>", "Load macros from textfile")
-    .option("-s,--steps <n>", "Set continuation steps", parseInt)
-    .option("-T,--typed", "Use Typed mode")
-    .option("-E,--eta", "Enable eta-reduction")
-    .option("-M,--multiedge", "Enable multiple-edges")
+    .name('lambda-friends')
+    .usage('[options] [FILE]')
+    .option('-i,--string <input>', 'Read from string <input>')
+    .option('-I,--stdin', 'Read from standard input')
+    .option('-l,--lmnin', 'Translate LMNtal code to lambda term')
+    .option('-g,--graph', 'Reverse search from reduction graph (tentative)')
+    .option('-t,--trace', 'Show reduction trace')
+    .option('-L,--lmnout', 'Translate lambda term to LMNtal code')
+    .option('-c,--skiout', 'Translate lambda term to SKI combinators')
+    .option('-m,--macro <filename>', 'Load macros from textfile')
+    .option('-s,--steps <n>', 'Set continuation steps', parseInt)
+    .option('-T,--typed', 'Use Typed mode')
+    .option('-E,--eta', 'Enable eta-reduction')
+    .option('-M,--multiedge', 'Enable multiple-edges')
     .parse(process.argv);
 
   const options = commander.opts();
@@ -38,9 +38,9 @@ import { REPL } from "./repl";
   // それらがなければ、FILEを読みに行くが、それもなければnull
   function getInput() {
     if (options.string) return options.string;
-    if (options.stdin) return fs.readFileSync("/dev/stdin", "utf8");
+    if (options.stdin) return fs.readFileSync('/dev/stdin', 'utf8');
     if (commander.args[0]) {
-      let file = getFileInput(commander.args[0]);
+      const file = getFileInput(commander.args[0]);
       if (file) return file;
     }
     return null;
@@ -54,7 +54,7 @@ import { REPL } from "./repl";
 
   if (options.steps) {
     if (isNaN(options.steps)) {
-      console.error("-s,--steps <n>: n is not a number");
+      console.error('-s,--steps <n>: n is not a number');
     } else {
       steps = options.steps;
     }
@@ -68,8 +68,8 @@ import { REPL } from "./repl";
   if (options.lmnin) {
     // Translate LMNtal code to lambda term
     try {
-      if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
-      let ret = LambdaFriends.lmntal2LF(input);
+      if (!input) input = fs.readFileSync('/dev/stdin', 'utf8');
+      const ret = LambdaFriends.lmntal2LF(input);
       console.log(ret.expr.toString(true));
     } catch (e) {
       console.error(e.toString());
@@ -77,9 +77,9 @@ import { REPL } from "./repl";
   } else if (options.graph) {
     // Reverse search from reduction graph (tentative)
     try {
-      if (!input) input = fs.readFileSync("/dev/stdin", "utf8");
-      let ret = LambdaFriends.graph2LF(input, allowMultipleEdges);
-      if (ret === null) console.log("");
+      if (!input) input = fs.readFileSync('/dev/stdin', 'utf8');
+      const ret = LambdaFriends.graph2LF(input, allowMultipleEdges);
+      if (ret === null) console.log('');
       else console.log(ret.expr.toString(true));
     } catch (e) {
       console.error(e.toString());
@@ -87,7 +87,7 @@ import { REPL } from "./repl";
   } else {
     // normal mode
     if (options.macro) {
-      let macro = getFileInput(options.macro);
+      const macro = getFileInput(options.macro);
       if (macro) {
         LambdaFriends.fileInput(macro, typed);
       }
@@ -119,10 +119,15 @@ import { REPL } from "./repl";
         );
         return;
       }
-      let lf = new LambdaFriends(input, typed, etaAllowed, allowMultipleEdges);
+      const lf = new LambdaFriends(
+        input,
+        typed,
+        etaAllowed,
+        allowMultipleEdges
+      );
       if (options.trace) console.log(lf.toString());
       for (let i = 0; i < steps; i++) {
-        let res = lf.reduction();
+        const res = lf.reduction();
         if (res === null) break;
         if (options.trace) console.log(res);
       }

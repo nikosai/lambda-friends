@@ -1,0 +1,43 @@
+{
+  // 適用する環境
+  "env": {
+    "es6": true,
+    "node": true,
+    "browser": true,
+    "commonjs": true
+  },
+  // パーサー
+  "parser": "@typescript-eslint/parser",
+  // jsx を使います
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    // import 文でモジュールを使用します
+    "sourceType": "module"
+  },
+  // React のバージョンは自動検出に
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "plugins": ["react-hooks", "react", "@typescript-eslint"],
+  // 基本的にルールは recommended に従う
+  // prettier は配列の最後尾に書く
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "prettier"
+  ],
+  "rules": {
+    // TypeScirpt なので prop-types は要らない
+    "react/prop-types": "off",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }]
+  }
+}

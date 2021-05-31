@@ -1,12 +1,12 @@
-import { putParens } from "./util";
-import { LambdaParseError, TranslateError } from "./error";
+import { putParens } from './util';
+import { LambdaParseError, TranslateError } from './error';
 import {
   Expression,
   Variable,
   LambdaAbstraction,
   Application,
   Macro,
-} from "./expression";
+} from './expression';
 
 export abstract class deBrujinExpression {
   className: string;
@@ -18,20 +18,20 @@ export abstract class deBrujinExpression {
   }
   public abstract getString(noParens: boolean): string;
   public static parse(str: string): deBrujinExpression {
-    let cs = str.split("");
+    const cs = str.split('');
     let left: deBrujinExpression = null;
     while (cs.length > 0) {
-      let t = cs.shift();
+      const t = cs.shift();
       switch (t) {
-        case "(": {
+        case '(': {
           let count = 1;
-          let content = "";
-          while (true) {
+          let content = '';
+          for (;;) {
             if (cs.length === 0)
               throw new LambdaParseError("Too many LPAREN '('");
-            let t1 = cs.shift();
-            if (t1 === "(") count++;
-            if (t1 === ")") count--;
+            const t1 = cs.shift();
+            if (t1 === '(') count++;
+            if (t1 === ')') count--;
             if (count === 0) break;
             content += t1;
           }
@@ -39,14 +39,14 @@ export abstract class deBrujinExpression {
           else left = new deBrujinApplication(left, this.parse(content));
           break;
         }
-        case "\\":
-        case "\u00a5":
-        case "λ": {
-          let ret = new deBrujinLambda(this.parse(cs.join("")));
+        case '\\':
+        case '\u00a5':
+        case 'λ': {
+          const ret = new deBrujinLambda(this.parse(cs.join('')));
           if (left === null) return ret;
           else return new deBrujinApplication(left, ret);
         }
-        case " ":
+        case ' ':
           break;
         default: {
           let ret: deBrujinExpression;
@@ -72,7 +72,7 @@ export abstract class deBrujinExpression {
         }
       }
     }
-    if (left === null) throw new LambdaParseError("No contents in Expression");
+    if (left === null) throw new LambdaParseError('No contents in Expression');
     return left;
   }
   public toLambda(): Expression {
@@ -85,16 +85,16 @@ export abstract class deBrujinExpression {
 export class deBrujinLambda extends deBrujinExpression {
   expr: deBrujinExpression;
   constructor(expr: deBrujinExpression) {
-    super("deBrujinLambda");
+    super('deBrujinLambda');
     this.expr = expr;
   }
   public getString(noParens: boolean): string {
-    return putParens("\\ " + this.expr.getString(true), noParens);
+    return putParens('\\ ' + this.expr.getString(true), noParens);
   }
   public getLambda(vars: Variable[]): Expression {
-    let v = Variable.getNew(vars);
+    const v = Variable.getNew(vars);
     vars.unshift(v);
-    let ret = this.expr.getLambda(vars);
+    const ret = this.expr.getLambda(vars);
     vars.shift();
     return new LambdaAbstraction(v, ret);
   }
@@ -107,14 +107,14 @@ export class deBrujinApplication extends deBrujinExpression {
   left: deBrujinExpression;
   right: deBrujinExpression;
   constructor(left: deBrujinExpression, right: deBrujinExpression) {
-    super("deBrujinApplication");
+    super('deBrujinApplication');
     this.left = left;
     this.right = right;
   }
   public getString(noParens: boolean): string {
     return putParens(
       this.left.getString(this.left instanceof deBrujinApplication) +
-        " " +
+        ' ' +
         this.right.getString(false),
       noParens
     );
@@ -133,17 +133,17 @@ export class deBrujinApplication extends deBrujinExpression {
 export class deBrujinIndex extends deBrujinExpression {
   index: number;
   constructor(index: number) {
-    super("deBrujinIndex");
+    super('deBrujinIndex');
     this.index = index;
   }
-  public getString(noParens: boolean): string {
+  public getString(_noParens: boolean): string {
     return this.index.toString();
   }
   public getLambda(vars: Variable[]): Expression {
     if (this.index < vars.length) return vars[this.index];
     else
       throw new TranslateError(
-        "de Brujin Index must be less than # of ancestor lambdas."
+        'de Brujin Index must be less than # of ancestor lambdas.'
       );
   }
   public getFV(): deBrujinFreeVar[] {
@@ -154,13 +154,13 @@ export class deBrujinIndex extends deBrujinExpression {
 export class deBrujinFreeVar extends deBrujinExpression {
   name: string;
   constructor(name: string) {
-    super("deBrujinFreeVar");
+    super('deBrujinFreeVar');
     this.name = name;
   }
-  public getString(noParens: boolean): string {
+  public getString(_noParens: boolean): string {
     return this.name;
   }
-  public getLambda(vars: Variable[]): Expression {
+  public getLambda(_vars: Variable[]): Expression {
     if (this.name.length === 1) return this.toVariable();
     else return Macro.get(this.name, false);
   }
@@ -168,8 +168,8 @@ export class deBrujinFreeVar extends deBrujinExpression {
     return new Variable(this.name);
   }
   public static toVariables(fvs: deBrujinFreeVar[]): Variable[] {
-    let ret: Variable[] = [];
-    for (let fv of fvs) {
+    const ret: Variable[] = [];
+    for (const fv of fvs) {
       ret.push(fv.toVariable());
     }
     return ret;

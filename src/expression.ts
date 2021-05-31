@@ -6,7 +6,7 @@ import {
   TypeEquation,
   TypeList,
   TypeVariable,
-} from "./type";
+} from './type';
 import {
   LambdaParseError,
   SubstitutionError,
@@ -15,21 +15,26 @@ import {
   TypeError,
   TexError,
   TranslateError,
-} from "./error";
-import { LambdaFriends } from "./lambda-friends";
-import { Redex, MacroRedex, EtaRedex, TypedRedex, BetaRedex } from "./redex";
-import * as Util from "./util";
+} from './error';
+import { LambdaFriends } from './lambda-friends';
+import { Redex, MacroRedex, EtaRedex, TypedRedex, BetaRedex } from './redex';
+import * as Util from './util';
 import {
   deBrujinExpression,
   deBrujinLambda,
   deBrujinIndex,
   deBrujinApplication,
   deBrujinFreeVar,
-} from "./deBrujin";
+} from './deBrujin';
 
 // 型の連立方程式と証明木の組
 class TypeResult {
-  constructor(public eqs: TypeEquation[], public proofTree: string) {}
+  eqs: TypeEquation[];
+  proofTree: string;
+  constructor(eqs: TypeEquation[], proofTree: string) {
+    this.eqs = eqs;
+    this.proofTree = proofTree;
+  }
 }
 
 // ラムダ項（抽象クラス）
@@ -62,12 +67,12 @@ export abstract class Expression {
 
   public parseChurchBool(): boolean {
     const t = new LambdaAbstraction(
-      new Variable("x"),
-      new LambdaAbstraction(new Variable("y"), new Variable("x"))
+      new Variable('x'),
+      new LambdaAbstraction(new Variable('y'), new Variable('x'))
     );
     const f = new LambdaAbstraction(
-      new Variable("x"),
-      new LambdaAbstraction(new Variable("y"), new Variable("y"))
+      new Variable('x'),
+      new LambdaAbstraction(new Variable('y'), new Variable('y'))
     );
     if (this.equalsAlpha(t)) return true;
     else if (this.equalsAlpha(f)) return false;
@@ -90,7 +95,7 @@ export abstract class Expression {
     );
   }
 
-  public getDeBrujin(vars: Variable[]): deBrujinExpression {
+  public getDeBrujin(_vars: Variable[]): deBrujinExpression {
     throw new TypeError(
       "Expression '" +
         this +
@@ -127,73 +132,73 @@ export abstract class Expression {
 }
 
 // 終端記号（未解析）
-export class Symbol extends Expression {
+export class Token extends Expression {
   name: string;
 
   constructor(name: string, className?: string) {
-    if (className === undefined) super("Symbol");
+    if (className === undefined) super('Token');
     else super(className);
     this.name = name;
   }
   equals(expr: Expression): boolean {
     return (
-      expr instanceof Symbol &&
+      expr instanceof Token &&
       expr.className === this.className &&
       expr.name === this.name
     );
   }
   equalsAlpha(expr: Expression): boolean {
     return (
-      expr instanceof Symbol &&
+      expr instanceof Token &&
       expr.className === this.className &&
       expr.name === this.name
     );
   }
-  public toString(noParens: boolean): string {
+  public toString(_noParens: boolean): string {
     return this.name;
   }
-  public toTexString(noParens: boolean): string {
-    throw new TexError("class Symbol does not have tex string");
+  public toTexString(_noParens: boolean): string {
+    throw new TexError('class Token does not have tex string');
   }
   public getFV(): Variable[] {
     return this.freevars;
   }
-  public substitute(x: Variable, expr: Expression): Expression {
-    throw new SubstitutionError("Undefined Substitution");
+  public substitute(_x: Variable, _expr: Expression): Expression {
+    throw new SubstitutionError('Undefined Substitution');
   }
   public getEquations(
-    gamma: Variable[],
-    type: Type,
-    noParens: boolean
+    _gamma: Variable[],
+    _type: Type,
+    _noParens: boolean
   ): TypeResult {
-    throw new TypeError("Undefined Type");
+    throw new TypeError('Undefined Type');
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
-    throw new ReductionError("Symbols must not appear in parsed Expression");
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
+    throw new ReductionError('Symbols must not appear in parsed Expression');
   }
-  public getTypedRedex(noParens: boolean): Redex {
-    throw new ReductionError("Symbols must not appear in parsed Expression");
+  public getTypedRedex(_noParens: boolean): Redex {
+    throw new ReductionError('Symbols must not appear in parsed Expression');
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
-    throw new ReductionError("Symbols must not appear in parsed Expression");
+    throw new ReductionError('Symbols must not appear in parsed Expression');
   }
   public extractMacros(): Expression {
-    throw new ReductionError("Symbols must not appear in parsed Expression");
+    throw new ReductionError('Symbols must not appear in parsed Expression');
   }
 }
 
 // 変数 x
-export class Variable extends Symbol {
+export class Variable extends Token {
   type: Type;
   constructor(name: string) {
-    super(name, "Variable");
+    super(name, 'Variable');
     this.freevars = [this];
   }
 
@@ -205,38 +210,38 @@ export class Variable extends Symbol {
   public getEquations(
     gamma: Variable[],
     type: Type,
-    noParens: boolean
+    _noParens: boolean
   ): TypeResult {
-    for (let g of gamma) {
+    for (const g of gamma) {
       if (g.equals(this)) {
         // (var)
-        let str = "\\AxiomC{}\n";
-        str += "\\RightLabel{\\scriptsize(var)}\n";
+        let str = '\\AxiomC{}\n';
+        str += '\\RightLabel{\\scriptsize(var)}\n';
         str +=
-          "\\UnaryInfC{$" +
+          '\\UnaryInfC{$' +
           Variable.gammaToTexString(gamma) +
-          " \\vdash " +
+          ' \\vdash ' +
           this.name +
-          " : " +
+          ' : ' +
           type.toTexString() +
-          " $}\n";
+          ' $}\n';
         return new TypeResult([new TypeEquation(g.type, type)], str);
       }
     }
-    throw new TypeError("free variable is not allowed: " + this);
+    throw new TypeError('free variable is not allowed: ' + this);
   }
 
-  public toTexString(noParens: boolean): string {
+  public toTexString(_noParens: boolean): string {
     return this.name;
   }
 
   static union(a: Variable[], b: Variable[], c?: Variable[]): Variable[] {
     if (c === undefined) {
-      let ret: Variable[] = [];
-      for (let v of a) {
+      const ret: Variable[] = [];
+      for (const v of a) {
         ret.push(v);
       }
-      for (let v of Variable.dif(b, a)) {
+      for (const v of Variable.dif(b, a)) {
         ret.push(v);
       }
       return ret;
@@ -245,16 +250,16 @@ export class Variable extends Symbol {
     }
   }
 
-  static dif(a: Variable[], b: Variable[]) {
-    let ret: Variable[] = [];
-    for (let ta of a) {
+  static dif(a: Variable[], b: Variable[]): Variable[] {
+    const ret: Variable[] = [];
+    for (const ta of a) {
       if (!Variable.contains(b, ta)) ret.push(ta);
     }
     return ret;
   }
 
-  static contains(a: Variable[], b: Variable) {
-    for (let ta of a) {
+  static contains(a: Variable[], b: Variable): boolean {
+    for (const ta of a) {
       if (ta.equals(b)) {
         return true;
       }
@@ -263,39 +268,38 @@ export class Variable extends Symbol {
   }
 
   static gammaToTexString(gamma: Variable[]): string {
-    if (gamma.length === 0) return "";
-    let ret = gamma[0].name + " : " + gamma[0].type.toTexString();
+    if (gamma.length === 0) return '';
+    let ret = gamma[0].name + ' : ' + gamma[0].type.toTexString();
     for (let i = 1; i < gamma.length; i++) {
-      ret += ",~" + gamma[i].name + " : " + gamma[i].type.toTexString();
+      ret += ',~' + gamma[i].name + ' : ' + gamma[i].type.toTexString();
     }
     return ret;
   }
 
-  static getNew(used: Variable[]) {
-    let alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split(
-      ""
-    );
-    for (let a of alphabet) {
-      let z = new Variable(a);
+  static getNew(used: Variable[]): Variable {
+    const alphabet =
+      'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    for (const a of alphabet) {
+      const z = new Variable(a);
       if (!Variable.contains(used, z)) {
         return z;
       }
     }
-    throw new SubstitutionError("No more Variables available");
+    throw new SubstitutionError('No more Variables available');
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     return [];
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     return null;
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     return null;
   }
@@ -303,7 +307,7 @@ export class Variable extends Symbol {
     return this;
   }
   public toLMNtal(): string {
-    return "fv(" + this.name + ")";
+    return 'fv(' + this.name + ')';
   }
   public toSKI(): Expression {
     return this;
@@ -319,14 +323,14 @@ export class Variable extends Symbol {
 }
 
 // 定数 c
-export abstract class Const extends Symbol {
+export abstract class Const extends Token {
   abstract value;
   abstract type: Type;
   constructor(name: string, className: string) {
     super(name, className);
     this.freevars = [];
   }
-  public substitute(x: Variable, expr: Expression): Expression {
+  public substitute(_x: Variable, _expr: Expression): Expression {
     return this;
   }
   public getEquations(
@@ -335,42 +339,42 @@ export abstract class Const extends Symbol {
     noParens: boolean
   ): TypeResult {
     // (con)
-    let str = "\\AxiomC{}\n";
-    str += "\\RightLabel{\\scriptsize(con)}\n";
+    let str = '\\AxiomC{}\n';
+    str += '\\RightLabel{\\scriptsize(con)}\n';
     str +=
-      "\\UnaryInfC{$" +
+      '\\UnaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult([new TypeEquation(this.type, type)], str);
   }
-  public toString(noParens: boolean): string {
-    return "[" + this.name + "]";
+  public toString(_noParens: boolean): string {
+    return '[' + this.name + ']';
   }
-  public toTexString(noParens: boolean): string {
-    return this.name + "^{" + this.type.toTexString() + "}";
+  public toTexString(_noParens: boolean): string {
+    return this.name + '^{' + this.type.toTexString() + '}';
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     return null;
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public extractMacros(): Expression {
@@ -383,7 +387,7 @@ export class ConstInt extends Const {
   value: number;
   type: TypeInt;
   constructor(value: number) {
-    super(value.toString(), "ConstInt");
+    super(value.toString(), 'ConstInt');
     this.value = value;
     this.type = new TypeInt();
   }
@@ -394,7 +398,7 @@ export class ConstBool extends Const {
   value: boolean;
   type: TypeBool;
   constructor(value: boolean) {
-    super(value.toString(), "ConstBool");
+    super(value.toString(), 'ConstBool');
     this.value = value;
     this.type = new TypeBool();
   }
@@ -402,12 +406,12 @@ export class ConstBool extends Const {
 
 // 関数型定数 c^{op} （前置記法・2項演算）
 export class ConstOp extends Const {
-  value: Function;
+  value: (x: Const, y: Const) => Const;
   type: TypeFunc;
   constructor(funcName: string) {
-    super(funcName, "ConstOp");
+    super(funcName, 'ConstOp');
     switch (funcName) {
-      case "+":
+      case '+':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstInt(x.value + y.value);
         this.type = new TypeFunc(
@@ -415,7 +419,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeInt())
         );
         break;
-      case "-":
+      case '-':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstInt(x.value - y.value);
         this.type = new TypeFunc(
@@ -423,7 +427,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeInt())
         );
         break;
-      case "*":
+      case '*':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstInt(x.value * y.value);
         this.type = new TypeFunc(
@@ -431,7 +435,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeInt())
         );
         break;
-      case "/":
+      case '/':
         this.value = (x: ConstInt, y: ConstInt) => {
           if (y.value === 0)
             throw new ReductionError("Dividing by '0' is not allowed");
@@ -442,7 +446,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeInt())
         );
         break;
-      case "%":
+      case '%':
         this.value = (x: ConstInt, y: ConstInt) => {
           if (y.value === 0)
             throw new ReductionError("Dividing by '0' is not allowed");
@@ -453,7 +457,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeInt())
         );
         break;
-      case "<":
+      case '<':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value < y.value);
         this.type = new TypeFunc(
@@ -461,7 +465,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case ">":
+      case '>':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value > y.value);
         this.type = new TypeFunc(
@@ -469,7 +473,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case "<=":
+      case '<=':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value <= y.value);
         this.type = new TypeFunc(
@@ -477,7 +481,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case ">=":
+      case '>=':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value >= y.value);
         this.type = new TypeFunc(
@@ -485,7 +489,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case "==":
+      case '==':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value == y.value);
         this.type = new TypeFunc(
@@ -493,7 +497,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case "=":
+      case '=':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value == y.value);
         this.type = new TypeFunc(
@@ -501,7 +505,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case "!=":
+      case '!=':
         this.value = (x: ConstInt, y: ConstInt) =>
           new ConstBool(x.value != y.value);
         this.type = new TypeFunc(
@@ -509,7 +513,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeInt(), new TypeBool())
         );
         break;
-      case "eq":
+      case 'eq':
         this.value = (x: ConstBool, y: ConstBool) =>
           new ConstBool(x.value == y.value);
         this.type = new TypeFunc(
@@ -517,7 +521,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeBool(), new TypeBool())
         );
         break;
-      case "xor":
+      case 'xor':
         this.value = (x: ConstBool, y: ConstBool) =>
           new ConstBool(x.value != y.value);
         this.type = new TypeFunc(
@@ -525,7 +529,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeBool(), new TypeBool())
         );
         break;
-      case "or":
+      case 'or':
         this.value = (x: ConstBool, y: ConstBool) =>
           new ConstBool(x.value || y.value);
         this.type = new TypeFunc(
@@ -533,7 +537,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeBool(), new TypeBool())
         );
         break;
-      case "and":
+      case 'and':
         this.value = (x: ConstBool, y: ConstBool) =>
           new ConstBool(x.value && y.value);
         this.type = new TypeFunc(
@@ -541,7 +545,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeBool(), new TypeBool())
         );
         break;
-      case "nor":
+      case 'nor':
         this.value = (x: ConstBool, y: ConstBool) =>
           new ConstBool(!(x.value || y.value));
         this.type = new TypeFunc(
@@ -549,7 +553,7 @@ export class ConstOp extends Const {
           new TypeFunc(new TypeBool(), new TypeBool())
         );
         break;
-      case "nand":
+      case 'nand':
         this.value = (x: ConstBool, y: ConstBool) =>
           new ConstBool(!(x.value && y.value));
         this.type = new TypeFunc(
@@ -558,61 +562,61 @@ export class ConstOp extends Const {
         );
         break;
       default:
-        throw new LambdaParseError("Undefined function: " + funcName);
+        throw new LambdaParseError('Undefined function: ' + funcName);
     }
   }
 }
 
 // 空リスト nil
-export class Nil extends Symbol {
-  public substitute(x: Variable, expr: Expression): Expression {
+export class Nil extends Token {
+  public substitute(_x: Variable, _expr: Expression): Expression {
     return this;
   }
   constructor() {
-    super("nil", "Nil");
+    super('nil', 'Nil');
     this.freevars = [];
   }
   public getEquations(
     gamma: Variable[],
     type: Type,
-    noParens: boolean
+    _noParens: boolean
   ): TypeResult {
     // (nil)
-    let t = TypeVariable.getNew();
-    let nType = new TypeList(t);
-    let str = "\\AxiomC{}\n";
-    str += "\\RightLabel{\\scriptsize(nil)}\n";
+    const t = TypeVariable.getNew();
+    const nType = new TypeList(t);
+    let str = '\\AxiomC{}\n';
+    str += '\\RightLabel{\\scriptsize(nil)}\n';
     str +=
-      "\\UnaryInfC{$" +
+      '\\UnaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.name +
-      " : " +
+      ' : ' +
       nType.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult([new TypeEquation(type, nType)], str);
   }
-  public toString(noParens: boolean): string {
-    return "[" + this.name + "]";
+  public toString(_noParens: boolean): string {
+    return '[' + this.name + ']';
   }
-  public toTexString(noParens: boolean): string {
-    return "{\\rm " + this.name + "}";
+  public toTexString(_noParens: boolean): string {
+    return '{\\rm ' + this.name + '}';
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public extractMacros(): Expression {
@@ -621,7 +625,7 @@ export class Nil extends Symbol {
 }
 
 // マクロ定義
-export class Macro extends Symbol {
+export class Macro extends Token {
   expr: Expression;
   typed: boolean;
   type: Type;
@@ -633,45 +637,45 @@ export class Macro extends Symbol {
     typed: boolean,
     type: Type
   ) {
-    super(name, "Macro");
+    super(name, 'Macro');
     this.freevars = [];
     this.expr = expr;
     this.typed = typed;
     this.type = type;
   }
   public static add(name: string, lf: LambdaFriends, typed: boolean): Macro {
-    let expr = lf.expr;
+    const expr = lf.expr;
     if (!/^[a-zA-Z0-9!?]+$/.test(name)) {
       throw new MacroError(
-        "<" +
+        '<' +
           name +
-          "> cannot be used as a name of macro. Available characters: [a-zA-Z0-9!?]"
+          '> cannot be used as a name of macro. Available characters: [a-zA-Z0-9!?]'
       );
     }
     if (name.match(/^\d+$/) !== null) {
       throw new MacroError(
-        "<" + name + "> is already defined as a built-in macro."
+        '<' + name + '> is already defined as a built-in macro.'
       );
     }
-    const builtins = ["true", "false", "S", "K", "I"];
-    for (let b of builtins) {
+    const builtins = ['true', 'false', 'S', 'K', 'I'];
+    for (const b of builtins) {
       if (b === name) {
         throw new MacroError(
-          "<" + name + "> is already defined as a built-in macro."
+          '<' + name + '> is already defined as a built-in macro.'
         );
       }
     }
-    let map = typed ? Macro.map : Macro.mapUntyped;
+    const map = typed ? Macro.map : Macro.mapUntyped;
     if (expr.getFV().length !== 0) {
       throw new MacroError(
-        "<" + name + "> contains free variables: " + expr.getFV()
+        '<' + name + '> contains free variables: ' + expr.getFV()
       );
     }
-    let m = new Macro(name, expr, typed, lf.type);
+    const m = new Macro(name, expr, typed, lf.type);
     map[name] = m;
     return map[name];
   }
-  public static clear(typed: boolean) {
+  public static clear(typed: boolean): void {
     if (typed) {
       Macro.map = {};
     } else {
@@ -687,15 +691,15 @@ export class Macro extends Symbol {
     }
     if (ret === undefined) {
       // 組み込みマクロ。typeがundefでいいかは疑問の余地あり
-      let f = (term) =>
+      const f = (term) =>
         new Macro(name, Util.makeAST(term, typed), typed, undefined);
       if (name.match(/^\d+$/) !== null)
         return f(Util.makeChurchNum(parseInt(name)));
-      if (name === "true") return f("\\xy.x");
-      if (name === "false") return f("\\xy.y");
-      if (name === "S") return f("\\fgx.fx(gx)");
-      if (name === "K") return f("\\xy.x");
-      if (name === "I") return f("\\x.x");
+      if (name === 'true') return f('\\xy.x');
+      if (name === 'false') return f('\\xy.y');
+      if (name === 'S') return f('\\fgx.fx(gx)');
+      if (name === 'K') return f('\\xy.x');
+      if (name === 'I') return f('\\x.x');
 
       // 発展の余地あり。typeを指定したundefマクロを許す？
       return new Macro(name, undefined, typed, undefined);
@@ -706,12 +710,12 @@ export class Macro extends Symbol {
   public static getMap(typed: boolean): { [key: string]: Macro } {
     return Object.assign({}, typed ? Macro.map : Macro.mapUntyped);
   }
-  public substitute(x: Variable, expr: Expression): Expression {
+  public substitute(_x: Variable, _expr: Expression): Expression {
     return this;
   }
 
-  public toString(noParens: boolean): string {
-    return "<" + this.name + ">";
+  public toString(_noParens: boolean): string {
+    return '<' + this.name + '>';
   }
   public equalsAlpha(expr: Expression): boolean {
     // 再検討の余地あり
@@ -724,48 +728,48 @@ export class Macro extends Symbol {
     noParens: boolean
   ): TypeResult {
     // ????
-    if (this.expr === undefined) throw new TypeError(this + " is undefined.");
+    if (this.expr === undefined) throw new TypeError(this + ' is undefined.');
     else return this.expr.getEquations(gamma, type, noParens);
   }
-  public toTexString(noParens: boolean): string {
-    return "\\,\\overline{\\bf " + this.name + "}\\,";
+  public toTexString(_noParens: boolean): string {
+    return '\\,\\overline{\\bf ' + this.name + '}\\,';
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     // let next = Macro.get(this.name,false);
     // if (next.expr === undefined) return [];
     // else return [new MacroRedex(next)];
     if (this.expr === undefined) return [];
     else return [new MacroRedex(this)];
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     if (this.expr === undefined) return null;
     else return new MacroRedex(this);
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     if (this.expr === undefined) return null;
     else return new MacroRedex(this);
   }
-  public extractMacros() {
+  public extractMacros(): Expression {
     if (this.expr === undefined) return this;
     else return this.expr.extractMacros();
   }
   public toLMNtal(): string {
-    if (this.expr === undefined) return "fv(" + this.name + ")";
+    if (this.expr === undefined) return 'fv(' + this.name + ')';
     else return this.expr.toLMNtal();
   }
   public toSKI(): Expression {
     if (this.expr === undefined) return this;
     switch (this.name) {
-      case "S":
-      case "K":
-      case "I":
+      case 'S':
+      case 'K':
+      case 'I':
         return this;
       default:
         return this.expr.toSKI();
@@ -783,19 +787,19 @@ export class LambdaAbstraction extends Expression {
   expr: Expression;
 
   constructor(boundvar: Variable, expr: Expression) {
-    super("LambdaAbstraction");
+    super('LambdaAbstraction');
     this.freevars = undefined;
     this.boundvar = boundvar;
     this.expr = expr;
   }
-  static parse(tokens: Symbol[], typed: boolean): LambdaAbstraction {
-    let boundvars: Variable[] = [];
+  static parse(tokens: Token[], typed: boolean): LambdaAbstraction {
+    const boundvars: Variable[] = [];
     while (tokens.length > 0) {
-      let t: Symbol = tokens.shift();
-      if (t.name === ".") {
+      const t: Token = tokens.shift();
+      if (t.name === '.') {
         if (boundvars.length === 0)
-          throw new LambdaParseError("Bound variables are expected.");
-        let expr = Util.parseSymbols(tokens, typed);
+          throw new LambdaParseError('Bound variables are expected.');
+        let expr = Util.parseTokens(tokens, typed);
         while (boundvars.length > 0) {
           expr = new LambdaAbstraction(boundvars.pop(), expr);
         }
@@ -809,14 +813,14 @@ export class LambdaAbstraction extends Expression {
     throw new LambdaParseError("'.' is needed");
   }
   public toString(noParens: boolean): string {
-    let boundvars = [this.boundvar];
+    const boundvars = [this.boundvar];
     let expr = this.expr;
     while (expr instanceof LambdaAbstraction) {
       boundvars.push(expr.boundvar);
       expr = expr.expr;
     }
-    let str = "\\" + boundvars.join("") + "." + expr.toString(true);
-    if (!noParens) str = "(" + str + ")";
+    let str = '\\' + boundvars.join('') + '.' + expr.toString(true);
+    if (!noParens) str = '(' + str + ')';
     return str;
   }
   public getFV(): Variable[] {
@@ -833,8 +837,8 @@ export class LambdaAbstraction extends Expression {
         this.expr.substitute(y, expr)
       );
     } else {
-      let uniFV = Variable.union(this.expr.getFV(), expr.getFV());
-      let z = Variable.getNew(uniFV);
+      const uniFV = Variable.union(this.expr.getFV(), expr.getFV());
+      const z = Variable.getNew(uniFV);
       return new LambdaAbstraction(
         z,
         this.expr.substitute(this.boundvar, z)
@@ -851,11 +855,11 @@ export class LambdaAbstraction extends Expression {
   public equalsAlpha(expr: Expression): boolean {
     if (!(expr instanceof LambdaAbstraction)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundvar;
-    let m = this.expr;
-    let y = expr.boundvar;
-    let n = expr.expr;
-    let v = Variable.getNew(Variable.union(m.getFV(), n.getFV()));
+    const x = this.boundvar;
+    const m = this.expr;
+    const y = expr.boundvar;
+    const n = expr.expr;
+    const v = Variable.getNew(Variable.union(m.getFV(), n.getFV()));
     return m.substitute(x, v).equalsAlpha(n.substitute(y, v));
     // if (Variable.contains(m.getFV(),y)){
     //   return n.equalsAlpha(m);
@@ -869,34 +873,34 @@ export class LambdaAbstraction extends Expression {
     noParens: boolean
   ): TypeResult {
     // (abs)
-    let t0 = TypeVariable.getNew();
-    let t1 = TypeVariable.getNew();
+    const t0 = TypeVariable.getNew();
+    const t1 = TypeVariable.getNew();
     this.boundvar.type = t1;
-    let next = this.expr.getEquations(gamma.concat(this.boundvar), t0, true);
+    const next = this.expr.getEquations(gamma.concat(this.boundvar), t0, true);
     let str = next.proofTree;
-    str += "\\RightLabel{\\scriptsize(abs)}\n";
+    str += '\\RightLabel{\\scriptsize(abs)}\n';
     str +=
-      "\\UnaryInfC{$" +
+      '\\UnaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(
       next.eqs.concat(new TypeEquation(type, new TypeFunc(t1, t0))),
       str
     );
   }
   public toTexString(noParens: boolean): string {
-    let boundvars = [this.boundvar.toTexString(false)];
+    const boundvars = [this.boundvar.toTexString(false)];
     let expr = this.expr;
     while (expr instanceof LambdaAbstraction) {
       boundvars.push(expr.boundvar.toTexString(false));
       expr = expr.expr;
     }
-    let str = "\\lambda " + boundvars.join("") + "." + expr.toTexString(true);
-    if (!noParens) str = "(" + str + ")";
+    let str = '\\lambda ' + boundvars.join('') + '.' + expr.toTexString(true);
+    if (!noParens) str = '(' + str + ')';
     return str;
   }
   public isEtaRedex(): boolean {
@@ -907,20 +911,21 @@ export class LambdaAbstraction extends Expression {
     );
   }
   public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
-    let lParen = "",
-      rParen = "";
+    let lParen = '',
+      rParen = '';
     if (!noParens) {
-      lParen = "(";
-      rParen = ")";
+      lParen = '(';
+      rParen = ')';
     }
-    let boundvars = [];
+    const boundvars = [];
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let la: LambdaAbstraction = this;
     while (la.expr instanceof LambdaAbstraction) {
       boundvars.push(la.boundvar);
       la = la.expr;
     }
     if (etaAllowed === undefined) {
-      console.error("etaAllowed is undefined.");
+      console.error('etaAllowed is undefined.');
       etaAllowed = false;
     }
     let eta: EtaRedex = null;
@@ -928,40 +933,40 @@ export class LambdaAbstraction extends Expression {
       eta = new EtaRedex(la);
 
       eta.next = ((prev) => {
-        let bvs: Variable[] = [].concat(boundvars);
+        const bvs: Variable[] = [].concat(boundvars);
         let ret = prev;
         while (bvs.length > 0) {
-          let t = bvs.pop();
+          const t = bvs.pop();
           ret = new LambdaAbstraction(t, ret);
         }
         return ret;
       })(eta.next);
       eta.addLeft(
-        lParen + (boundvars.length > 0 ? "\\" + boundvars.join("") + "." : "")
+        lParen + (boundvars.length > 0 ? '\\' + boundvars.join('') + '.' : '')
       );
       eta.addRight(rParen);
       eta.addTexLeft(
         lParen +
-          (boundvars.length > 0 ? "\\lambda{" + boundvars.join("") + "}." : "")
+          (boundvars.length > 0 ? '\\lambda{' + boundvars.join('') + '}.' : '')
       );
       eta.addTexRight(rParen);
     }
 
-    let expr = la.expr;
+    const expr = la.expr;
     boundvars.push(la.boundvar);
 
-    let ret = Redex.makeNext(
+    const ret = Redex.makeNext(
       expr.getRedexes(etaAllowed, true),
-      lParen + (boundvars.length > 0 ? "\\" + boundvars.join("") + "." : ""),
+      lParen + (boundvars.length > 0 ? '\\' + boundvars.join('') + '.' : ''),
       rParen,
       lParen +
-        (boundvars.length > 0 ? "\\lambda{" + boundvars.join("") + "}." : ""),
+        (boundvars.length > 0 ? '\\lambda{' + boundvars.join('') + '}.' : ''),
       rParen,
       (prev) => {
-        let bvs: Variable[] = [].concat(boundvars);
+        const bvs: Variable[] = [].concat(boundvars);
         let ret = prev;
         while (bvs.length > 0) {
-          let t = bvs.pop();
+          const t = bvs.pop();
           ret = new LambdaAbstraction(t, ret);
         }
         return ret;
@@ -970,7 +975,7 @@ export class LambdaAbstraction extends Expression {
     if (eta !== null) ret.push(eta);
     return ret;
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     return null;
   }
   public getUnTypedRedex(
@@ -982,7 +987,7 @@ export class LambdaAbstraction extends Expression {
     noParens: boolean
   ): Redex {
     if (etaAllowed === undefined) {
-      console.error("etaAllowed is undefined.");
+      console.error('etaAllowed is undefined.');
       etaAllowed = false;
     }
     // this is eta-redex
@@ -994,17 +999,18 @@ export class LambdaAbstraction extends Expression {
       }
     }
 
-    let boundvars = [];
+    const boundvars = [];
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let la: LambdaAbstraction = this;
     while (la.expr instanceof LambdaAbstraction) {
       boundvars.push(la.boundvar);
       la = la.expr;
     }
-    let lParen = "",
-      rParen = "";
+    let lParen = '',
+      rParen = '';
     if (!noParens) {
-      lParen = "(";
-      rParen = ")";
+      lParen = '(';
+      rParen = ')';
     }
     // la is eta-redex
     let outerRedex: Redex = null;
@@ -1014,7 +1020,7 @@ export class LambdaAbstraction extends Expression {
     // console.log(`outer:${outerRedex}`);
     let innerRedex: Redex = null;
     if (!outerRedex || innermost) {
-      let expr = la.expr;
+      const expr = la.expr;
 
       // inner-redex
       innerRedex = expr.getUnTypedRedex(
@@ -1039,21 +1045,21 @@ export class LambdaAbstraction extends Expression {
     if (ret === null) return null;
 
     ret.next = ((prev) => {
-      let bvs: Variable[] = [].concat(boundvars);
+      const bvs: Variable[] = [].concat(boundvars);
       let ret = prev;
       while (bvs.length > 0) {
-        let t = bvs.pop();
+        const t = bvs.pop();
         ret = new LambdaAbstraction(t, ret);
       }
       return ret;
     })(ret.next);
     ret.addLeft(
-      lParen + (boundvars.length > 0 ? "\\" + boundvars.join("") + "." : "")
+      lParen + (boundvars.length > 0 ? '\\' + boundvars.join('') + '.' : '')
     );
     ret.addRight(rParen);
     ret.addTexLeft(
       lParen +
-        (boundvars.length > 0 ? "\\lambda{" + boundvars.join("") + "}." : "")
+        (boundvars.length > 0 ? '\\lambda{' + boundvars.join('') + '}.' : '')
     );
     ret.addTexRight(rParen);
 
@@ -1063,11 +1069,11 @@ export class LambdaAbstraction extends Expression {
     return new LambdaAbstraction(this.boundvar, this.expr.extractMacros());
   }
   public toLMNtal(): string {
-    let ret = this.expr.toLMNtal().split("fv(" + this.boundvar.name + ")");
+    const ret = this.expr.toLMNtal().split('fv(' + this.boundvar.name + ')');
     let str = ret[0];
-    let links: string[] = [];
+    const links: string[] = [];
     for (let i = 1; i < ret.length; i++) {
-      let r = LambdaFriends.getNewLink();
+      const r = LambdaFriends.getNewLink();
       links.push(r);
       str += r + ret[i];
     }
@@ -1075,43 +1081,43 @@ export class LambdaAbstraction extends Expression {
     function connect(links: string[]): string {
       switch (links.length) {
         case 0:
-          return "rm";
+          return 'rm';
         case 1:
           return links[0];
         case 2:
-          return "cp(" + links[0] + "," + links[1] + ")";
+          return 'cp(' + links[0] + ',' + links[1] + ')';
         default: {
-          let r = links.shift();
-          return "cp(" + r + "," + connect(links) + ")";
+          const r = links.shift();
+          return 'cp(' + r + ',' + connect(links) + ')';
         }
       }
     }
-    return "lambda(" + connect(links) + "," + str + ")";
+    return 'lambda(' + connect(links) + ',' + str + ')';
   }
   public toSKI(): Expression {
     if (!Variable.contains(this.expr.getFV(), this.boundvar)) {
-      return new Application(Macro.get("K", false), this.expr.toSKI());
+      return new Application(Macro.get('K', false), this.expr.toSKI());
     }
     if (this.boundvar.equals(this.expr)) {
-      return Macro.get("I", false);
+      return Macro.get('I', false);
     }
     if (this.expr instanceof Application) {
-      let f = (e: Expression) =>
+      const f = (e: Expression) =>
         new LambdaAbstraction(this.boundvar, e).toSKI();
       return new Application(
-        new Application(Macro.get("S", false), f(this.expr.left)),
+        new Application(Macro.get('S', false), f(this.expr.left)),
         f(this.expr.right)
       );
     }
     if (this.expr instanceof LambdaAbstraction) {
-      let inner = this.expr.toSKI();
+      const inner = this.expr.toSKI();
       return new LambdaAbstraction(this.boundvar, inner).toSKI();
     }
-    throw new TranslateError("Unknown kind of expression.");
+    throw new TranslateError('Unknown kind of expression.');
   }
   public getDeBrujin(vars: Variable[]): deBrujinExpression {
     vars.unshift(this.boundvar);
-    let ret = this.expr.getDeBrujin(vars);
+    const ret = this.expr.getDeBrujin(vars);
     vars.shift();
     return new deBrujinLambda(ret);
   }
@@ -1123,7 +1129,7 @@ export class Application extends Expression {
   right: Expression;
 
   constructor(left: Expression, right: Expression) {
-    super("Application");
+    super('Application');
     this.left = left;
     this.right = right;
   }
@@ -1136,7 +1142,7 @@ export class Application extends Expression {
     let str =
       this.left.toString(this.left instanceof Application) +
       this.right.toString(false);
-    if (!noParens) str = "(" + str + ")";
+    if (!noParens) str = '(' + str + ')';
     return str;
   }
 
@@ -1176,46 +1182,46 @@ export class Application extends Expression {
     noParens: boolean
   ): TypeResult {
     // (app)
-    let t1 = TypeVariable.getNew();
-    let nextL = this.left.getEquations(gamma, new TypeFunc(t1, type), false);
-    let nextR = this.right.getEquations(gamma, t1, false);
+    const t1 = TypeVariable.getNew();
+    const nextL = this.left.getEquations(gamma, new TypeFunc(t1, type), false);
+    const nextR = this.right.getEquations(gamma, t1, false);
     let str = nextL.proofTree + nextR.proofTree;
-    str += "\\RightLabel{\\scriptsize(app)}\n";
+    str += '\\RightLabel{\\scriptsize(app)}\n';
     str +=
-      "\\BinaryInfC{$" +
+      '\\BinaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
   }
   public toTexString(noParens: boolean): string {
     let str =
       this.left.toTexString(this.left instanceof Application) +
       this.right.toTexString(false);
-    if (!noParens) str = "(" + str + ")";
+    if (!noParens) str = '(' + str + ')';
     return str;
   }
   public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
-    let b = this.left instanceof Application;
-    let leftRedexes = this.left.getRedexes(etaAllowed, b);
-    let left = Redex.makeNext(
+    const b = this.left instanceof Application;
+    const leftRedexes = this.left.getRedexes(etaAllowed, b);
+    const left = Redex.makeNext(
       leftRedexes,
-      "",
+      '',
       this.right.toString(false),
-      "",
+      '',
       this.right.toTexString(false),
       (prev) => new Application(prev, this.right)
     );
-    let rightRedexes = this.right.getRedexes(etaAllowed, false);
-    let right = Redex.makeNext(
+    const rightRedexes = this.right.getRedexes(etaAllowed, false);
+    const right = Redex.makeNext(
       rightRedexes,
       this.left.toString(b),
-      "",
+      '',
       this.left.toTexString(b),
-      "",
+      '',
       (prev) => new Application(this.left, prev)
     );
     let ret = left.concat(right);
@@ -1223,29 +1229,29 @@ export class Application extends Expression {
       ret.push(new BetaRedex(this));
     }
     if (!noParens) {
-      ret = Redex.makeNext(ret, "(", ")", "(", ")", (prev) => prev);
+      ret = Redex.makeNext(ret, '(', ')', '(', ')', (prev) => prev);
     }
     return ret;
   }
   public getTypedRedex(noParens: boolean): Redex {
     // typed
-    let lParen = noParens ? "" : "(";
-    let rParen = noParens ? "" : ")";
+    const lParen = noParens ? '' : '(';
+    const rParen = noParens ? '' : ')';
     if (this.left instanceof LambdaAbstraction) {
       // (app2)
       return new TypedRedex(
         this,
         this.left.expr.substitute(this.left.boundvar, this.right),
-        "app2"
+        'app2'
       );
     } else if (
       this.left instanceof Application &&
       this.left.left instanceof ConstOp &&
       this.left.right instanceof Const
     ) {
-      let op = this.left.left;
-      let left = this.left.right;
-      let right = this.right;
+      const op = this.left.left;
+      const left = this.left.right;
+      const right = this.right;
       if (right instanceof Const) {
         // (app5)
         if (
@@ -1253,20 +1259,20 @@ export class Application extends Expression {
           op.type.right instanceof TypeFunc &&
           op.type.right.left.equals(right.type)
         ) {
-          return new TypedRedex(this, op.value(left, right), "app5");
+          return new TypedRedex(this, op.value(left, right), 'app5');
         } else {
           throw new ReductionError(
             op.type +
-              " cannot handle " +
+              ' cannot handle ' +
               left.type +
-              " and " +
+              ' and ' +
               right.type +
-              " as arguments"
+              ' as arguments'
           );
         }
       } else {
         // (app4)
-        let ret = right.getTypedRedex(false);
+        const ret = right.getTypedRedex(false);
         if (ret === null) return null;
         ret.next = new Application(new Application(op, left), ret.next);
         ret.addLeft(lParen + op.toString(false) + left.toString(false));
@@ -1279,7 +1285,7 @@ export class Application extends Expression {
       }
     } else if (this.left instanceof ConstOp) {
       // (app3)
-      let ret = this.right.getTypedRedex(false);
+      const ret = this.right.getTypedRedex(false);
       if (ret === null) return null;
       ret.next = new Application(this.left, ret.next);
       ret.addLeft(lParen + this.left.toString(false));
@@ -1289,7 +1295,7 @@ export class Application extends Expression {
       return ret;
     } else {
       // (app1)
-      let ret = this.left.getTypedRedex(false);
+      const ret = this.left.getTypedRedex(false);
       if (ret === null) return null;
       ret.next = new Application(ret.next, this.right);
       ret.addLeft(lParen);
@@ -1310,15 +1316,15 @@ export class Application extends Expression {
     const b = this.left instanceof Application;
     const p = (r: Redex) => {
       if (r !== null && !noParens) {
-        r.addLeft("(");
-        r.addRight(")");
-        r.addTexLeft("(");
-        r.addTexRight(")");
+        r.addLeft('(');
+        r.addRight(')');
+        r.addTexLeft('(');
+        r.addTexRight(')');
       }
       return r;
     };
     const searchL = () => {
-      let ret = this.left.getUnTypedRedex(
+      const ret = this.left.getUnTypedRedex(
         etaAllowed,
         rightmost,
         innermost,
@@ -1333,7 +1339,7 @@ export class Application extends Expression {
       return p(ret);
     };
     const searchR = () => {
-      let ret = this.right.getUnTypedRedex(
+      const ret = this.right.getUnTypedRedex(
         etaAllowed,
         rightmost,
         innermost,
@@ -1368,7 +1374,7 @@ export class Application extends Expression {
     );
   }
   public toLMNtal(): string {
-    return "apply(" + this.left.toLMNtal() + "," + this.right.toLMNtal() + ")";
+    return 'apply(' + this.left.toLMNtal() + ',' + this.right.toLMNtal() + ')';
   }
   public toSKI(): Expression {
     return new Application(this.left.toSKI(), this.right.toSKI());
@@ -1387,14 +1393,14 @@ export class List extends Expression {
   tail: Expression;
 
   constructor(head: Expression, tail: Expression) {
-    super("List");
+    super('List');
     this.head = head;
     this.tail = tail;
   }
 
   public toString(noParens: boolean): string {
-    let ret = this.head.toString(false) + "::" + this.tail.toString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    let ret = this.head.toString(false) + '::' + this.tail.toString(true);
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
 
@@ -1434,49 +1440,49 @@ export class List extends Expression {
     noParens: boolean
   ): TypeResult {
     // (list) 再検討の余地あり？ 新しい型変数要る？
-    let t = TypeVariable.getNew();
-    let lt = new TypeList(t);
-    let nextH = this.head.getEquations(gamma, t, false);
-    let nextT = this.tail.getEquations(gamma, lt, false);
+    const t = TypeVariable.getNew();
+    const lt = new TypeList(t);
+    const nextH = this.head.getEquations(gamma, t, false);
+    const nextT = this.tail.getEquations(gamma, lt, false);
     let str = nextH.proofTree + nextT.proofTree;
-    str += "\\RightLabel{\\scriptsize(list)}\n";
+    str += '\\RightLabel{\\scriptsize(list)}\n';
     str +=
-      "\\BinaryInfC{$" +
+      '\\BinaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       lt.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(
       nextH.eqs.concat(nextT.eqs, new TypeEquation(lt, type)),
       str
     );
   }
   public toTexString(noParens: boolean): string {
-    let ret = this.head.toTexString(false) + "::" + this.tail.toTexString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    let ret = this.head.toTexString(false) + '::' + this.tail.toTexString(true);
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
 
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     return null;
   }
   public extractMacros(): Expression {
@@ -1490,7 +1496,7 @@ export class If extends Expression {
   ifTrue: Expression;
   ifFalse: Expression;
   constructor(state: Expression, ifTrue: Expression, ifFalse: Expression) {
-    super("If");
+    super('If');
     this.state = state;
     this.ifTrue = ifTrue;
     this.ifFalse = ifFalse;
@@ -1504,13 +1510,13 @@ export class If extends Expression {
   }
   public toString(noParens: boolean): string {
     let ret =
-      "[if]" +
+      '[if]' +
       this.state.toString(true) +
-      "[then]" +
+      '[then]' +
       this.ifTrue.toString(true) +
-      "[else]" +
+      '[else]' +
       this.ifFalse.toString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
   public substitute(y: Variable, expr: Expression): Expression {
@@ -1542,128 +1548,128 @@ export class If extends Expression {
     noParens: boolean
   ): TypeResult {
     // (if)
-    let nextS = this.state.getEquations(gamma, new TypeBool(), true);
-    let nextT = this.ifTrue.getEquations(gamma, type, true);
-    let nextF = this.ifFalse.getEquations(gamma, type, true);
+    const nextS = this.state.getEquations(gamma, new TypeBool(), true);
+    const nextT = this.ifTrue.getEquations(gamma, type, true);
+    const nextF = this.ifFalse.getEquations(gamma, type, true);
     let str = nextS.proofTree + nextT.proofTree + nextF.proofTree;
-    str += "\\RightLabel{\\scriptsize(if)}\n";
+    str += '\\RightLabel{\\scriptsize(if)}\n';
     str +=
-      "\\TrinaryInfC{$" +
+      '\\TrinaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(nextS.eqs.concat(nextT.eqs, nextF.eqs), str);
   }
   public toTexString(noParens: boolean): string {
     let ret =
-      "{\\bf if}~" +
+      '{\\bf if}~' +
       this.state.toTexString(true) +
-      "~{\\bf then}~" +
+      '~{\\bf then}~' +
       this.ifTrue.toTexString(true) +
-      "~{\\bf else}~" +
+      '~{\\bf else}~' +
       this.ifFalse.toTexString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     if (this.state instanceof ConstBool) {
       if (this.state.value) {
         // (if2)
-        return new TypedRedex(this, this.ifTrue, "if2");
+        return new TypedRedex(this, this.ifTrue, 'if2');
       } else {
         // (if3)
-        return new TypedRedex(this, this.ifFalse, "if3");
+        return new TypedRedex(this, this.ifFalse, 'if3');
       }
     } else {
       // (if1)
-      let ret = this.state.getTypedRedex(false);
+      const ret = this.state.getTypedRedex(false);
       if (ret === null) return null;
       ret.next = new If(ret.next, this.ifTrue, this.ifFalse);
-      ret.addLeft("([if]");
+      ret.addLeft('([if]');
       ret.addRight(
-        "[then]" +
+        '[then]' +
           this.ifTrue.toString(true) +
-          "[else]" +
+          '[else]' +
           this.ifFalse.toString(true) +
-          ")"
+          ')'
       );
-      ret.addTexLeft("({\\bf if}~");
+      ret.addTexLeft('({\\bf if}~');
       ret.addTexRight(
-        "~{\\bf then}~" +
+        '~{\\bf then}~' +
           this.ifTrue.toTexString(true) +
-          "~{\\bf else}~" +
+          '~{\\bf else}~' +
           this.ifFalse.toTexString(true) +
-          ")"
+          ')'
       );
       return ret;
     }
   }
-  public static parse(tokens: Symbol[], typed: boolean): If {
-    let state: Symbol[] = [];
+  public static parse(tokens: Token[], typed: boolean): If {
+    const state: Token[] = [];
     let i_num = 0,
       t_num = 0,
       e_num = 0;
-    while (true) {
+    for (;;) {
       if (tokens.length == 0)
-        throw new LambdaParseError("Illegal If statement");
-      let t = tokens.shift();
+        throw new LambdaParseError('Illegal If statement');
+      const t = tokens.shift();
       switch (t.name) {
-        case "if":
+        case 'if':
           i_num++;
           break;
-        case "then":
+        case 'then':
           t_num++;
           break;
-        case "else":
+        case 'else':
           e_num++;
           break;
       }
       if (i_num === e_num && t_num === i_num + 1) break;
       state.push(t);
     }
-    let stateExpr = Util.parseSymbols(state, typed);
-    let ifTrue: Symbol[] = [];
+    const stateExpr = Util.parseTokens(state, typed);
+    const ifTrue: Token[] = [];
     (i_num = 0), (t_num = 0), (e_num = 0);
-    while (true) {
+    for (;;) {
       if (tokens.length == 0)
-        throw new LambdaParseError("Illegal If statement");
-      let t = tokens.shift();
+        throw new LambdaParseError('Illegal If statement');
+      const t = tokens.shift();
       switch (t.name) {
-        case "if":
+        case 'if':
           i_num++;
           break;
-        case "then":
+        case 'then':
           t_num++;
           break;
-        case "else":
+        case 'else':
           e_num++;
           break;
       }
       if (i_num === t_num && e_num === i_num + 1) break;
       ifTrue.push(t);
     }
-    let ifTrueExpr = Util.parseSymbols(ifTrue, typed);
-    let ifFalseExpr = Util.parseSymbols(tokens, typed);
+    const ifTrueExpr = Util.parseTokens(ifTrue, typed);
+    const ifFalseExpr = Util.parseTokens(tokens, typed);
     return new If(stateExpr, ifTrueExpr, ifFalseExpr);
   }
   public extractMacros(): Expression {
@@ -1681,15 +1687,15 @@ export class Let extends Expression {
   left: Expression;
   right: Expression;
   constructor(boundvar: Variable, left: Expression, right: Expression) {
-    super("Let");
+    super('Let');
     this.boundvar = boundvar;
     this.left = left;
     this.right = right;
   }
   public getFV(): Variable[] {
     if (this.freevars !== undefined) return this.freevars;
-    let ret: Variable[] = [];
-    for (let fv of this.right.getFV()) {
+    const ret: Variable[] = [];
+    for (const fv of this.right.getFV()) {
       if (!fv.equals(this.boundvar)) {
         ret.push(fv);
       }
@@ -1698,24 +1704,24 @@ export class Let extends Expression {
   }
   public toString(noParens: boolean): string {
     let ret =
-      "[let]" +
+      '[let]' +
       this.boundvar.toString(true) +
-      "=" +
+      '=' +
       this.left.toString(true) +
-      "[in]" +
+      '[in]' +
       this.right.toString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
   public substitute(y: Variable, expr: Expression): Expression {
-    let left = this.left.substitute(y, expr);
+    const left = this.left.substitute(y, expr);
     if (this.boundvar.equals(y)) {
       return new Let(this.boundvar, left, this.right);
     } else if (!Variable.contains(expr.getFV(), this.boundvar)) {
       return new Let(this.boundvar, left, this.right.substitute(y, expr));
     } else {
-      let uniFV = Variable.union(this.right.getFV(), expr.getFV());
-      let z = Variable.getNew(uniFV);
+      const uniFV = Variable.union(this.right.getFV(), expr.getFV());
+      const z = Variable.getNew(uniFV);
       if (z.equals(y)) {
         return new Let(z, left, this.right.substitute(this.boundvar, z));
       } else {
@@ -1738,10 +1744,10 @@ export class Let extends Expression {
   public equalsAlpha(expr: Expression): boolean {
     if (!(expr instanceof Let)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundvar;
-    let m = this.right;
-    let y = expr.boundvar;
-    let n = expr.right;
+    const x = this.boundvar;
+    const m = this.right;
+    const y = expr.boundvar;
+    const n = expr.right;
     return (
       !Variable.contains(m.getFV(), y) && n.equalsAlpha(m.substitute(x, y))
     );
@@ -1752,83 +1758,83 @@ export class Let extends Expression {
     noParens: boolean
   ): TypeResult {
     // (let)
-    let t1 = TypeVariable.getNew();
+    const t1 = TypeVariable.getNew();
     this.boundvar.type = t1;
-    let nextL = this.left.getEquations(gamma, t1, true);
-    let nextR = this.right.getEquations(
+    const nextL = this.left.getEquations(gamma, t1, true);
+    const nextR = this.right.getEquations(
       gamma.concat(this.boundvar),
       type,
       true
     );
     let str = nextL.proofTree + nextR.proofTree;
-    str += "\\RightLabel{\\scriptsize(let)}\n";
+    str += '\\RightLabel{\\scriptsize(let)}\n';
     str +=
-      "\\TrinaryInfC{$" +
+      '\\TrinaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(nextL.eqs.concat(nextR.eqs), str);
   }
   public toTexString(noParens: boolean): string {
     let ret =
-      "{\\bf let}~" +
+      '{\\bf let}~' +
       this.boundvar.toTexString(false) +
-      " = " +
+      ' = ' +
       this.left.toTexString(true) +
-      "~{\\bf in}~" +
+      '~{\\bf in}~' +
       this.right.toTexString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     // (let)
     return new TypedRedex(
       this,
       this.right.substitute(this.boundvar, this.left),
-      "let"
+      'let'
     );
   }
-  public static parse(tokens: Symbol[], typed: boolean): Let {
-    let t = tokens.shift();
+  public static parse(tokens: Token[], typed: boolean): Let {
+    const t = tokens.shift();
     if (t.name.match(/^[A-Za-z]$/) === null)
       throw new LambdaParseError("Unexpected token: '" + t + "'");
-    let boundvar = new Variable(t.name);
-    if (tokens.shift().name !== "=")
+    const boundvar = new Variable(t.name);
+    if (tokens.shift().name !== '=')
       throw new LambdaParseError("'=' is expected");
-    let content: Symbol[] = [];
+    const content: Token[] = [];
     let i = 1;
-    while (true) {
+    for (;;) {
       // console.log(i);
       if (tokens.length == 0)
-        throw new LambdaParseError("Illegal Let statement");
-      let t = tokens.shift();
-      if (t.name === "let") i++;
-      else if (t.name === "in") i--;
+        throw new LambdaParseError('Illegal Let statement');
+      const t = tokens.shift();
+      if (t.name === 'let') i++;
+      else if (t.name === 'in') i--;
       if (i == 0) break;
       content.push(t);
     }
-    let contentExpr: Expression = Util.parseSymbols(content, typed);
-    let restExpr: Expression = Util.parseSymbols(tokens, typed);
+    const contentExpr: Expression = Util.parseTokens(content, typed);
+    const restExpr: Expression = Util.parseTokens(tokens, typed);
     return new Let(boundvar, contentExpr, restExpr);
   }
   public extractMacros(): Expression {
@@ -1854,7 +1860,7 @@ export class Case extends Expression {
     tail: Variable,
     ifElse: Expression
   ) {
-    super("Case");
+    super('Case');
     this.state = state;
     this.ifNil = ifNil;
     this.head = head;
@@ -1872,22 +1878,22 @@ export class Case extends Expression {
   }
   public toString(noParens: boolean): string {
     let ret =
-      "[case]" +
+      '[case]' +
       this.state.toString(true) +
-      "[of][nil]->" +
+      '[of][nil]->' +
       this.ifNil.toString(true) +
-      "|" +
+      '|' +
       this.head.toString(true) +
-      "::" +
+      '::' +
       this.tail.toString(true) +
-      "->" +
+      '->' +
       this.ifElse.toString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
   public substitute(y: Variable, expr: Expression): Expression {
-    let state = this.state.substitute(y, expr);
-    let ifNil = this.ifNil.substitute(y, expr);
+    const state = this.state.substitute(y, expr);
+    const ifNil = this.ifNil.substitute(y, expr);
     if (this.head.equals(y) || this.tail.equals(y)) {
       return new Case(state, ifNil, this.head, this.tail, this.ifElse);
     } else if (
@@ -1906,8 +1912,8 @@ export class Case extends Expression {
       let tail = this.tail;
       let ifElse = this.ifElse;
       if (Variable.contains(expr.getFV(), head)) {
-        let uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
-        let z = Variable.getNew(uniFV);
+        const uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
+        const z = Variable.getNew(uniFV);
         if (z.equals(y)) {
           ifElse = ifElse.substitute(head, z);
         } else {
@@ -1916,8 +1922,8 @@ export class Case extends Expression {
         head = z;
       }
       if (Variable.contains(expr.getFV(), tail)) {
-        let uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
-        let z = Variable.getNew(uniFV);
+        const uniFV = Variable.union(this.ifElse.getFV(), expr.getFV());
+        const z = Variable.getNew(uniFV);
         if (z.equals(y)) {
           ifElse = ifElse.substitute(tail, z);
         } else {
@@ -1954,65 +1960,65 @@ export class Case extends Expression {
     noParens: boolean
   ): TypeResult {
     // (case)
-    let t1 = TypeVariable.getNew();
-    let lt1 = new TypeList(t1);
+    const t1 = TypeVariable.getNew();
+    const lt1 = new TypeList(t1);
     this.head.type = t1;
     this.tail.type = lt1;
-    let nextS = this.state.getEquations(gamma, lt1, true);
-    let nextN = this.ifNil.getEquations(gamma, type, true);
-    let nextE = this.ifElse.getEquations(
+    const nextS = this.state.getEquations(gamma, lt1, true);
+    const nextN = this.ifNil.getEquations(gamma, type, true);
+    const nextE = this.ifElse.getEquations(
       gamma.concat(this.head, this.tail),
       type,
       true
     );
     let str = nextS.proofTree + nextN.proofTree + nextE.proofTree;
-    str += "\\RightLabel{\\scriptsize(case)}\n";
+    str += '\\RightLabel{\\scriptsize(case)}\n';
     str +=
-      "\\TrinaryInfC{$" +
+      '\\TrinaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(nextS.eqs.concat(nextN.eqs, nextE.eqs), str);
   }
   public toTexString(noParens: boolean): string {
     let ret =
-      "{\\bf case} " +
+      '{\\bf case} ' +
       this.state.toTexString(true) +
-      " {\\bf of} {\\rm nil} \\Rightarrow " +
+      ' {\\bf of} {\\rm nil} \\Rightarrow ' +
       this.ifNil.toTexString(true) +
-      " | " +
+      ' | ' +
       this.head.toTexString(true) +
-      "::" +
+      '::' +
       this.tail.toTexString(true) +
-      " \\Rightarrow " +
+      ' \\Rightarrow ' +
       this.ifElse.toTexString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     if (this.state instanceof Nil) {
       // (case2)
-      return new TypedRedex(this, this.ifNil, "case2");
+      return new TypedRedex(this, this.ifNil, 'case2');
     } else if (this.state instanceof List) {
       // (case3)
       return new TypedRedex(
@@ -2020,11 +2026,11 @@ export class Case extends Expression {
         this.ifElse
           .substitute(this.head, this.state.head)
           .substitute(this.tail, this.state.tail),
-        "case3"
+        'case3'
       );
     } else {
       // (case1)
-      let ret = this.state.getTypedRedex(true);
+      const ret = this.state.getTypedRedex(true);
       if (ret === null) return null;
       ret.next = new Case(
         ret.next,
@@ -2033,85 +2039,85 @@ export class Case extends Expression {
         this.tail,
         this.ifElse
       );
-      ret.addLeft("([case]");
+      ret.addLeft('([case]');
       ret.addRight(
-        "[of][nil]->" +
+        '[of][nil]->' +
           this.ifNil +
-          " | " +
+          ' | ' +
           this.head +
-          "::" +
+          '::' +
           this.tail +
-          "->" +
+          '->' +
           this.ifElse +
-          ")"
+          ')'
       );
-      ret.addTexLeft("({\\bf case} ");
+      ret.addTexLeft('({\\bf case} ');
       ret.addTexRight(
-        " {\\bf of} {\\rm nil} \\Rightarrow " +
+        ' {\\bf of} {\\rm nil} \\Rightarrow ' +
           this.ifNil.toTexString(true) +
-          " | " +
+          ' | ' +
           this.head.toTexString(true) +
-          "::" +
+          '::' +
           this.tail.toTexString(true) +
-          " \\Rightarrow " +
+          ' \\Rightarrow ' +
           this.ifElse.toTexString(true) +
-          ")"
+          ')'
       );
       return ret;
     }
   }
-  public static parse(tokens: Symbol[], typed: boolean): Case {
-    let state: Symbol[] = [];
+  public static parse(tokens: Token[], typed: boolean): Case {
+    const state: Token[] = [];
     let i = 1;
-    while (true) {
+    for (;;) {
       if (tokens.length == 0)
-        throw new LambdaParseError("Illegal Case statement");
-      let t = tokens.shift();
-      if (t.name === "case") i++;
-      else if (t.name === "of") i--;
+        throw new LambdaParseError('Illegal Case statement');
+      const t = tokens.shift();
+      if (t.name === 'case') i++;
+      else if (t.name === 'of') i--;
       if (i == 0) break;
       state.push(t);
     }
-    let stateExpr: Expression = Util.parseSymbols(state, typed);
+    const stateExpr: Expression = Util.parseTokens(state, typed);
     let t = tokens.shift();
-    if (t.name !== "nil")
+    if (t.name !== 'nil')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
     t = tokens.shift();
-    if (t.name !== "-")
+    if (t.name !== '-')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
     t = tokens.shift();
-    if (t.name !== ">")
+    if (t.name !== '>')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
-    let ifNil: Symbol[] = [];
+    const ifNil: Token[] = [];
     i = 1;
-    while (true) {
-      if (tokens.length == 0) throw new LambdaParseError("Too many [case]");
-      let t = tokens.shift();
-      if (t.name === "case") i++;
-      else if (t.name === "|") i--;
+    for (;;) {
+      if (tokens.length == 0) throw new LambdaParseError('Too many [case]');
+      const t = tokens.shift();
+      if (t.name === 'case') i++;
+      else if (t.name === '|') i--;
       if (i == 0) break;
       ifNil.push(t);
     }
-    let ifNilExpr: Expression = Util.parseSymbols(ifNil, typed);
-    let head = new Variable(tokens.shift().name);
+    const ifNilExpr: Expression = Util.parseTokens(ifNil, typed);
+    const head = new Variable(tokens.shift().name);
     if (head.name.match(/^[A-Za-z]$/) === null)
       throw new LambdaParseError("Unexpected token: '" + head.name + "'");
     t = tokens.shift();
-    if (t.name !== ":")
+    if (t.name !== ':')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
     t = tokens.shift();
-    if (t.name !== ":")
+    if (t.name !== ':')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
-    let tail = new Variable(tokens.shift().name);
+    const tail = new Variable(tokens.shift().name);
     if (tail.name.match(/^[A-Za-z]$/) === null)
       throw new LambdaParseError("Unexpected token: '" + tail.name + "'");
     t = tokens.shift();
-    if (t.name !== "-")
+    if (t.name !== '-')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
     t = tokens.shift();
-    if (t.name !== ">")
+    if (t.name !== '>')
       throw new LambdaParseError("Unexpected token: '" + t + "'");
-    let ifElseExpr = Util.parseSymbols(tokens, typed);
+    const ifElseExpr = Util.parseTokens(tokens, typed);
     return new Case(stateExpr, ifNilExpr, head, tail, ifElseExpr);
   }
   public extractMacros(): Expression {
@@ -2130,14 +2136,14 @@ export class Fix extends Expression {
   boundvar: Variable;
   expr: Expression;
   constructor(boundvar: Variable, expr: Expression) {
-    super("Fix");
+    super('Fix');
     this.boundvar = boundvar;
     this.expr = expr;
   }
   public getFV(): Variable[] {
     if (this.freevars !== undefined) return this.freevars;
-    let ret: Variable[] = [];
-    for (let fv of this.expr.getFV()) {
+    const ret: Variable[] = [];
+    for (const fv of this.expr.getFV()) {
       if (!fv.equals(this.boundvar)) {
         ret.push(fv);
       }
@@ -2146,8 +2152,8 @@ export class Fix extends Expression {
   }
   public toString(noParens: boolean): string {
     let ret =
-      "[fix]" + this.boundvar.toString(false) + "." + this.expr.toString(true);
-    if (!noParens) ret = "(" + ret + ")";
+      '[fix]' + this.boundvar.toString(false) + '.' + this.expr.toString(true);
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
   public substitute(y: Variable, expr: Expression): Expression {
@@ -2156,8 +2162,8 @@ export class Fix extends Expression {
     } else if (!Variable.contains(expr.getFV(), this.boundvar)) {
       return new Fix(this.boundvar, this.expr.substitute(y, expr));
     } else {
-      let uniFV = Variable.union(this.expr.getFV(), expr.getFV());
-      let z = Variable.getNew(uniFV);
+      const uniFV = Variable.union(this.expr.getFV(), expr.getFV());
+      const z = Variable.getNew(uniFV);
       return new Fix(z, this.expr.substitute(this.boundvar, z)).substitute(
         y,
         expr
@@ -2174,10 +2180,10 @@ export class Fix extends Expression {
   public equalsAlpha(expr: Expression): boolean {
     if (!(expr instanceof Fix)) return false;
     if (this.equals(expr)) return true;
-    let x = this.boundvar;
-    let m = this.expr;
-    let y = expr.boundvar;
-    let n = expr.expr;
+    const x = this.boundvar;
+    const m = this.expr;
+    const y = expr.boundvar;
+    const n = expr.expr;
     if (Variable.contains(m.getFV(), y)) {
       return n.equalsAlpha(m);
     } else {
@@ -2191,46 +2197,50 @@ export class Fix extends Expression {
   ): TypeResult {
     // (fix)
     this.boundvar.type = type;
-    let next = this.expr.getEquations(gamma.concat(this.boundvar), type, true);
+    const next = this.expr.getEquations(
+      gamma.concat(this.boundvar),
+      type,
+      true
+    );
     let str = next.proofTree;
-    str += "\\RightLabel{\\scriptsize(fix)}\n";
+    str += '\\RightLabel{\\scriptsize(fix)}\n';
     str +=
-      "\\UnaryInfC{$" +
+      '\\UnaryInfC{$' +
       Variable.gammaToTexString(gamma) +
-      " \\vdash " +
+      ' \\vdash ' +
       this.toTexString(noParens) +
-      " : " +
+      ' : ' +
       type.toTexString() +
-      " $}\n";
+      ' $}\n';
     return new TypeResult(next.eqs, str);
   }
   public toTexString(noParens: boolean): string {
     let ret =
-      "{\\bf fix}~" +
+      '{\\bf fix}~' +
       this.boundvar.toTexString(true) +
-      "." +
+      '.' +
       this.expr.toTexString(true);
-    if (!noParens) ret = "(" + ret + ")";
+    if (!noParens) ret = '(' + ret + ')';
     return ret;
   }
-  public getRedexes(etaAllowed: boolean, noParens: boolean): Redex[] {
+  public getRedexes(_etaAllowed: boolean, _noParens: boolean): Redex[] {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
   public getUnTypedRedex(
-    etaAllowed: boolean,
-    rightmost: boolean,
-    innermost: boolean,
-    weak: boolean,
-    head: boolean,
-    noParens: boolean
+    _etaAllowed: boolean,
+    _rightmost: boolean,
+    _innermost: boolean,
+    _weak: boolean,
+    _head: boolean,
+    _noParens: boolean
   ): Redex {
     throw new ReductionError(
-      "Untyped Reduction cannot handle typeof " + this.className
+      'Untyped Reduction cannot handle typeof ' + this.className
     );
   }
-  public getTypedRedex(noParens: boolean): Redex {
+  public getTypedRedex(_noParens: boolean): Redex {
     // (fix)
     return new TypedRedex(
       this,
@@ -2238,18 +2248,18 @@ export class Fix extends Expression {
         this.boundvar,
         new Fix(new Variable(this.boundvar.name), this.expr)
       ),
-      "fix"
+      'fix'
     );
   }
-  public static parse(tokens: Symbol[], typed: boolean): Fix {
-    let t = tokens.shift();
+  public static parse(tokens: Token[], typed: boolean): Fix {
+    const t = tokens.shift();
     if (t.name.match(/^[A-Za-z]$/) === null)
       throw new LambdaParseError("Unexpected token: '" + t + "'");
-    let boundvar = new Variable(t.name);
-    if (tokens.shift().name !== ".")
+    const boundvar = new Variable(t.name);
+    if (tokens.shift().name !== '.')
       throw new LambdaParseError("'.' is expected");
 
-    let contentExpr: Expression = Util.parseSymbols(tokens, typed);
+    const contentExpr: Expression = Util.parseTokens(tokens, typed);
     return new Fix(boundvar, contentExpr);
   }
   public extractMacros(): Expression {

@@ -1,7 +1,8 @@
-import { Expression } from "./expression";
-import { GraphParseError } from "./error";
-import { LambdaFriends } from "./lambda-friends";
-import { Redex } from "./redex";
+import { Expression } from './expression';
+import { GraphParseError } from './error';
+import { LambdaFriends } from './lambda-friends';
+import { Redex } from './redex';
+import * as fs from 'fs';
 
 export class GraphNode {
   info: Info;
@@ -18,7 +19,7 @@ export class GraphNode {
     info.nodes.push(this);
   }
 
-  public toString() {
+  public toString(): string {
     return this.label;
   }
 
@@ -39,14 +40,14 @@ export class GraphNode {
     ): boolean {
       if (n1.children.length !== n2.children.length) return false;
       closed.push({ n1: n1, n2: n2 });
-      let cs2: GraphNode[] = [].concat(n2.children);
+      const cs2: GraphNode[] = [].concat(n2.children);
       let ret = true;
-      for (let c1 of n1.children) {
+      for (const c1 of n1.children) {
         let found = false;
         for (let i = 0; i < cs2.length; i++) {
-          let c2 = cs2[i];
+          const c2 = cs2[i];
           let pair: { n1: GraphNode; n2: GraphNode } = undefined;
-          for (let c of closed) {
+          for (const c of closed) {
             if (c.n1.id === c1.id || c.n2.id === c2.id) {
               pair = c;
               break;
@@ -72,23 +73,23 @@ export class GraphNode {
           return ret;
         }
       }
-      throw new Error("Unexpected Error");
+      throw new Error('Unexpected Error');
     }
   }
 
   // input: root -> a,b,c -> d; d -> e
   // 多重辺が入力に存在する場合、自動で多重辺をオンにする
   static parse(str: string): GraphNode {
-    let stmts = str.split(";");
-    let info = new Info([], [], null, null, 0, false);
-    let nodes: { [key: string]: GraphNode } = {};
-    for (let stmt of stmts) {
-      let strs = stmt.split("->");
+    const stmts = str.split(';');
+    const info = new Info([], [], null, null, 0, false);
+    const nodes: { [key: string]: GraphNode } = {};
+    for (const stmt of stmts) {
+      const strs = stmt.split('->');
       let ps = str2nodes(strs[0]);
       for (let i = 1; i < strs.length; i++) {
-        let cs = str2nodes(strs[i]);
-        for (let p of ps) {
-          for (let c of cs) {
+        const cs = str2nodes(strs[i]);
+        for (const p of ps) {
+          for (const c of cs) {
             if (info.hasEdge({ from: p, to: c }))
               info.allowMultipleEdges = true;
             info.edges.push({ from: p, to: c });
@@ -98,18 +99,18 @@ export class GraphNode {
         ps = cs;
       }
     }
-    if (nodes["root"] === undefined)
+    if (nodes['root'] === undefined)
       throw new GraphParseError("there must be a 'root' node.");
 
-    return nodes["root"];
+    return nodes['root'];
 
     // input: " a, b, c "
     function str2nodes(str: string): GraphNode[] {
-      let strs = str.split(",");
-      let rets: GraphNode[] = [];
+      const strs = str.split(',');
+      const rets: GraphNode[] = [];
       for (let t of strs) {
         t = t.trim();
-        if (t === "") continue;
+        if (t === '') continue;
         if (!/^[a-z][a-z0-9]*$/.test(t))
           throw new GraphParseError(
             "the name '" +
@@ -118,7 +119,7 @@ export class GraphNode {
           );
         let n = nodes[t];
         if (n === undefined) {
-          n = nodes[t] = new GraphNode(t, info, t === "root");
+          n = nodes[t] = new GraphNode(t, info, t === 'root');
         }
         rets.push(n);
       }
@@ -128,36 +129,35 @@ export class GraphNode {
 
   static search(n: GraphNode, allowMultipleEdges: boolean): LambdaFriends {
     let input: string;
-    let filename = "graph_closure.csv";
+    const filename = 'graph_closure.csv';
     try {
-      let request = new XMLHttpRequest();
-      request.open("GET", filename, false);
+      const request = new XMLHttpRequest();
+      request.open('GET', filename, false);
       request.send(null);
       input = request.responseText;
     } catch (e) {
       if (!require) {
-        console.error("require is not defined");
+        console.error('require is not defined');
         return;
       }
-      let fs = require("fs");
       try {
         fs.statSync(filename);
       } catch (e) {
-        console.error("File Not Found: " + filename);
+        console.error('File Not Found: ' + filename);
         return;
       }
-      input = fs.readFileSync(filename, "utf8");
+      input = fs.readFileSync(filename, 'utf8');
     }
-    let lines = input.split("\n");
-    for (let line of lines) {
-      let strs = line.split(",");
+    const lines = input.split('\n');
+    for (const line of lines) {
+      const strs = line.split(',');
       if (
         parseInt(strs[2]) === n.info.nodes.length &&
         parseInt(strs[3]) === n.info.edges.length
       ) {
-        let lf = new LambdaFriends(strs[0], false, false, allowMultipleEdges);
+        const lf = new LambdaFriends(strs[0], false, false, allowMultipleEdges);
         // csvに書いてあるものは止まることを保証しておこう
-        while (true) if (lf.deepen() === null) break;
+        for (;;) if (lf.deepen() === null) break;
         if (lf.root.equalsShape(n)) {
           return lf;
         }
@@ -177,7 +177,7 @@ class Info {
     public allowMultipleEdges: boolean
   ) {}
   public hasEdge(edge: { from: GraphNode; to: GraphNode }): boolean {
-    for (let e of this.edges) {
+    for (const e of this.edges) {
       if (e.from.id === edge.from.id && e.to.id === edge.to.id) {
         return true;
       }
@@ -204,7 +204,7 @@ export class ReductionNode extends GraphNode {
     if (parent === null) this.depth = 0;
     else this.depth = parent.depth + 1;
     if (info.typed) {
-      let r = this.expr.getTypedRedex(true);
+      const r = this.expr.getTypedRedex(true);
       this.nextrs = r ? [r] : [];
     } else {
       this.nextrs = this.expr.getRedexes(info.etaAllowed, true);
@@ -217,7 +217,7 @@ export class ReductionNode extends GraphNode {
     typed: boolean,
     etaAllowed: boolean,
     allowMultipleEdges: boolean
-  ) {
+  ): ReductionNode {
     return new ReductionNode(
       expr,
       null,
@@ -230,14 +230,14 @@ export class ReductionNode extends GraphNode {
     nodes: ReductionNode[];
     edges: { from: ReductionNode; to: ReductionNode }[];
   } {
-    let ans: {
+    const ans: {
       nodes: ReductionNode[];
       edges: { from: ReductionNode; to: ReductionNode }[];
     } = { nodes: [], edges: [] };
-    for (let r of this.nextrs) {
-      let ret = this.find(r.next);
+    for (const r of this.nextrs) {
+      const ret = this.find(r.next);
       if (ret === null) {
-        let n = new ReductionNode(r.next, this, this.info, false);
+        const n = new ReductionNode(r.next, this, this.info, false);
         this.children.push(n);
         ans.nodes.push(n);
         if (
@@ -262,7 +262,7 @@ export class ReductionNode extends GraphNode {
   }
 
   find(expr: Expression): ReductionNode {
-    for (let n of <ReductionNode[]>this.info.nodes) {
+    for (const n of <ReductionNode[]>this.info.nodes) {
       if (n.expr.equalsAlpha(expr)) {
         return n;
       }
