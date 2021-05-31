@@ -2,9 +2,13 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { LambdaFriends } from './lambda-friends';
 import { ReductionNode } from './graph';
+import * as cytoscape from 'cytoscape';
+import * as dagre from 'cytoscape-dagre';
 
-declare let cytoscape: any;
+// declare let cytoscape: any;
 declare let MicroModal: any;
+
+cytoscape.use(dagre);
 
 const defaultSteps = 100;
 let steps: number = defaultSteps;
@@ -913,7 +917,7 @@ function launchGraph() {
         graphRunning = false;
         return;
       }
-      const ans: any[] = [];
+      const ans: cytoscape.ElementDefinition[] = [];
       for (const n of ret.nodes) {
         ans.push(node2cyObj(n));
       }
@@ -1201,7 +1205,7 @@ function showContinueBtn() {
 function graphClear() {
   cy.remove('*');
 }
-function node2cyObj(n: ReductionNode) {
+function node2cyObj(n: ReductionNode): cytoscape.ElementDefinition {
   return {
     group: 'nodes',
     data: { id: '' + n.id, label: '' + n.toString() },
@@ -1213,11 +1217,12 @@ function makeLayout() {
   cy.elements()
     .makeLayout({
       name: 'dagre',
-      nodeSpacing: 5,
+      // spacingFactor: 0.9,
+      nodeDimensionsIncludeLabels: true,
       animate: true,
       randomize: false,
       maxSimulationTime: 1500,
-    })
+    } as cytoscape.LayoutOptions)
     .run();
 }
 

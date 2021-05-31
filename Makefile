@@ -1,5 +1,5 @@
 .PHONY: web run clean silent test all
-ALLSRC := $(wildcard src/*.ts)
+ALLSRC := $(wildcard src/*.ts) $(wildcard src/*.tsx)
 
 all: js/cli.js docs/app.js
 

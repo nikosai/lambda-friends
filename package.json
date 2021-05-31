@@ -43,6 +43,8 @@
   },
   "dependencies": {
     "commander": "^7.2.0",
+    "cytoscape": "^3.19.0",
+    "cytoscape-dagre": "^2.3.2",
     "micromodal": "^0.4.6",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"

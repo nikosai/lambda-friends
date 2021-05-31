@@ -918,8 +918,7 @@ export class LambdaAbstraction extends Expression {
       rParen = ')';
     }
     const boundvars = [];
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let la: LambdaAbstraction = this;
+    let la = this as LambdaAbstraction;
     while (la.expr instanceof LambdaAbstraction) {
       boundvars.push(la.boundvar);
       la = la.expr;
@@ -1000,8 +999,7 @@ export class LambdaAbstraction extends Expression {
     }
 
     const boundvars = [];
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let la: LambdaAbstraction = this;
+    let la = this as LambdaAbstraction;
     while (la.expr instanceof LambdaAbstraction) {
       boundvars.push(la.boundvar);
       la = la.expr;

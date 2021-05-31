@@ -2,7 +2,6 @@ import { Expression } from './expression';
 import { GraphParseError } from './error';
 import { LambdaFriends } from './lambda-friends';
 import { Redex } from './redex';
-import * as fs from 'fs';
 
 export class GraphNode {
   info: Info;
@@ -141,12 +140,14 @@ export class GraphNode {
         return;
       }
       try {
-        fs.statSync(filename);
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('fs').statSync(filename);
       } catch (e) {
         console.error('File Not Found: ' + filename);
         return;
       }
-      input = fs.readFileSync(filename, 'utf8');
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      input = require('fs').readFileSync(filename, 'utf8');
     }
     const lines = input.split('\n');
     for (const line of lines) {
