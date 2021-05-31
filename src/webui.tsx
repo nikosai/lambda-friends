@@ -4,9 +4,9 @@ import { LambdaFriends } from './lambda-friends';
 import { ReductionNode } from './graph';
 import * as cytoscape from 'cytoscape';
 import * as dagre from 'cytoscape-dagre';
+import MicroModal from 'micromodal';
 
 // declare let cytoscape: any;
-declare let MicroModal: any;
 
 cytoscape.use(dagre);
 
@@ -21,282 +21,282 @@ class App extends React.Component {
   render() {
     return (
       <div>
-        <div className="container-fluid">
-          <header>
-            <a
-              className="logo"
-              href="https://github.com/nikosai/lambda-friends"
-              target="_blank"
-              rel="noreferrer"></a>
-            <button type="button" id="settingBtn" className="btn btn-default">
-              設定
-            </button>
-          </header>
-
-          <div className="input-group">
-            <input
-              type="text"
-              className="form-control code"
-              id="input"
-              placeholder="ラムダ式を入力……"
-              autoComplete="off"
-            />
-            <span className="input-group-btn">
-              <button type="button" id="submit" className="btn btn-default">
-                送信
+        <div id="wrapper">
+          <div className="container-fluid">
+            <header>
+              <a
+                className="logo"
+                href="https://github.com/nikosai/lambda-friends"
+                target="_blank"
+                rel="noreferrer"></a>
+              <button type="button" id="settingBtn" className="btn btn-default">
+                設定
               </button>
-            </span>
-          </div>
-          <div id="output-group">
-            {/* タブ・メニュー */}
-            <ul className="nav nav-tabs">
-              <li className="active">
-                <a id="tabAbtn" href="#tabA" data-toggle="tab">
-                  出力
-                </a>
-              </li>
-              <li>
-                <a id="tabBbtn" href="#tabB" data-toggle="tab">
-                  マクロ
-                </a>
-              </li>
-              <li>
-                <a id="tabC1btn" href="#tabC1" data-toggle="tab">
-                  Export
-                </a>
-              </li>
-              <li>
-                <a id="tabC2btn" href="#tabC2" data-toggle="tab">
-                  Import
-                </a>
-              </li>
-              <li>
-                <a id="tabDbtn" href="#tabD" data-toggle="tab">
-                  グラフ
-                </a>
-              </li>
-            </ul>
+            </header>
 
-            {/* タブ内容 */}
-            <div className="tab-content">
-              <div className="tab-pane active form-group" id="tabA">
-                <div className="code" id="output">
-                  出力はここに表示されます。
-                  <br />
-                  ヘルプが必要な場合、
-                  <a href="https://github.com/nikosai/lambda-friends">
-                    README.md
+            <div className="input-group">
+              <input
+                type="text"
+                className="form-control code"
+                id="input"
+                placeholder="ラムダ式を入力……"
+                autoComplete="off"
+              />
+              <span className="input-group-btn">
+                <button type="button" id="submit" className="btn btn-default">
+                  送信
+                </button>
+              </span>
+            </div>
+            <div id="output-group">
+              {/* タブ・メニュー */}
+              <ul className="nav nav-tabs">
+                <li className="active">
+                  <a id="tabAbtn" href="#tabA" data-toggle="tab">
+                    出力
                   </a>
-                  を読んでください。
+                </li>
+                <li>
+                  <a id="tabBbtn" href="#tabB" data-toggle="tab">
+                    マクロ
+                  </a>
+                </li>
+                <li>
+                  <a id="tabC1btn" href="#tabC1" data-toggle="tab">
+                    Export
+                  </a>
+                </li>
+                <li>
+                  <a id="tabC2btn" href="#tabC2" data-toggle="tab">
+                    Import
+                  </a>
+                </li>
+                <li>
+                  <a id="tabDbtn" href="#tabD" data-toggle="tab">
+                    グラフ
+                  </a>
+                </li>
+              </ul>
+
+              {/* タブ内容 */}
+              <div className="tab-content">
+                <div className="tab-pane active form-group" id="tabA">
+                  <div className="code" id="output">
+                    出力はここに表示されます。
+                    <br />
+                    ヘルプが必要な場合、
+                    <a href="https://github.com/nikosai/lambda-friends">
+                      README.md
+                    </a>
+                    を読んでください。
+                  </div>
+                  <div id="outputBtns"></div>
                 </div>
-                <div id="outputBtns"></div>
-              </div>
-              <div className="tab-pane" id="tabB">
-                <div
-                  className="btn-group"
-                  style={{ margin: 0, marginTop: '5px' }}>
-                  <label className="btn btn-info" id="fileInputBtn">
-                    <span>
-                      ファイル読み込み
-                      <input
-                        type="file"
-                        style={{ display: 'none' }}
-                        id="fileInput"
-                      />
-                    </span>
-                  </label>
+                <div className="tab-pane" id="tabB">
+                  <div
+                    className="btn-group"
+                    style={{ margin: 0, marginTop: '5px' }}>
+                    <label className="btn btn-info" id="fileInputBtn">
+                      <span>
+                        ファイル読み込み
+                        <input
+                          type="file"
+                          style={{ display: 'none' }}
+                          id="fileInput"
+                        />
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-info dropdown-toggle"
+                      data-toggle="dropdown"
+                      aria-expanded="false">
+                      <span className="caret"></span>
+                    </button>
+                    <ul className="dropdown-menu" role="menu">
+                      <li role="presentation">
+                        <a
+                          role="menuitem"
+                          tabIndex={-1}
+                          href="https://nikosai.ml/lambda-friends/samples.txt"
+                          target="_blank"
+                          rel="noreferrer">
+                          サンプルファイルを表示
+                        </a>
+                      </li>
+                      <li role="presentation">
+                        <a
+                          role="menuitem"
+                          tabIndex={-1}
+                          href="javascript:void(0)"
+                          id="sampleInputBtn">
+                          サンプルファイルを読み込み
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
                   <button
                     type="button"
-                    className="btn btn-info dropdown-toggle"
-                    data-toggle="dropdown"
-                    aria-expanded="false">
-                    <span className="caret"></span>
+                    id="clearMacroBtn"
+                    className="btn btn-danger">
+                    全マクロ消去
                   </button>
-                  <ul className="dropdown-menu" role="menu">
-                    <li role="presentation">
-                      <a
-                        role="menuitem"
-                        tabIndex={-1}
-                        href="https://nikosai.ml/lambda-friends/samples.txt"
-                        target="_blank"
-                        rel="noreferrer">
-                        サンプルファイルを表示
-                      </a>
-                    </li>
-                    <li role="presentation">
-                      <a
-                        role="menuitem"
-                        tabIndex={-1}
-                        href="javascript:void(0)"
-                        id="sampleInputBtn">
-                        サンプルファイルを読み込み
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-                <button
-                  type="button"
-                  id="clearMacroBtn"
-                  className="btn btn-danger">
-                  全マクロ消去
-                </button>
-                {/* <div className="form-inline">
+                  {/* <div className="form-inline">
                   <input type="text" className="form-control code" id="macroNameInput" placeholder="マクロ名"/>
                   <input type="text" className="form-control code" id="macroInput" placeholder="定義"/>
                   <button type="button" id="submitMacro" className="btn btn-default">登録</button>
                 </div> */}
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '20%' }}>マクロ名</th>
-                      <th style={{ width: '50%' }}>定義</th>
-                      {/* <th style={{width:"30%"}}>型</th> */}
-                    </tr>
-                  </thead>
-                  <tbody id="macroList" className="code"></tbody>
-                </table>
-              </div>
-              <div className="tab-pane" id="tabC1">
-                <div id="translate">
-                  <p>
-                    これまでの簡約過程
-                    {/*と、型付けの証明木（bussproofs.sty形式）*/}
-                    をLaTeX形式で表示します。
-                  </p>
-                  <p>
-                    また、{/*型なしの*/}
-                    ラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>
-                      [1]
-                    </sup>{' '}
-                    結果を表示します。
-                  </p>
-                  <h5>参考文献</h5>
-                  <p>
-                    <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda
-                    Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008,
-                    LNCS 5117, Springer, 2008, pp.392-408.
-                  </p>
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '20%' }}>マクロ名</th>
+                        <th style={{ width: '50%' }}>定義</th>
+                        {/* <th style={{width:"30%"}}>型</th> */}
+                      </tr>
+                    </thead>
+                    <tbody id="macroList" className="code"></tbody>
+                  </table>
                 </div>
-              </div>
-              <div className="tab-pane" id="tabC2">
-                <div className="input-output">
-                  <div className="input-group">
-                    <input
-                      type="text"
-                      className="form-control code"
-                      id="lmnInput"
-                      placeholder="LMNtalコードを入力"
-                      autoComplete="off"
-                    />
-                    <span className="input-group-btn">
-                      <button
-                        type="button"
-                        id="lmnSubmit"
-                        className="btn btn-default">
-                        変換
-                      </button>
-                    </span>
-                  </div>
-                  <div id="lmnOutput" className="code output">
-                    LMNtalコードをラムダ式に変換します
+                <div className="tab-pane" id="tabC1">
+                  <div id="translate">
+                    <p>
+                      これまでの簡約過程
+                      {/*と、型付けの証明木（bussproofs.sty形式）*/}
+                      をLaTeX形式で表示します。
+                    </p>
+                    <p>
+                      また、{/*型なしの*/}
+                      ラムダ式を階層グラフ書換え言語LMNtalに変換した
+                      <sup>[1]</sup> 結果を表示します。
+                    </p>
+                    <h5>参考文献</h5>
+                    <p>
+                      <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda
+                      Calculus into Hierarchical Graph Rewriting. Proc. RTA
+                      2008, LNCS 5117, Springer, 2008, pp.392-408.
+                    </p>
                   </div>
                 </div>
-                <div className="input-output">
-                  <div className="input-group">
-                    <input
-                      type="text"
-                      className="form-control code"
-                      id="deBrujinInput"
-                      placeholder="de Brujin Indexを入力"
-                      autoComplete="off"
-                    />
-                    <span className="input-group-btn">
-                      <button
-                        type="button"
-                        id="deBrujinSubmit"
-                        className="btn btn-default">
-                        変換
-                      </button>
-                    </span>
-                  </div>
-                  <div id="deBrujinOutput" className="code output">
-                    de Brujin Indexをラムダ式に変換します
-                  </div>
-                </div>
-                <div className="input-output">
-                  <div className="input-group">
-                    <input
-                      type="text"
-                      className="form-control code"
-                      id="graphInput"
-                      placeholder="簡約グラフを入力"
-                      autoComplete="off"
-                    />
-                    <span className="input-group-btn">
-                      <button
-                        type="button"
-                        id="graphSubmit"
-                        className="btn btn-default">
-                        逆引き
-                      </button>
-                    </span>
-                  </div>
-                  <div id="graphOutput" className="code output">
-                    簡約グラフからラムダ式を逆引きします（実験機能）
-                  </div>
-                </div>
-              </div>
-              <div className="tab-pane" id="tabD">
-                <div id="graphSettings">
-                  <button
-                    type="button"
-                    id="startGraph"
-                    className="btn btn-info">
-                    start
-                  </button>
-                  <button
-                    type="button"
-                    id="stopGraph"
-                    className="btn btn-danger">
-                    stop
-                  </button>
-                  <button
-                    type="button"
-                    id="imgGraph"
-                    className="btn btn-default">
-                    PNG
-                  </button>
-                  <div className="btn-group" role="group">
-                    <button
-                      type="button"
-                      id="multiEdgeEnable"
-                      className="btn btn-default">
-                      多重辺あり
-                    </button>
-                    <button
-                      type="button"
-                      id="multiEdgeDisable"
-                      className="btn btn-primary">
-                      多重辺なし
-                    </button>
-                  </div>
-                  <div
-                    className="form-inline"
-                    style={{ margin: '7px', display: 'inline-table' }}>
+                <div className="tab-pane" id="tabC2">
+                  <div className="input-output">
                     <div className="input-group">
-                      <span className="input-group-addon">深さ</span>
                       <input
                         type="text"
-                        className="form-control"
-                        placeholder="10"
-                        id="maxDepth"
-                        style={{ width: '60px', textAlign: 'center' }}
+                        className="form-control code"
+                        id="lmnInput"
+                        placeholder="LMNtalコードを入力"
                         autoComplete="off"
                       />
+                      <span className="input-group-btn">
+                        <button
+                          type="button"
+                          id="lmnSubmit"
+                          className="btn btn-default">
+                          変換
+                        </button>
+                      </span>
+                    </div>
+                    <div id="lmnOutput" className="code output">
+                      LMNtalコードをラムダ式に変換します
+                    </div>
+                  </div>
+                  <div className="input-output">
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        className="form-control code"
+                        id="deBrujinInput"
+                        placeholder="de Brujin Indexを入力"
+                        autoComplete="off"
+                      />
+                      <span className="input-group-btn">
+                        <button
+                          type="button"
+                          id="deBrujinSubmit"
+                          className="btn btn-default">
+                          変換
+                        </button>
+                      </span>
+                    </div>
+                    <div id="deBrujinOutput" className="code output">
+                      de Brujin Indexをラムダ式に変換します
+                    </div>
+                  </div>
+                  <div className="input-output">
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        className="form-control code"
+                        id="graphInput"
+                        placeholder="簡約グラフを入力"
+                        autoComplete="off"
+                      />
+                      <span className="input-group-btn">
+                        <button
+                          type="button"
+                          id="graphSubmit"
+                          className="btn btn-default">
+                          逆引き
+                        </button>
+                      </span>
+                    </div>
+                    <div id="graphOutput" className="code output">
+                      簡約グラフからラムダ式を逆引きします（実験機能）
                     </div>
                   </div>
                 </div>
-                <div id="graph"></div>
+                <div className="tab-pane" id="tabD">
+                  <div id="graphSettings">
+                    <button
+                      type="button"
+                      id="startGraph"
+                      className="btn btn-info">
+                      start
+                    </button>
+                    <button
+                      type="button"
+                      id="stopGraph"
+                      className="btn btn-danger">
+                      stop
+                    </button>
+                    <button
+                      type="button"
+                      id="imgGraph"
+                      className="btn btn-default">
+                      PNG
+                    </button>
+                    <div className="btn-group" role="group">
+                      <button
+                        type="button"
+                        id="multiEdgeEnable"
+                        className="btn btn-default">
+                        多重辺あり
+                      </button>
+                      <button
+                        type="button"
+                        id="multiEdgeDisable"
+                        className="btn btn-primary">
+                        多重辺なし
+                      </button>
+                    </div>
+                    <div
+                      className="form-inline"
+                      style={{ margin: '7px', display: 'inline-table' }}>
+                      <div className="input-group">
+                        <span className="input-group-addon">深さ</span>
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="10"
+                          id="maxDepth"
+                          style={{ width: '60px', textAlign: 'center' }}
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div id="graph"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -465,7 +465,7 @@ class App extends React.Component {
   }
 }
 
-ReactDOM.render(<App />, document.getElementById('wrapper'));
+ReactDOM.render(<App />, document.getElementById('app'));
 
 const cy = cytoscape({
   container: document.getElementById('graph'),

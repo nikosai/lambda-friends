@@ -54,7 +54,9 @@ export class REPL {
           return;
         }
       }
-      if (line.startsWith(':')) {
+      if (line === '') {
+        // do nothing
+      } else if (line.startsWith(':')) {
         const cmd = line.match(/^:\s*.*?(?=\s|$)/)[0].replace(/^:\s*/, '');
         const arg = line.replace(/^:\s*.*?(\s|$)/, '').trim();
         switch (cmd) {

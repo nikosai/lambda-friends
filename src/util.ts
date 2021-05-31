@@ -24,7 +24,9 @@ function tokenize(str: string, typed: boolean): Token[] {
   const tokens: Token[] = [];
   while (strs.length > 0) {
     let c = strs.shift().trim();
-    if (c === '<') {
+    if (c === '') {
+      // do nothing
+    } else if (c === '<') {
       // <macro>
       let content = '';
       for (;;) {
