@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import { LambdaFriends } from "./lambda-friends";
 
-export class REPL{
-  mainFunc: (line:string) => void;
+export class REPL {
+  mainFunc: (line: string) => void;
   stdin: any;
   prompt: string;
   steps: number;
@@ -11,10 +11,15 @@ export class REPL{
   allowMultipleEdges: boolean;
   lf: LambdaFriends;
 
-  constructor(steps:number,typed:boolean,etaAllowed:boolean,allowMultipleEdges:boolean){
+  constructor(
+    steps: number,
+    typed: boolean,
+    etaAllowed: boolean,
+    allowMultipleEdges: boolean
+  ) {
     this.stdin = require("readline").createInterface({
       input: process.stdin,
-      output: process.stdout
+      output: process.stdout,
     });
     this.prompt = "input> ";
     this.stdin.setPrompt(this.prompt);
@@ -22,176 +27,200 @@ export class REPL{
     this.typed = typed;
     this.etaAllowed = etaAllowed;
     this.allowMultipleEdges = allowMultipleEdges;
-    this.mainFunc = (line:string)=>{
+    this.mainFunc = (line: string) => {
       line = line.split("#")[0];
       line = line.trim();
-      if (this.lf !== undefined){
-        if (line.toLowerCase() === "n"){
+      if (this.lf !== undefined) {
+        if (line.toLowerCase() === "n") {
           this.lf = undefined;
           console.log();
           process.stdout.write(this.prompt);
           return;
         }
-        try{
-          for (let i=0; i<this.steps; i++){
+        try {
+          for (let i = 0; i < this.steps; i++) {
             let res = this.lf.reduction();
             if (res === null) break;
             console.log(res);
           }
           if (!this.lf.hasNext()) this.lf = undefined;
           else {
-            process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
+            process.stdout.write(this.steps + " Steps Done. Continue? (Y/n)> ");
             return;
           }
-        }catch(e){
+        } catch (e) {
           console.log(e.toString());
           return;
         }
       }
-      if (line===""){}
-      else if (line.startsWith(":")){
-        let cmd = line.match(/^:\s*.*?(?=\s|$)/)[0].replace(/^:\s*/,"");
-        let arg = line.replace(/^:\s*.*?(\s|$)/,"").trim();
-        switch (cmd){
-          case "q":{
+      if (line === "") {
+      } else if (line.startsWith(":")) {
+        let cmd = line.match(/^:\s*.*?(?=\s|$)/)[0].replace(/^:\s*/, "");
+        let arg = line.replace(/^:\s*.*?(\s|$)/, "").trim();
+        switch (cmd) {
+          case "q": {
             process.exit(0);
             return;
           }
           case "?":
           case "help":
-          case "h":{
+          case "h": {
             REPL.fileMes("mes/help.txt");
             break;
           }
-          case "t":{
-            if (arg==="y") this.typed = true;
-            else if (arg==="n") this.typed = false;
-            console.log("Current setting: "+(this.typed?"Typed":"Untyped"));
+          case "t": {
+            if (arg === "y") this.typed = true;
+            else if (arg === "n") this.typed = false;
+            console.log(
+              "Current setting: " + (this.typed ? "Typed" : "Untyped")
+            );
             break;
           }
-          case "e":{
-            if (arg==="y") this.etaAllowed = true;
-            else if (arg==="n") this.etaAllowed = false;
-            console.log("Eta-Reduction is now "+(this.etaAllowed?"allowed":"not allowed"));
+          case "e": {
+            if (arg === "y") this.etaAllowed = true;
+            else if (arg === "n") this.etaAllowed = false;
+            console.log(
+              "Eta-Reduction is now " +
+                (this.etaAllowed ? "allowed" : "not allowed")
+            );
             break;
           }
-          case "s":{
+          case "s": {
             let new_s = parseInt(arg);
-            if (!isNaN(new_s)){
+            if (!isNaN(new_s)) {
               this.steps = new_s;
             }
-            console.log("Continuation steps: "+this.steps);
+            console.log("Continuation steps: " + this.steps);
             break;
           }
-          case "l":{
+          case "l": {
             let file = arg;
-            if (file === undefined){
+            if (file === undefined) {
               console.log("Command Usage = :l <filename>");
               break;
             }
-            if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
-            try{
+            if (file.match(/^".+"$/) !== null) file = file.slice(1, -1);
+            try {
               fs.statSync(file);
-            }catch(e){
-              console.log("File Not Found: "+file);
+            } catch (e) {
+              console.log("File Not Found: " + file);
               break;
             }
-            let ret = LambdaFriends.fileInput(fs.readFileSync(file,"utf8"),this.typed);
+            let ret = LambdaFriends.fileInput(
+              fs.readFileSync(file, "utf8"),
+              this.typed
+            );
             console.log("File input completed.");
-            if (ret.defs.length!==0){
-              console.log("\nFinally, "+ret.defs.length+" macros are successfully added.");
-              for (let r of ret.defs){
+            if (ret.defs.length !== 0) {
+              console.log(
+                "\nFinally, " +
+                  ret.defs.length +
+                  " macros are successfully added."
+              );
+              for (let r of ret.defs) {
                 let names = r.names;
                 let name = names.shift();
-                let ret = "<"+name+">";
-                while (names.length>0){
+                let ret = "<" + name + ">";
+                while (names.length > 0) {
                   let name = names.shift();
-                  ret += " and <"+name+">";
+                  ret += " and <" + name + ">";
                 }
-                ret += " is defined as "+r.expr+" : "+r.type;
-                console.log("  * "+ret);
-              } 
+                ret += " is defined as " + r.expr + " : " + r.type;
+                console.log("  * " + ret);
+              }
             }
-            if (ret.errs.length!==0){
-              console.log("\nUnfortunately, "+ret.errs.length+" macros are rejected due to some errors");
-              for (let r of ret.errs){
-                console.log("  * "+r);
+            if (ret.errs.length !== 0) {
+              console.log(
+                "\nUnfortunately, " +
+                  ret.errs.length +
+                  " macros are rejected due to some errors"
+              );
+              for (let r of ret.errs) {
+                console.log("  * " + r);
               }
             }
             console.log();
             break;
           }
-          case "g":{
+          case "g": {
             try {
-              let ret = LambdaFriends.graph2LF(arg,this.allowMultipleEdges);
-              if (ret===null) console.log("not found");
-              else console.log("Found: "+ret.expr.toString(true));
-            } catch (e){
+              let ret = LambdaFriends.graph2LF(arg, this.allowMultipleEdges);
+              if (ret === null) console.log("not found");
+              else console.log("Found: " + ret.expr.toString(true));
+            } catch (e) {
               console.log(e.toString());
             }
             break;
           }
-          case "lmn":{
+          case "lmn": {
             try {
               let ret = LambdaFriends.lmntal2LF(arg);
-              console.log("Found: "+ret.expr.toString(true));
-            } catch (e){
+              console.log("Found: " + ret.expr.toString(true));
+            } catch (e) {
               console.log(e.toString());
             }
             break;
           }
-          case "me":{
-            if (arg==="y") this.allowMultipleEdges = true;
-            else if (arg==="n") this.allowMultipleEdges = false;
-            console.log("Multiple-Edges are now "+(this.allowMultipleEdges?"allowed":"not allowed"));
+          case "me": {
+            if (arg === "y") this.allowMultipleEdges = true;
+            else if (arg === "n") this.allowMultipleEdges = false;
+            console.log(
+              "Multiple-Edges are now " +
+                (this.allowMultipleEdges ? "allowed" : "not allowed")
+            );
             break;
           }
-          case "m":{
+          case "m": {
             console.log(LambdaFriends.getMacroList(this.typed));
             break;
           }
-          default:{
-            console.log("Undefined command: "+line);
+          default: {
+            console.log("Undefined command: " + line);
           }
         }
       } else {
-        try{
-          let lf = new LambdaFriends(line,this.typed,this.etaAllowed,this.allowMultipleEdges);
+        try {
+          let lf = new LambdaFriends(
+            line,
+            this.typed,
+            this.etaAllowed,
+            this.allowMultipleEdges
+          );
           console.log(lf.toString());
-          for (let i=0; i<this.steps; i++){
+          for (let i = 0; i < this.steps; i++) {
             let res = lf.reduction();
             if (res === null) break;
             console.log(res);
           }
-          if (lf.hasNext()){
+          if (lf.hasNext()) {
             this.lf = lf;
-            process.stdout.write(this.steps+" Steps Done. Continue? (Y/n)> ");
+            process.stdout.write(this.steps + " Steps Done. Continue? (Y/n)> ");
             return;
           } else {
             this.lf = undefined;
           }
-        }catch(e){
-          console.log(e.toString()+"\n");
+        } catch (e) {
+          console.log(e.toString() + "\n");
         }
       }
       process.stdout.write(this.prompt);
     };
   }
 
-  start(){
+  start() {
     REPL.fileMes("mes/title.txt");
     process.stdout.write(this.prompt);
     this.stdin.on("line", this.mainFunc);
   }
 
-  static fileMes(file:string){
-    if (file.match(/^".+"$/)!==null) file = file.slice(1,-1);
-    try{
+  static fileMes(file: string) {
+    if (file.match(/^".+"$/) !== null) file = file.slice(1, -1);
+    try {
       fs.statSync(file);
-      let lines = fs.readFileSync(file,"utf8");
+      let lines = fs.readFileSync(file, "utf8");
       console.log(lines);
-    }catch(e){
-      console.log("File Not Found: "+file);
+    } catch (e) {
+      console.log("File Not Found: " + file);
     }
   }
 }
