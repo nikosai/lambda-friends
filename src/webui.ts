@@ -1,6 +1,10 @@
 import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
 
+const lang = document.documentElement.lang === "ja" ? "ja" : "en";
+const i18n = (o: { en?: string; ja?: string }) =>
+  (lang === "ja" ? o.ja : o.en) || "";
+
 declare let cytoscape: any;
 declare let MicroModal: any;
 
@@ -118,9 +122,9 @@ let tabDbtn = document.getElementById("tabDbtn");
 let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
 let lmnSubmitBtn = document.getElementById("lmnSubmit");
 let lmnOutput = document.getElementById("lmnOutput");
-let deBrujinInput = <HTMLInputElement>document.getElementById("deBrujinInput");
-let deBrujinSubmitBtn = document.getElementById("deBrujinSubmit");
-let deBrujinOutput = document.getElementById("deBrujinOutput");
+let deBruijnInput = <HTMLInputElement>document.getElementById("deBruijnInput");
+let deBruijnSubmitBtn = document.getElementById("deBruijnSubmit");
+let deBruijnOutput = document.getElementById("deBruijnOutput");
 let graphInput = <HTMLInputElement>document.getElementById("graphInput");
 let graphSubmitBtn = document.getElementById("graphSubmit");
 let graphOutput = document.getElementById("graphOutput");
@@ -131,7 +135,12 @@ fileInput.addEventListener("change", function (ev) {
   let type = file.type; // MIMEタイプ
   // let size = file.size; // ファイル容量（byte）
   if (type !== "text/plain") {
-    alert("プレーンテキストを選択してください");
+    alert(
+      i18n({
+        en: "Select a Plain Text File",
+        ja: "プレーンテキストを選択してください",
+      })
+    );
     fileInput.value = "";
     return;
   }
@@ -405,10 +414,10 @@ let submitInput = function () {
 
 document.getElementById("submit").onclick = submitInput;
 document.getElementById("input").onkeydown = function (e) {
-  if (e.keyCode === 13) {
+  if (e.code === "Enter") {
     submitInput();
     e.preventDefault();
-  } else if (e.keyCode === 38) {
+  } else if (e.code === "ArrowUp") {
     // up
     if (historyNum < workspace.length - 1) {
       workspace[historyNum] = input.value;
@@ -416,7 +425,7 @@ document.getElementById("input").onkeydown = function (e) {
       input.value = workspace[historyNum];
     }
     e.preventDefault();
-  } else if (e.keyCode === 40) {
+  } else if (e.code === "ArrowDown") {
     // down
     if (historyNum > 0) {
       workspace[historyNum] = input.value;
@@ -518,7 +527,7 @@ tabDbtn.addEventListener("click", () => {
 });
 
 lmnInput.onkeydown = function (e) {
-  if (e.keyCode === 13) {
+  if (e.code === "Enter") {
     submitLMNtal();
     e.preventDefault();
   }
@@ -534,25 +543,25 @@ function submitLMNtal() {
   }
 }
 
-deBrujinInput.onkeydown = function (e) {
-  if (e.keyCode === 13) {
-    submitDeBrujin();
+deBruijnInput.onkeydown = function (e) {
+  if (e.code === "Enter") {
+    submitDeBruijn();
     e.preventDefault();
   }
 };
-deBrujinSubmitBtn.onclick = submitDeBrujin;
-function submitDeBrujin() {
-  let input = deBrujinInput.value;
+deBruijnSubmitBtn.onclick = submitDeBruijn;
+function submitDeBruijn() {
+  let input = deBruijnInput.value;
   try {
-    let ret = LambdaFriends.deBrujin2LF(input);
-    deBrujinOutput.innerText = "Found: " + ret.expr.toString(true);
+    let ret = LambdaFriends.deBruijn2LF(input);
+    deBruijnOutput.innerText = "Found: " + ret.expr.toString(true);
   } catch (e) {
-    deBrujinOutput.innerText = e.toString();
+    deBruijnOutput.innerText = e.toString();
   }
 }
 
 graphInput.onkeydown = function (e) {
-  if (e.keyCode === 13) {
+  if (e.code === "Enter") {
     submitGraph();
     e.preventDefault();
   }
@@ -623,16 +632,32 @@ function refreshTex() {
   translateDiv.appendChild(header);
 
   translateDiv.appendChild(
-    makeTexDiv("これまでの簡約過程", curlf.getProcessTex())
+    makeTexDiv(
+      i18n({ en: "Reduction process", ja: "これまでの簡約過程" }),
+      curlf.getProcessTex()
+    )
   );
   if (typed)
     translateDiv.appendChild(
-      makeTexDiv("型付けの証明木", curlf.getProofTree())
+      makeTexDiv(
+        i18n({ en: "Proof tree for typing", ja: "型付けの証明木" }),
+        curlf.getProofTree()
+      )
     );
   else {
-    translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
-    translateDiv.appendChild(makeTexDiv("SKIコンビネータ", curlf.toSKI()));
-    translateDiv.appendChild(makeTexDiv("de Brujin Index", curlf.toDeBrujin()));
+    translateDiv.appendChild(
+      makeTexDiv(
+        i18n({ en: "LMNtal code", ja: "LMNtalコード" }),
+        curlf.toLMNtal()
+      )
+    );
+    translateDiv.appendChild(
+      makeTexDiv(
+        i18n({ en: "SKI combinators", ja: "SKIコンビネータ" }),
+        curlf.toSKI()
+      )
+    );
+    translateDiv.appendChild(makeTexDiv("de Bruijn Index", curlf.toDeBruijn()));
   }
 }
 function makeTexDiv(title: string, content: string) {
@@ -649,7 +674,10 @@ function makeTexDiv(title: string, content: string) {
   span.innerText = title;
   btn.type = "button";
   btn.className = "btn btn-default btn-sm";
-  btn.innerText = "クリップボードにコピー";
+  btn.innerText = i18n({
+    en: "Copy to Clipboard",
+    ja: "クリップボードにコピー",
+  });
   // btn.setAttribute("data-toggle","popover");
   // btn.setAttribute("data-content","Copied!");
   // $(function(){$('[data-toggle="popover"]').popover();});
@@ -703,20 +731,29 @@ function showContinueBtn() {
   if (!curlf.hasNext()) return;
   if (curlf.isNormalForm(rightmost, innermost, weak, head)) {
     let s = document.createElement("span");
-    s.innerText = "指定の評価戦略ではこれが正規形です。";
+    s.innerText = i18n({
+      en: "This is the normal form for the specified strategy.",
+      ja: "指定の評価戦略ではこれが正規形です。",
+    });
     outputButtons.appendChild(s);
   } else {
     let b = document.createElement("button");
     b.type = "button";
     b.className = "btn btn-default btn-sm";
-    b.innerText = steps + "ステップ簡約する";
+    b.innerText =
+      i18n({ en: "Reduce up to " }) +
+      steps +
+      i18n({ en: " Steps", ja: "ステップまで簡約する" });
     b.onclick = doContinual;
     outputButtons.textContent = null;
     outputButtons.appendChild(b);
   }
   if (typed) return;
   let span = document.createElement("span");
-  span.innerText = "または、以下から簡約基を選ぶ：";
+  span.innerText = i18n({
+    en: "or select redex from the following:",
+    ja: "または、以下から簡約基を選ぶ：",
+  });
   outputButtons.appendChild(span);
   let div = document.createElement("div");
   div.className = "list-group";

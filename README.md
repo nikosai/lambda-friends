@@ -41,9 +41,9 @@ git cloneすれば手元でも動かせますが、[GitHub Pages上にも置い�
 * SKIコンビネータと相互に変換できる
   + SKI → ラムダ は組み込みマクロとして
   + ラムダ → SKI は Export タブに
-* de Brujin Indexと相互に変換できる
-  + de Brujin → ラムダ は Import タブに
-  + ラムダ → de Brujin は Export タブに
+* de Bruijn Indexと相互に変換できる
+  + de Bruijn → ラムダ は Import タブに
+  + ラムダ → de Bruijn は Export タブに
 * 簡約グラフの形からラムダ式を逆引きできる（実験機能）
   + 「Import」タブ
   + まだ実験なので完全性はないが、健全性はある

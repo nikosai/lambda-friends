@@ -14,6 +14,9 @@
   <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
   <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
   <link href="main.css" rel="stylesheet">
+  <link rel="alternate" hreflang="en" href="https://nikosai.ml/lambda-friends/index-en.html">
+  <link rel="alternate" hreflang="ja" href="https://nikosai.ml/lambda-friends/index.html">
+  <link rel="alternate" hreflang="x-default" href="https://nikosai.ml/lambda-friends/index-en.html">
 </head>
 <body>
 <div id="wrapper">
@@ -44,7 +47,8 @@
         <div class="tab-pane active form-group" id="tabA">
           <div class="code" id="output">
             出力はここに表示されます。<br>
-            <a href="//qiita.com/nikosai2531/items/8dbb997701c9fa4543b9">詳しい使い方はこちらのQiita記事を参照してください</a>。
+            <a href="//qiita.com/nikosai2531/items/8dbb997701c9fa4543b9">詳しい使い方はこちらのQiita記事を参照してください</a>。<br>
+            <strong><a href="./index-en.html">The English version is available here.</a></strong>
           </div>
           <div id="outputBtns"></div>
         </div>
@@ -104,12 +108,12 @@
           </div>
           <div class="input-output">
             <div class="input-group">
-              <input type="text" class="form-control code" id="deBrujinInput" placeholder="de Brujin Indexを入力" autocomplete="off">
+              <input type="text" class="form-control code" id="deBruijnInput" placeholder="de Bruijn Indexを入力" autocomplete="off">
               <span class="input-group-btn">
-                <button type="button" id="deBrujinSubmit" class="btn btn-default">変換</button>
+                <button type="button" id="deBruijnSubmit" class="btn btn-default">変換</button>
               </span>
             </div>
-            <div id="deBrujinOutput" class="code output">de Brujin Indexをラムダ式に変換します</div>
+            <div id="deBruijnOutput" class="code output">de Bruijn Indexをラムダ式に変換します</div>
           </div>
           <div class="input-output">
             <div class="input-group">
@@ -196,7 +200,7 @@
           <button type="button" id="headBtn" class="btn btn-default">頭部</button>
           <button type="button" id="nonheadBtn" class="btn btn-primary"> - </button>
         </div>
-        <div class="form-inline" style="margin:7px; display:inline-block">
+        <div class="btn-group form-inline" style="margin:7px; display:inline-block">
           <div class="input-group">
             <span class="input-group-addon">連続ステップ数</span>
             <input type="text" class="form-control" placeholder="100" id="stepInput" style="width: 60px; text-align:center" autocomplete="off">

@@ -3,7 +3,7 @@ import { Type, TypeUntyped, TypeVariable, TypeEquation } from "./type";
 import { ReductionNode, GraphNode } from "./graph";
 import { Redex } from "./redex";
 import { makeAST, parseLMNtal } from "./util";
-import { deBrujinExpression } from "./deBrujin";
+import { deBruijnExpression } from "./deBruijn";
 
 export class LambdaFriends {
   expr: Expression;
@@ -319,9 +319,9 @@ export class LambdaFriends {
     );
   }
 
-  public static deBrujin2LF(str: string) {
+  public static deBruijn2LF(str: string) {
     return new LambdaFriends(
-      deBrujinExpression.parse(str).toLambda().toString(true),
+      deBruijnExpression.parse(str).toLambda().toString(true),
       false,
       false,
       false
@@ -342,9 +342,9 @@ export class LambdaFriends {
   }
 
   // typedだったらとりあえずnullを返すことにする
-  public toDeBrujin(): string {
+  public toDeBruijn(): string {
     if (this.typed) return null;
-    else return this.original.toDeBrujin().toString();
+    else return this.original.toDeBruijn().toString();
   }
 
   public toString(): string {
