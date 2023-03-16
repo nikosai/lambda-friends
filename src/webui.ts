@@ -70,6 +70,8 @@ let curlf: LambdaFriends = undefined;
 let input = <HTMLInputElement>document.getElementById("input");
 let oel = document.getElementById("output");
 let settingButton = document.getElementById("settingBtn");
+let langEnButton = document.getElementById("langEn");
+let langJpButton = document.getElementById("langJp");
 let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
 let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
@@ -118,9 +120,9 @@ let tabDbtn = document.getElementById("tabDbtn");
 let lmnInput = <HTMLInputElement>document.getElementById("lmnInput");
 let lmnSubmitBtn = document.getElementById("lmnSubmit");
 let lmnOutput = document.getElementById("lmnOutput");
-let deBrujinInput = <HTMLInputElement>document.getElementById("deBrujinInput");
-let deBrujinSubmitBtn = document.getElementById("deBrujinSubmit");
-let deBrujinOutput = document.getElementById("deBrujinOutput");
+let deBruijnInput = <HTMLInputElement>document.getElementById("deBruijnInput");
+let deBruijnSubmitBtn = document.getElementById("deBruijnSubmit");
+let deBruijnOutput = document.getElementById("deBruijnOutput");
 let graphInput = <HTMLInputElement>document.getElementById("graphInput");
 let graphSubmitBtn = document.getElementById("graphSubmit");
 let graphOutput = document.getElementById("graphOutput");
@@ -226,6 +228,28 @@ settingButton.onclick = function () {
     awaitCloseAnimation: true,
   });
 };
+
+// langJpButton.onclick = function () {
+//   untypedButton.className = "btn btn-primary";
+//   typedButton.className = "btn btn-default";
+//   typed = false;
+//   etaEnableButton.disabled = false;
+//   etaDisableButton.disabled = false;
+//   multiEdgeEnableButton.disabled = false;
+//   multiEdgeDisableButton.disabled = false;
+//   refreshMacroList();
+// };
+
+// langEnButton.onclick = function () {
+//   typedButton.className = "btn btn-primary";
+//   untypedButton.className = "btn btn-default";
+//   typed = true;
+//   etaEnableButton.disabled = true;
+//   etaDisableButton.disabled = true;
+//   multiEdgeEnableButton.disabled = true;
+//   multiEdgeDisableButton.disabled = true;
+//   refreshMacroList();
+// };
 
 untypedButton.onclick = function () {
   untypedButton.className = "btn btn-primary";
@@ -518,7 +542,7 @@ tabDbtn.addEventListener("click", () => {
 });
 
 lmnInput.onkeydown = function (e) {
-  if (e.keyCode === 13) {
+  if (e.code === "Enter") {
     submitLMNtal();
     e.preventDefault();
   }
@@ -534,25 +558,25 @@ function submitLMNtal() {
   }
 }
 
-deBrujinInput.onkeydown = function (e) {
-  if (e.keyCode === 13) {
-    submitDeBrujin();
+deBruijnInput.onkeydown = function (e) {
+  if (e.code === "Enter") {
+    submitDeBruijn();
     e.preventDefault();
   }
 };
-deBrujinSubmitBtn.onclick = submitDeBrujin;
-function submitDeBrujin() {
-  let input = deBrujinInput.value;
+deBruijnSubmitBtn.onclick = submitDeBruijn;
+function submitDeBruijn() {
+  let input = deBruijnInput.value;
   try {
-    let ret = LambdaFriends.deBrujin2LF(input);
-    deBrujinOutput.innerText = "Found: " + ret.expr.toString(true);
+    let ret = LambdaFriends.deBruijn2LF(input);
+    deBruijnOutput.innerText = "Found: " + ret.expr.toString(true);
   } catch (e) {
-    deBrujinOutput.innerText = e.toString();
+    deBruijnOutput.innerText = e.toString();
   }
 }
 
 graphInput.onkeydown = function (e) {
-  if (e.keyCode === 13) {
+  if (e.code === "Enter") {
     submitGraph();
     e.preventDefault();
   }
@@ -632,7 +656,7 @@ function refreshTex() {
   else {
     translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
     translateDiv.appendChild(makeTexDiv("SKIコンビネータ", curlf.toSKI()));
-    translateDiv.appendChild(makeTexDiv("de Brujin Index", curlf.toDeBrujin()));
+    translateDiv.appendChild(makeTexDiv("de Bruijn Index", curlf.toDeBruijn()));
   }
 }
 function makeTexDiv(title: string, content: string) {

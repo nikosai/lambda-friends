@@ -20,12 +20,12 @@ import { LambdaFriends } from "./lambda-friends";
 import { Redex, MacroRedex, EtaRedex, TypedRedex, BetaRedex } from "./redex";
 import * as Util from "./util";
 import {
-  deBrujinExpression,
-  deBrujinLambda,
-  deBrujinIndex,
-  deBrujinApplication,
-  deBrujinFreeVar,
-} from "./deBrujin";
+  deBruijnExpression,
+  deBruijnLambda,
+  deBruijnIndex,
+  deBruijnApplication,
+  deBruijnFreeVar,
+} from "./deBruijn";
 
 // 型の連立方程式と証明木の組
 class TypeResult {
@@ -90,16 +90,16 @@ export abstract class Expression {
     );
   }
 
-  public getDeBrujin(vars: Variable[]): deBrujinExpression {
+  public getDeBruijn(vars: Variable[]): deBruijnExpression {
     throw new TypeError(
       "Expression '" +
         this +
-        "' cannot be converted to de Brujin indexes (untyped only)."
+        "' cannot be converted to de Bruijn indexes (untyped only)."
     );
   }
 
-  public toDeBrujin(): deBrujinExpression {
-    return this.getDeBrujin([]);
+  public toDeBruijn(): deBruijnExpression {
+    return this.getDeBruijn([]);
   }
 
   public abstract toString(noParens: boolean): string;
@@ -308,13 +308,13 @@ export class Variable extends Symbol {
   public toSKI(): Expression {
     return this;
   }
-  public getDeBrujin(vars: Variable[]): deBrujinExpression {
+  public getDeBruijn(vars: Variable[]): deBruijnExpression {
     for (let i = 0; i < vars.length; i++) {
       if (vars[i].equals(this)) {
-        return new deBrujinIndex(i);
+        return new deBruijnIndex(i);
       }
     }
-    return new deBrujinFreeVar(this.name);
+    return new deBruijnFreeVar(this.name);
   }
 }
 
@@ -771,9 +771,9 @@ export class Macro extends Symbol {
         return this.expr.toSKI();
     }
   }
-  public getDeBrujin(vars: Variable[]): deBrujinExpression {
-    if (this.expr === undefined) return new deBrujinFreeVar(this.name);
-    else return this.expr.getDeBrujin(vars);
+  public getDeBruijn(vars: Variable[]): deBruijnExpression {
+    if (this.expr === undefined) return new deBruijnFreeVar(this.name);
+    else return this.expr.getDeBruijn(vars);
   }
 }
 
@@ -1109,11 +1109,11 @@ export class LambdaAbstraction extends Expression {
     }
     throw new TranslateError("Unknown kind of expression.");
   }
-  public getDeBrujin(vars: Variable[]): deBrujinExpression {
+  public getDeBruijn(vars: Variable[]): deBruijnExpression {
     vars.unshift(this.boundvar);
-    let ret = this.expr.getDeBrujin(vars);
+    let ret = this.expr.getDeBruijn(vars);
     vars.shift();
-    return new deBrujinLambda(ret);
+    return new deBruijnLambda(ret);
   }
 }
 
@@ -1373,10 +1373,10 @@ export class Application extends Expression {
   public toSKI(): Expression {
     return new Application(this.left.toSKI(), this.right.toSKI());
   }
-  public getDeBrujin(vars: Variable[]): deBrujinExpression {
-    return new deBrujinApplication(
-      this.left.getDeBrujin(vars),
-      this.right.getDeBrujin(vars)
+  public getDeBruijn(vars: Variable[]): deBruijnExpression {
+    return new deBruijnApplication(
+      this.left.getDeBruijn(vars),
+      this.right.getDeBruijn(vars)
     );
   }
 }

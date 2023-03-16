@@ -8,7 +8,7 @@ import {
   Macro,
 } from "./expression";
 
-export abstract class deBrujinExpression {
+export abstract class deBruijnExpression {
   className: string;
   constructor(className: string) {
     this.className = className;
@@ -17,9 +17,9 @@ export abstract class deBrujinExpression {
     return this.getString(true);
   }
   public abstract getString(noParens: boolean): string;
-  public static parse(str: string): deBrujinExpression {
+  public static parse(str: string): deBruijnExpression {
     let cs = str.split("");
-    let left: deBrujinExpression = null;
+    let left: deBruijnExpression = null;
     while (cs.length > 0) {
       let t = cs.shift();
       switch (t) {
@@ -36,39 +36,39 @@ export abstract class deBrujinExpression {
             content += t1;
           }
           if (left === null) left = this.parse(content);
-          else left = new deBrujinApplication(left, this.parse(content));
+          else left = new deBruijnApplication(left, this.parse(content));
           break;
         }
         case "\\":
         case "\u00a5":
         case "λ": {
-          let ret = new deBrujinLambda(this.parse(cs.join("")));
+          let ret = new deBruijnLambda(this.parse(cs.join("")));
           if (left === null) return ret;
-          else return new deBrujinApplication(left, ret);
+          else return new deBruijnApplication(left, ret);
         }
         case " ":
           break;
         default: {
-          let ret: deBrujinExpression;
+          let ret: deBruijnExpression;
           if (t.match(/^[0-9]$/) !== null) {
             let content = t;
             while (cs.length > 0) {
               if (cs[0].match(/^[0-9]$/) === null) break;
               content += cs.shift();
             }
-            ret = new deBrujinIndex(parseInt(content));
+            ret = new deBruijnIndex(parseInt(content));
           } else if (t.match(/^[a-zA-Z]$/) !== null) {
             let content = t;
             while (cs.length > 0) {
               if (cs[0].match(/^[a-zA-Z0-9]$/) === null) break;
               content += cs.shift();
             }
-            ret = new deBrujinFreeVar(content);
+            ret = new deBruijnFreeVar(content);
           } else {
             throw new LambdaParseError("Unexpected token: '" + t + "'");
           }
           if (left === null) left = ret;
-          else left = new deBrujinApplication(left, ret);
+          else left = new deBruijnApplication(left, ret);
         }
       }
     }
@@ -76,16 +76,16 @@ export abstract class deBrujinExpression {
     return left;
   }
   public toLambda(): Expression {
-    return this.getLambda(deBrujinFreeVar.toVariables(this.getFV()));
+    return this.getLambda(deBruijnFreeVar.toVariables(this.getFV()));
   }
   public abstract getLambda(vars: Variable[]): Expression;
-  public abstract getFV(): deBrujinFreeVar[];
+  public abstract getFV(): deBruijnFreeVar[];
 }
 
-export class deBrujinLambda extends deBrujinExpression {
-  expr: deBrujinExpression;
-  constructor(expr: deBrujinExpression) {
-    super("deBrujinLambda");
+export class deBruijnLambda extends deBruijnExpression {
+  expr: deBruijnExpression;
+  constructor(expr: deBruijnExpression) {
+    super("deBruijnLambda");
     this.expr = expr;
   }
   public getString(noParens: boolean): string {
@@ -98,22 +98,22 @@ export class deBrujinLambda extends deBrujinExpression {
     vars.shift();
     return new LambdaAbstraction(v, ret);
   }
-  public getFV(): deBrujinFreeVar[] {
+  public getFV(): deBruijnFreeVar[] {
     return this.expr.getFV();
   }
 }
 
-export class deBrujinApplication extends deBrujinExpression {
-  left: deBrujinExpression;
-  right: deBrujinExpression;
-  constructor(left: deBrujinExpression, right: deBrujinExpression) {
-    super("deBrujinApplication");
+export class deBruijnApplication extends deBruijnExpression {
+  left: deBruijnExpression;
+  right: deBruijnExpression;
+  constructor(left: deBruijnExpression, right: deBruijnExpression) {
+    super("deBruijnApplication");
     this.left = left;
     this.right = right;
   }
   public getString(noParens: boolean): string {
     return putParens(
-      this.left.getString(this.left instanceof deBrujinApplication) +
+      this.left.getString(this.left instanceof deBruijnApplication) +
         " " +
         this.right.getString(false),
       noParens
@@ -125,15 +125,15 @@ export class deBrujinApplication extends deBrujinExpression {
       this.right.getLambda(vars)
     );
   }
-  public getFV(): deBrujinFreeVar[] {
+  public getFV(): deBruijnFreeVar[] {
     return this.left.getFV().concat(this.right.getFV());
   }
 }
 
-export class deBrujinIndex extends deBrujinExpression {
+export class deBruijnIndex extends deBruijnExpression {
   index: number;
   constructor(index: number) {
-    super("deBrujinIndex");
+    super("deBruijnIndex");
     this.index = index;
   }
   public getString(noParens: boolean): string {
@@ -143,18 +143,18 @@ export class deBrujinIndex extends deBrujinExpression {
     if (this.index < vars.length) return vars[this.index];
     else
       throw new TranslateError(
-        "de Brujin Index must be less than # of ancestor lambdas."
+        "de Bruijn Index must be less than # of ancestor lambdas."
       );
   }
-  public getFV(): deBrujinFreeVar[] {
+  public getFV(): deBruijnFreeVar[] {
     return [];
   }
 }
 
-export class deBrujinFreeVar extends deBrujinExpression {
+export class deBruijnFreeVar extends deBruijnExpression {
   name: string;
   constructor(name: string) {
-    super("deBrujinFreeVar");
+    super("deBruijnFreeVar");
     this.name = name;
   }
   public getString(noParens: boolean): string {
@@ -167,14 +167,14 @@ export class deBrujinFreeVar extends deBrujinExpression {
   public toVariable(): Variable {
     return new Variable(this.name);
   }
-  public static toVariables(fvs: deBrujinFreeVar[]): Variable[] {
+  public static toVariables(fvs: deBruijnFreeVar[]): Variable[] {
     let ret: Variable[] = [];
     for (let fv of fvs) {
       ret.push(fv.toVariable());
     }
     return ret;
   }
-  public getFV(): deBrujinFreeVar[] {
+  public getFV(): deBruijnFreeVar[] {
     return [this];
   }
 }
