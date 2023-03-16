@@ -732,7 +732,7 @@ function showContinueBtn() {
   if (curlf.isNormalForm(rightmost, innermost, weak, head)) {
     let s = document.createElement("span");
     s.innerText = i18n({
-      en: "This is the normal form for the specified strategy.",
+      en: "This is the normal form for the specified strategy, ",
       ja: "指定の評価戦略ではこれが正規形です。",
     });
     outputButtons.appendChild(s);
