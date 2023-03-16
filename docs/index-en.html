@@ -1,220 +1,439 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
-  <meta name="description" content="Interpreter for Lambda Calculus.">
-  <meta name="format-detection" content="email=no,telephone=no,address=no">
-  <meta name="google" content="notranslate">
-  <meta name="author" content="nikosai">
-  <title>Lambda Friends</title>
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" rel="stylesheet">
-  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
-  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
-  <link href="main.css" rel="stylesheet">
-</head>
-<body>
-<div id="wrapper">
-  <div class="container-fluid">
-    <header>
-      <a class="logo" href="https://github.com/nikosai/lambda-friends" target="_blank"></a>
-      <button type="button" id="settingBtn" class="btn btn-default">Settings</button>
-    </header>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,minimum-scale=1.0"
+    />
+    <meta name="description" content="Interpreter for Lambda Calculus." />
+    <meta name="format-detection" content="email=no,telephone=no,address=no" />
+    <meta name="google" content="notranslate" />
+    <meta name="author" content="nikosai" />
+    <title>Lambda Friends</title>
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css"
+    />
+    <link href="main.css" rel="stylesheet" />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href="https://nikosai.ml/lambda-friends/index-en.html"
+    />
+    <link
+      rel="alternate"
+      hreflang="ja"
+      href="https://nikosai.ml/lambda-friends/index.html"
+    />
+    <link
+      rel="alternate"
+      hreflang="x-default"
+      href="https://nikosai.ml/lambda-friends/index-en.html"
+    />
+  </head>
+  <body>
+    <div id="wrapper">
+      <div class="container-fluid">
+        <header>
+          <a
+            class="logo"
+            href="https://github.com/nikosai/lambda-friends"
+            target="_blank"
+          ></a>
+          <button type="button" id="settingBtn" class="btn btn-default">
+            Settings
+          </button>
+        </header>
 
-    <div class="input-group">
-      <input type="text" class="form-control code" id="input" placeholder="Input a lambda term here ..." autocomplete="off">
-      <span class="input-group-btn">
-        <button type="button" id="submit" class="btn btn-default">Submit</button>
-      </span>
-    </div>
-    <div id="output-group">
-      <!-- タブ・メニュー -->
-      <ul class="nav nav-tabs">
-        <li class="active"><a id="tabAbtn" href="#tabA" data-toggle="tab">Output</a></li>
-        <li><a id="tabBbtn" href="#tabB" data-toggle="tab">Macro</a></li>
-        <li><a id="tabC1btn" href="#tabC1" data-toggle="tab">Export</a></li>
-        <li><a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a></li>
-        <li><a id="tabDbtn" href="#tabD" data-toggle="tab">Graph</a></li>
-      </ul>
-
-      <!-- タブ内容 -->
-      <div class="tab-content">
-        <div class="tab-pane active form-group" id="tabA">
-          <div class="code" id="output">
-            Outputs will be shown here.<br>
-            <a href="//qiita.com/nikosai2531/items/8dbb997701c9fa4543b9">For detailed usage, refer to this article</a>.<br>
-            <strong><a href="./index.html">日本語版はこちらから</a></strong>。
-          </div>
-          <div id="outputBtns"></div>
-        </div>
-        <div class="tab-pane" id="tabB">
-          <div class="btn-group" style="margin:0; margin-top:5px">
-            <label class="btn btn-info" id="fileInputBtn">
-              <span>
-                Load Macros from File<input type="file" style="display:none" id="fileInput">
-              </span>
-            </label>
-            <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-              <span class="caret"></span>
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control code"
+            id="input"
+            placeholder="Input a lambda term here ..."
+            autocomplete="off"
+          />
+          <span class="input-group-btn">
+            <button type="button" id="submit" class="btn btn-default">
+              Submit
             </button>
-            <ul class="dropdown-menu" role="menu">
-              <li role="presentation"><a role="menuitem" tabindex="-1" href="https://nikosai.ml/lambda-friends/samples.txt" target="_blank">Show sample macros</a></li>
-              <li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:void(0)" id="sampleInputBtn">Load sample macros</a></li>
-            </ul>
-          </div>
-          <button type="button" id="clearMacroBtn" class="btn btn-danger">Remove All Macros</button>
-          <!-- <div class="form-inline">
+          </span>
+        </div>
+        <div id="output-group">
+          <!-- タブ・メニュー -->
+          <ul class="nav nav-tabs">
+            <li class="active">
+              <a id="tabAbtn" href="#tabA" data-toggle="tab">Output</a>
+            </li>
+            <li><a id="tabBbtn" href="#tabB" data-toggle="tab">Macro</a></li>
+            <li><a id="tabC1btn" href="#tabC1" data-toggle="tab">Export</a></li>
+            <li><a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a></li>
+            <li><a id="tabDbtn" href="#tabD" data-toggle="tab">Graph</a></li>
+          </ul>
+
+          <!-- タブ内容 -->
+          <div class="tab-content">
+            <div class="tab-pane active form-group" id="tabA">
+              <div class="code" id="output">
+                Outputs will be shown here.<br />
+                <a href="//qiita.com/nikosai2531/items/8dbb997701c9fa4543b9"
+                  >For detailed usage, refer to this article (in Japanese,
+                  sorry)</a
+                >.<br />
+                <strong><a href="./index.html">日本語版はこちらから</a></strong
+                >。
+              </div>
+              <div id="outputBtns"></div>
+            </div>
+            <div class="tab-pane" id="tabB">
+              <div class="btn-group" style="margin: 0; margin-top: 5px">
+                <label class="btn btn-info" id="fileInputBtn">
+                  <span>
+                    Load Macros from File<input
+                      type="file"
+                      style="display: none"
+                      id="fileInput"
+                    />
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  class="btn btn-info dropdown-toggle"
+                  data-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                  <li role="presentation">
+                    <a
+                      role="menuitem"
+                      tabindex="-1"
+                      href="https://nikosai.ml/lambda-friends/samples.txt"
+                      target="_blank"
+                      >Show sample macros</a
+                    >
+                  </li>
+                  <li role="presentation">
+                    <a
+                      role="menuitem"
+                      tabindex="-1"
+                      href="javascript:void(0)"
+                      id="sampleInputBtn"
+                      >Load sample macros</a
+                    >
+                  </li>
+                </ul>
+              </div>
+              <button type="button" id="clearMacroBtn" class="btn btn-danger">
+                Remove All Macros
+              </button>
+              <!-- <div class="form-inline">
             <input type="text" class="form-control code" id="macroNameInput" placeholder="マクロ名">
             <input type="text" class="form-control code" id="macroInput" placeholder="定義">
             <button type="button" id="submitMacro" class="btn btn-default">登録</button>
           </div> -->
-          <table class="table table-hover">
-            <thead><tr>
-              <th style="width:20%">Macro Name</th>
-              <th style="width:50%">Definition</th>
-              <!-- <th style="width:30%">型</th> -->
-            </tr></thead>
-            <tbody id="macroList" class="code"></tbody>
-          </table>
-        </div>
-        <div class="tab-pane" id="tabC1">
-          <div id="translate">
-            <p>
-              Here you can get various formats of the lambda term: 
-              the process of reduction so far <!-- and the proof tree of typing (with bussproofs.sty) --> in LaTeX format, and the conversion of the lambda term into the Graph Rewriting Language LMNtal<sup>[1]</sup>, SKI combinators, and the de Bruijn Index format.
-            </p>
-            <h5>Reference</h5>
-            <p>
-              <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008, LNCS 5117, Springer, 2008, pp.392&#8211;408.
-            </p>
-          </div>
-        </div>
-        <div class="tab-pane" id="tabC2">
-          <div class="input-output">
-            <div class="input-group">
-              <input type="text" class="form-control code" id="lmnInput" placeholder="Input an LMNtal code" autocomplete="off">
-              <span class="input-group-btn">
-                <button type="button" id="lmnSubmit" class="btn btn-default">Convert</button>
-              </span>
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th style="width: 20%">Macro Name</th>
+                    <th style="width: 50%">Definition</th>
+                    <!-- <th style="width:30%">型</th> -->
+                  </tr>
+                </thead>
+                <tbody id="macroList" class="code"></tbody>
+              </table>
             </div>
-            <div id="lmnOutput" class="code output">Convert an LMNtal code into a lambda term</div>
-          </div>
-          <div class="input-output">
-            <div class="input-group">
-              <input type="text" class="form-control code" id="deBruijnInput" placeholder="Input a de Bruijn Index term" autocomplete="off">
-              <span class="input-group-btn">
-                <button type="button" id="deBruijnSubmit" class="btn btn-default">Convert</button>
-              </span>
-            </div>
-            <div id="deBruijnOutput" class="code output">Convert a de Bruijn Index term into a lambda term</div>
-          </div>
-          <div class="input-output">
-            <div class="input-group">
-              <input type="text" class="form-control code" id="graphInput" placeholder="Input a reduction graph" autocomplete="off">
-              <span class="input-group-btn">
-                <button type="button" id="graphSubmit" class="btn btn-default">Search</button>
-              </span>
-            </div>
-            <div id="graphOutput" class="code output">Search a lambda term from its reduction graph (experimental)</div>
-          </div>
-        </div>
-        <div class="tab-pane" id="tabD">
-          <div id="graphSettings">
-            <button type="button" id="startGraph" class="btn btn-info">Start</button>
-            <button type="button" id="stopGraph" class="btn btn-danger">Stop</button>
-            <button type="button" id="imgGraph" class="btn btn-default">PNG</button>
-            <div class="btn-group" role="group">
-              <button type="button" id="multiEdgeEnable" class="btn btn-default">Allow multi-edges</button>
-              <button type="button" id="multiEdgeDisable" class="btn btn-primary">Disallow</button>
-            </div>
-            <div class="form-inline" style="margin:7px; display:inline-table">
-              <div class="input-group">
-                <span class="input-group-addon">Depth</span>
-                <input type="text" class="form-control" placeholder="10" id="maxDepth" style="width: 60px; text-align:center" autocomplete="off">
+            <div class="tab-pane" id="tabC1">
+              <div id="translate">
+                <p>
+                  Here you can get various formats of the lambda term: the
+                  reduction process
+                  <!-- and the proof tree of typing (with bussproofs.sty) -->
+                  in LaTeX format, and the conversion of the lambda term into
+                  the Graph Rewriting Language LMNtal<sup>[1]</sup>, SKI
+                  combinators, and the de Bruijn Index format.
+                </p>
+                <h5>Reference</h5>
+                <p>
+                  <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda
+                  Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008,
+                  LNCS 5117, Springer, 2008, pp.392&#8211;408.
+                </p>
               </div>
             </div>
+            <div class="tab-pane" id="tabC2">
+              <div class="input-output">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control code"
+                    id="lmnInput"
+                    placeholder="Input an LMNtal code"
+                    autocomplete="off"
+                  />
+                  <span class="input-group-btn">
+                    <button
+                      type="button"
+                      id="lmnSubmit"
+                      class="btn btn-default"
+                    >
+                      Convert
+                    </button>
+                  </span>
+                </div>
+                <div id="lmnOutput" class="code output">
+                  Convert an LMNtal code into a lambda term
+                </div>
+              </div>
+              <div class="input-output">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control code"
+                    id="deBruijnInput"
+                    placeholder="Input a de Bruijn Index term"
+                    autocomplete="off"
+                  />
+                  <span class="input-group-btn">
+                    <button
+                      type="button"
+                      id="deBruijnSubmit"
+                      class="btn btn-default"
+                    >
+                      Convert
+                    </button>
+                  </span>
+                </div>
+                <div id="deBruijnOutput" class="code output">
+                  Convert a de Bruijn Index term into a lambda term
+                </div>
+              </div>
+              <div class="input-output">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control code"
+                    id="graphInput"
+                    placeholder="Input a reduction graph"
+                    autocomplete="off"
+                  />
+                  <span class="input-group-btn">
+                    <button
+                      type="button"
+                      id="graphSubmit"
+                      class="btn btn-default"
+                    >
+                      Search
+                    </button>
+                  </span>
+                </div>
+                <div id="graphOutput" class="code output">
+                  Search a lambda term from its reduction graph (experimental)
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane" id="tabD">
+              <div id="graphSettings">
+                <button type="button" id="startGraph" class="btn btn-info">
+                  Start
+                </button>
+                <button type="button" id="stopGraph" class="btn btn-danger">
+                  Stop
+                </button>
+                <button type="button" id="imgGraph" class="btn btn-default">
+                  PNG
+                </button>
+                <div class="btn-group" role="group">
+                  <button
+                    type="button"
+                    id="multiEdgeEnable"
+                    class="btn btn-default"
+                  >
+                    Allow multi-edges
+                  </button>
+                  <button
+                    type="button"
+                    id="multiEdgeDisable"
+                    class="btn btn-primary"
+                  >
+                    Disallow
+                  </button>
+                </div>
+                <div
+                  class="form-inline"
+                  style="margin: 7px; display: inline-table"
+                >
+                  <div class="input-group">
+                    <span class="input-group-addon">Depth</span>
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="10"
+                      id="maxDepth"
+                      style="width: 60px; text-align: center"
+                      autocomplete="off"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div id="graph"></div>
+            </div>
           </div>
-          <div id="graph"></div>
         </div>
       </div>
     </div>
-  </div>
-</div>
-<div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
-  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
-    <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-1-title">
-      <header class="modal__header">
-        <h2 class="modal__title" id="modal-1-title">
-          File Input Completed.
-        </h2>
-        <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
-      </header>
-      <main class="modal__content" id="modal-1-content">
-        <div id="fileInputLog">
+    <div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
+      <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+        <div
+          class="modal__container"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-1-title"
+        >
+          <header class="modal__header">
+            <h2 class="modal__title" id="modal-1-title">
+              File Input Completed.
+            </h2>
+            <button
+              class="modal__close"
+              aria-label="Close modal"
+              data-micromodal-close
+            ></button>
+          </header>
+          <main class="modal__content" id="modal-1-content">
+            <div id="fileInputLog"></div>
+          </main>
+          <footer class="modal__footer">
+            <button
+              class="modal__btn"
+              data-micromodal-close
+              aria-label="Close this dialog window"
+            >
+              Close
+            </button>
+          </footer>
         </div>
-      </main>
-      <footer class="modal__footer">
-        <button class="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
-      </footer>
+      </div>
     </div>
-  </div>
-</div>
-<div class="modal micromodal-slide" id="modal-2" aria-hidden="true">
-  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
-    <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-2-title">
-      <header class="modal__header">
-        <h2 class="modal__title" id="modal-2-title">
-          Settings
-        </h2>
-        <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
-      </header>
-      <main class="modal__content" id="modal-2-content">
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="untyped" class="btn btn-default">Untyped</button>
-          <button type="button" id="typed" class="btn btn-primary">Typed</button>
+    <div class="modal micromodal-slide" id="modal-2" aria-hidden="true">
+      <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+        <div
+          class="modal__container"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-2-title"
+        >
+          <header class="modal__header">
+            <h2 class="modal__title" id="modal-2-title">Settings</h2>
+            <button
+              class="modal__close"
+              aria-label="Close modal"
+              data-micromodal-close
+            ></button>
+          </header>
+          <main class="modal__content" id="modal-2-content">
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="untyped" class="btn btn-default">
+                Untyped
+              </button>
+              <button type="button" id="typed" class="btn btn-primary">
+                Typed
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="button" id="etaEnable" class="btn btn-default">
+                Allow η-reduction
+              </button>
+              <button type="button" id="etaDisable" class="btn btn-primary">
+                Disallow
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="button" id="leftmostBtn" class="btn btn-default">
+                Leftmost
+              </button>
+              <button type="button" id="rightmostBtn" class="btn btn-primary">
+                Rightmost
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="button" id="outermostBtn" class="btn btn-default">
+                Outermost
+              </button>
+              <button type="button" id="innermostBtn" class="btn btn-primary">
+                Innermost
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="button" id="strongBtn" class="btn btn-default">
+                Strong
+              </button>
+              <button type="button" id="weakBtn" class="btn btn-primary">
+                Weak
+              </button>
+            </div>
+            <div class="btn-group" role="group">
+              <button type="button" id="headBtn" class="btn btn-default">
+                Head
+              </button>
+              <button type="button" id="nonheadBtn" class="btn btn-primary">
+                -
+              </button>
+            </div>
+            <div
+              class="btn-group form-inline"
+              style="margin: 7px; display: inline-block"
+            >
+              <div class="input-group">
+                <span class="input-group-addon">Reduction Steps</span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="100"
+                  id="stepInput"
+                  style="width: 60px; text-align: center"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+          </main>
+          <footer class="modal__footer">
+            <button
+              class="modal__btn"
+              data-micromodal-close
+              aria-label="Close this dialog window"
+            >
+              Close
+            </button>
+          </footer>
         </div>
-        <div class="btn-group" role="group">
-          <button type="button" id="etaEnable" class="btn btn-default">Allow η-reduction</button>
-          <button type="button" id="etaDisable" class="btn btn-primary">Disallow</button>
-        </div>
-        <div class="btn-group" role="group">
-          <button type="button" id="leftmostBtn" class="btn btn-default">Leftmost</button>
-          <button type="button" id="rightmostBtn" class="btn btn-primary">Rightmost</button>
-        </div>
-        <div class="btn-group" role="group">
-          <button type="button" id="outermostBtn" class="btn btn-default">Outermost</button>
-          <button type="button" id="innermostBtn" class="btn btn-primary">Innermost</button>
-        </div>
-        <div class="btn-group" role="group">
-          <button type="button" id="strongBtn" class="btn btn-default">Strong</button>
-          <button type="button" id="weakBtn" class="btn btn-primary">Weak</button>
-        </div>
-        <div class="btn-group" role="group">
-          <button type="button" id="headBtn" class="btn btn-default">Head</button>
-          <button type="button" id="nonheadBtn" class="btn btn-primary"> - </button>
-        </div>
-        <div class="btn-group form-inline" style="margin:7px; display:inline-block">
-          <div class="input-group">
-            <span class="input-group-addon">Reduction Steps</span>
-            <input type="text" class="form-control" placeholder="100" id="stepInput" style="width: 60px; text-align:center" autocomplete="off">
-          </div>
-        </div>
-      </main>
-      <footer class="modal__footer">
-        <button class="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
-      </footer>
+      </div>
     </div>
-  </div>
-</div>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
-  <!-- for 'layout: "dagre"' -->
-  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.8.5/dist/dagre.min.js"></script>
-  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/2.5.0/cytoscape-dagre.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-  <script src="app.js"></script>
-</body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
+    <!-- for 'layout: "dagre"' -->
+    <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.8.5/dist/dagre.min.js"></script>
+    <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/2.5.0/cytoscape-dagre.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>

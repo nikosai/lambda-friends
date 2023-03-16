@@ -1,6 +1,10 @@
 import { LambdaFriends } from "./lambda-friends";
 import { ReductionNode } from "./graph";
 
+const lang = document.documentElement.lang === "ja" ? "ja" : "en";
+const i18n = (o: { en?: string; ja?: string }) =>
+  (lang === "ja" ? o.ja : o.en) || "";
+
 declare let cytoscape: any;
 declare let MicroModal: any;
 
@@ -70,8 +74,6 @@ let curlf: LambdaFriends = undefined;
 let input = <HTMLInputElement>document.getElementById("input");
 let oel = document.getElementById("output");
 let settingButton = document.getElementById("settingBtn");
-let langEnButton = document.getElementById("langEn");
-let langJpButton = document.getElementById("langJp");
 let untypedButton = document.getElementById("untyped");
 let typedButton = document.getElementById("typed");
 let etaEnableButton = <HTMLButtonElement>document.getElementById("etaEnable");
@@ -133,7 +135,12 @@ fileInput.addEventListener("change", function (ev) {
   let type = file.type; // MIMEタイプ
   // let size = file.size; // ファイル容量（byte）
   if (type !== "text/plain") {
-    alert("プレーンテキストを選択してください");
+    alert(
+      i18n({
+        en: "Select a Plain Text File",
+        ja: "プレーンテキストを選択してください",
+      })
+    );
     fileInput.value = "";
     return;
   }
@@ -228,28 +235,6 @@ settingButton.onclick = function () {
     awaitCloseAnimation: true,
   });
 };
-
-// langJpButton.onclick = function () {
-//   untypedButton.className = "btn btn-primary";
-//   typedButton.className = "btn btn-default";
-//   typed = false;
-//   etaEnableButton.disabled = false;
-//   etaDisableButton.disabled = false;
-//   multiEdgeEnableButton.disabled = false;
-//   multiEdgeDisableButton.disabled = false;
-//   refreshMacroList();
-// };
-
-// langEnButton.onclick = function () {
-//   typedButton.className = "btn btn-primary";
-//   untypedButton.className = "btn btn-default";
-//   typed = true;
-//   etaEnableButton.disabled = true;
-//   etaDisableButton.disabled = true;
-//   multiEdgeEnableButton.disabled = true;
-//   multiEdgeDisableButton.disabled = true;
-//   refreshMacroList();
-// };
 
 untypedButton.onclick = function () {
   untypedButton.className = "btn btn-primary";
@@ -647,15 +632,31 @@ function refreshTex() {
   translateDiv.appendChild(header);
 
   translateDiv.appendChild(
-    makeTexDiv("これまでの簡約過程", curlf.getProcessTex())
+    makeTexDiv(
+      i18n({ en: "Reduction process", ja: "これまでの簡約過程" }),
+      curlf.getProcessTex()
+    )
   );
   if (typed)
     translateDiv.appendChild(
-      makeTexDiv("型付けの証明木", curlf.getProofTree())
+      makeTexDiv(
+        i18n({ en: "Proof tree for typing", ja: "型付けの証明木" }),
+        curlf.getProofTree()
+      )
     );
   else {
-    translateDiv.appendChild(makeTexDiv("LMNtalコード", curlf.toLMNtal()));
-    translateDiv.appendChild(makeTexDiv("SKIコンビネータ", curlf.toSKI()));
+    translateDiv.appendChild(
+      makeTexDiv(
+        i18n({ en: "LMNtal code", ja: "LMNtalコード" }),
+        curlf.toLMNtal()
+      )
+    );
+    translateDiv.appendChild(
+      makeTexDiv(
+        i18n({ en: "SKI combinators", ja: "SKIコンビネータ" }),
+        curlf.toSKI()
+      )
+    );
     translateDiv.appendChild(makeTexDiv("de Bruijn Index", curlf.toDeBruijn()));
   }
 }
@@ -673,7 +674,10 @@ function makeTexDiv(title: string, content: string) {
   span.innerText = title;
   btn.type = "button";
   btn.className = "btn btn-default btn-sm";
-  btn.innerText = "クリップボードにコピー";
+  btn.innerText = i18n({
+    en: "Copy to Clipboard",
+    ja: "クリップボードにコピー",
+  });
   // btn.setAttribute("data-toggle","popover");
   // btn.setAttribute("data-content","Copied!");
   // $(function(){$('[data-toggle="popover"]').popover();});
@@ -727,20 +731,29 @@ function showContinueBtn() {
   if (!curlf.hasNext()) return;
   if (curlf.isNormalForm(rightmost, innermost, weak, head)) {
     let s = document.createElement("span");
-    s.innerText = "指定の評価戦略ではこれが正規形です。";
+    s.innerText = i18n({
+      en: "This is the normal form for the specified strategy.",
+      ja: "指定の評価戦略ではこれが正規形です。",
+    });
     outputButtons.appendChild(s);
   } else {
     let b = document.createElement("button");
     b.type = "button";
     b.className = "btn btn-default btn-sm";
-    b.innerText = steps + "ステップ簡約する";
+    b.innerText =
+      i18n({ en: "Reduce up to " }) +
+      steps +
+      i18n({ en: " Steps", ja: "ステップまで簡約する" });
     b.onclick = doContinual;
     outputButtons.textContent = null;
     outputButtons.appendChild(b);
   }
   if (typed) return;
   let span = document.createElement("span");
-  span.innerText = "または、以下から簡約基を選ぶ：";
+  span.innerText = i18n({
+    en: "or select redex from the following:",
+    ja: "または、以下から簡約基を選ぶ：",
+  });
   outputButtons.appendChild(span);
   let div = document.createElement("div");
   div.className = "list-group";
