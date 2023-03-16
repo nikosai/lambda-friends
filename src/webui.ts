@@ -405,10 +405,10 @@ let submitInput = function () {
 
 document.getElementById("submit").onclick = submitInput;
 document.getElementById("input").onkeydown = function (e) {
-  if (e.keyCode === 13) {
+  if (e.code === "Enter") {
     submitInput();
     e.preventDefault();
-  } else if (e.keyCode === 38) {
+  } else if (e.code === "ArrowUp") {
     // up
     if (historyNum < workspace.length - 1) {
       workspace[historyNum] = input.value;
@@ -416,7 +416,7 @@ document.getElementById("input").onkeydown = function (e) {
       input.value = workspace[historyNum];
     }
     e.preventDefault();
-  } else if (e.keyCode === 40) {
+  } else if (e.code === "ArrowDown") {
     // down
     if (historyNum > 0) {
       workspace[historyNum] = input.value;
