@@ -1,225 +1,423 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
-  <meta name="description" content="ラムダ計算のインタプリタです。">
-  <meta name="format-detection" content="email=no,telephone=no,address=no">
-  <meta name="google" content="notranslate">
-  <meta name="author" content="nikosai">
-  <title>単純型付きラムダ計算（β版） - らむだフレンズ</title>
-  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" rel="stylesheet">
-  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css">
-  <link rel="stylesheet" type="text/css"  href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css">
-  <link href="main.css" rel="stylesheet">
-  <style>
-    #wrapper { background-color: rgba(154, 175, 182, 0.74); }
-  </style>
-</head>
-<body>
-<div id="wrapper">
-  <div class="container-fluid">
-    <header>
-      <a class="logo" href="https://github.com/nikosai/lambda-friends" target="_blank"></a>
-      <button type="button" id="settingBtn" class="btn btn-default">設定</button>
-    </header>
-    <p style="text-align:center">単純型付きラムダ計算（β版）</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,minimum-scale=1.0"
+    />
+    <meta name="description" content="ラムダ計算のインタプリタです。" />
+    <meta name="format-detection" content="email=no,telephone=no,address=no" />
+    <meta name="google" content="notranslate" />
+    <meta name="author" content="nikosai" />
+    <title>単純型付きラムダ計算（β版） - らむだフレンズ</title>
+    <link
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://mplus-fonts.sourceforge.jp/webfonts/basic_latin/mplus_webfonts.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://mplus-fonts.sourceforge.jp/webfonts/general-j/mplus_webfonts.css"
+    />
+    <link href="main.css" rel="stylesheet" />
+    <style>
+      #wrapper {
+        background-color: rgba(154, 175, 182, 0.74);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="wrapper">
+      <div class="container-fluid">
+        <header>
+          <a
+            class="logo"
+            href="https://github.com/nikosai/lambda-friends"
+            target="_blank"
+          ></a>
+          <button type="button" id="settingBtn" class="btn btn-default">
+            設定
+          </button>
+        </header>
+        <p style="text-align: center">単純型付きラムダ計算（β版）</p>
 
-    <div class="input-group">
-      <input type="text" class="form-control code" id="input" placeholder="プログラムを入力……" autocomplete="off">
-      <span class="input-group-btn">
-        <button type="button" id="submit" class="btn btn-default">送信</button>
-      </span>
-    </div>
-    <div id="output-group">
-      <!-- タブ・メニュー -->
-      <ul class="nav nav-tabs">
-        <li class="active"><a id="tabAbtn" href="#tabA" data-toggle="tab">出力</a></li>
-        <li><a id="tabBbtn" href="#tabB" data-toggle="tab">マクロ</a></li>
-        <li><a id="tabC1btn" href="#tabC1" data-toggle="tab">Export</a></li>
-        <li style="display:none"><a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a></li style="display:none">
-        <li style="display:none"><a id="tabDbtn" href="#tabD" data-toggle="tab">グラフ</a></li>
-      </ul>
-
-      <!-- タブ内容 -->
-      <div class="tab-content">
-        <div class="tab-pane active form-group" id="tabA">
-          <div class="code" id="output">
-            出力はここに表示されます。<br>
-            ヘルプが必要な場合、上のロゴからREADME.mdを読んでください。
-          </div>
-          <div id="outputBtns"></div>
+        <div class="input-group">
+          <input
+            type="text"
+            class="form-control code"
+            id="input"
+            placeholder="プログラムを入力……"
+            autocomplete="off"
+          />
+          <span class="input-group-btn">
+            <button type="button" id="submit" class="btn btn-default">
+              送信
+            </button>
+          </span>
         </div>
-        <div class="tab-pane" id="tabB">
-          <div class="btn-group" style="margin:0; margin-top:5px">
-            <label class="btn btn-info" id="fileInputBtn">
-              <span>
-                ファイル読み込み<input type="file" style="display:none" id="fileInput">
-              </span>
-            </label>
-          </div>
-          <button style="display:none" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-            <span class="caret"></span>
-          </button style="display:none">
-          <ul style="display:none" class="dropdown-menu" role="menu">
-            <li role="presentation"><a role="menuitem" tabindex="-1" href="https://nikosai.ml/lambda-friends/samples.txt" target="_blank">サンプルファイルを表示</a></li>
-            <li role="presentation"><a role="menuitem" tabindex="-1" href="javascript:void(0)" id="sampleInputBtn">サンプルファイルを読み込み</a></li>
+        <div id="output-group">
+          <!-- タブ・メニュー -->
+          <ul class="nav nav-tabs">
+            <li class="active">
+              <a id="tabAbtn" href="#tabA" data-toggle="tab">出力</a>
+            </li>
+            <li><a id="tabBbtn" href="#tabB" data-toggle="tab">マクロ</a></li>
+            <li><a id="tabC1btn" href="#tabC1" data-toggle="tab">Export</a></li>
+            <li style="display: none">
+              <a id="tabC2btn" href="#tabC2" data-toggle="tab">Import</a>
+            </li>
+            <li style="display: none">
+              <a id="tabDbtn" href="#tabD" data-toggle="tab">グラフ</a>
+            </li>
           </ul>
-          <button type="button" id="clearMacroBtn" class="btn btn-danger">全マクロ消去</button>
-          <!-- <div class="form-inline">
+
+          <!-- タブ内容 -->
+          <div class="tab-content">
+            <div class="tab-pane active form-group" id="tabA">
+              <div class="code" id="output">
+                出力はここに表示されます。<br />
+                ヘルプが必要な場合、上のロゴからREADME.mdを読んでください。
+              </div>
+              <div id="outputBtns"></div>
+            </div>
+            <div class="tab-pane" id="tabB">
+              <div class="btn-group" style="margin: 0; margin-top: 5px">
+                <label class="btn btn-info" id="fileInputBtn">
+                  <span>
+                    ファイル読み込み<input
+                      type="file"
+                      style="display: none"
+                      id="fileInput"
+                    />
+                  </span>
+                </label>
+              </div>
+              <button
+                style="display: none"
+                type="button"
+                class="btn btn-info dropdown-toggle"
+                data-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <span class="caret"></span>
+              </button>
+              <ul style="display: none" class="dropdown-menu" role="menu">
+                <li role="presentation">
+                  <a
+                    role="menuitem"
+                    tabindex="-1"
+                    href="/lambda-friends/samples.txt"
+                    target="_blank"
+                    >サンプルファイルを表示</a
+                  >
+                </li>
+                <li role="presentation">
+                  <a
+                    role="menuitem"
+                    tabindex="-1"
+                    href="javascript:void(0)"
+                    id="sampleInputBtn"
+                    >サンプルファイルを読み込み</a
+                  >
+                </li>
+              </ul>
+              <button type="button" id="clearMacroBtn" class="btn btn-danger">
+                全マクロ消去
+              </button>
+              <!-- <div class="form-inline">
             <input type="text" class="form-control code" id="macroNameInput" placeholder="マクロ名">
             <input type="text" class="form-control code" id="macroInput" placeholder="定義">
             <button type="button" id="submitMacro" class="btn btn-default">登録</button>
           </div> -->
-          <table class="table table-hover">
-            <thead><tr>
-              <th style="width:20%">マクロ名</th>
-              <th style="width:50%">定義</th>
-              <th style="width:30%">型</th>
-            </tr></thead>
-            <tbody id="macroList" class="code"></tbody>
-          </table>
-        </div>
-        <div class="tab-pane" id="tabC1">
-          <div id="translate">
-            <p>
-              これまでの簡約過程と、型付けの証明木（bussproofs.sty形式）をLaTeX形式で表示します。
-            </p>
-            <!-- <p>
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th style="width: 20%">マクロ名</th>
+                    <th style="width: 50%">定義</th>
+                    <th style="width: 30%">型</th>
+                  </tr>
+                </thead>
+                <tbody id="macroList" class="code"></tbody>
+              </table>
+            </div>
+            <div class="tab-pane" id="tabC1">
+              <div id="translate">
+                <p>
+                  これまでの簡約過程と、型付けの証明木（bussproofs.sty形式）をLaTeX形式で表示します。
+                </p>
+                <!-- <p>
               また、型なしのラムダ式を階層グラフ書換え言語LMNtalに変換した<sup>[1]</sup> 結果を表示します。
             </p>
             <h5>参考文献</h5>
             <p>
               <sup>[1]</sup> Kazunori Ueda, Encoding the Pure Lambda Calculus into Hierarchical Graph Rewriting. Proc. RTA 2008, LNCS 5117, Springer, 2008, pp.392-408.
             </p> -->
-          </div>
-        </div>
-        <div style="display:none" class="tab-pane" id="tabC2">
-          <div class="input-output">
-            <div class="input-group">
-              <input type="text" class="form-control code" id="lmnInput" placeholder="LMNtalコードを入力" autocomplete="off">
-              <span class="input-group-btn">
-                <button type="button" id="lmnSubmit" class="btn btn-default">変換</button>
-              </span>
-            </div>
-            <div id="lmnOutput" class="code output">LMNtalコードをラムダ式に変換します</div>
-          </div>
-          <div class="input-output">
-            <div class="input-group">
-              <input type="text" class="form-control code" id="deBruijnInput" placeholder="de Bruijn Indexを入力" autocomplete="off">
-              <span class="input-group-btn">
-                <button type="button" id="deBruijnSubmit" class="btn btn-default">変換</button>
-              </span>
-            </div>
-            <div id="deBruijnOutput" class="code output">de Bruijn Indexをラムダ式に変換します</div>
-          </div>
-          <div class="input-output">
-            <div class="input-group">
-              <input type="text" class="form-control code" id="graphInput" placeholder="簡約グラフを入力" autocomplete="off">
-              <span class="input-group-btn">
-                <button type="button" id="graphSubmit" class="btn btn-default">逆引き</button>
-              </span>
-            </div>
-            <div id="graphOutput" class="code output">簡約グラフからラムダ式を逆引きします（実験機能）</div>
-          </div>
-        </div>
-        <div style="display:none" class="tab-pane" id="tabD">
-          <div id="graphSettings">
-            <button type="button" id="startGraph" class="btn btn-info">start</button>
-            <button type="button" id="stopGraph" class="btn btn-danger">stop</button>
-            <button type="button" id="imgGraph" class="btn btn-default">PNG</button>
-            <div class="btn-group" role="group">
-              <button type="button" id="multiEdgeEnable" class="btn btn-default">多重辺あり</button>
-              <button type="button" id="multiEdgeDisable" class="btn btn-primary">多重辺なし</button>
-            </div>
-            <div class="form-inline" style="margin:7px; display:inline-table">
-              <div class="input-group">
-                <span class="input-group-addon">深さ</span>
-                <input type="text" class="form-control" placeholder="10" id="maxDepth" style="width: 60px; text-align:center" autocomplete="off">
               </div>
             </div>
+            <div style="display: none" class="tab-pane" id="tabC2">
+              <div class="input-output">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control code"
+                    id="lmnInput"
+                    placeholder="LMNtalコードを入力"
+                    autocomplete="off"
+                  />
+                  <span class="input-group-btn">
+                    <button
+                      type="button"
+                      id="lmnSubmit"
+                      class="btn btn-default"
+                    >
+                      変換
+                    </button>
+                  </span>
+                </div>
+                <div id="lmnOutput" class="code output">
+                  LMNtalコードをラムダ式に変換します
+                </div>
+              </div>
+              <div class="input-output">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control code"
+                    id="deBruijnInput"
+                    placeholder="de Bruijn Indexを入力"
+                    autocomplete="off"
+                  />
+                  <span class="input-group-btn">
+                    <button
+                      type="button"
+                      id="deBruijnSubmit"
+                      class="btn btn-default"
+                    >
+                      変換
+                    </button>
+                  </span>
+                </div>
+                <div id="deBruijnOutput" class="code output">
+                  de Bruijn Indexをラムダ式に変換します
+                </div>
+              </div>
+              <div class="input-output">
+                <div class="input-group">
+                  <input
+                    type="text"
+                    class="form-control code"
+                    id="graphInput"
+                    placeholder="簡約グラフを入力"
+                    autocomplete="off"
+                  />
+                  <span class="input-group-btn">
+                    <button
+                      type="button"
+                      id="graphSubmit"
+                      class="btn btn-default"
+                    >
+                      逆引き
+                    </button>
+                  </span>
+                </div>
+                <div id="graphOutput" class="code output">
+                  簡約グラフからラムダ式を逆引きします（実験機能）
+                </div>
+              </div>
+            </div>
+            <div style="display: none" class="tab-pane" id="tabD">
+              <div id="graphSettings">
+                <button type="button" id="startGraph" class="btn btn-info">
+                  start
+                </button>
+                <button type="button" id="stopGraph" class="btn btn-danger">
+                  stop
+                </button>
+                <button type="button" id="imgGraph" class="btn btn-default">
+                  PNG
+                </button>
+                <div class="btn-group" role="group">
+                  <button
+                    type="button"
+                    id="multiEdgeEnable"
+                    class="btn btn-default"
+                  >
+                    多重辺あり
+                  </button>
+                  <button
+                    type="button"
+                    id="multiEdgeDisable"
+                    class="btn btn-primary"
+                  >
+                    多重辺なし
+                  </button>
+                </div>
+                <div
+                  class="form-inline"
+                  style="margin: 7px; display: inline-table"
+                >
+                  <div class="input-group">
+                    <span class="input-group-addon">深さ</span>
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="10"
+                      id="maxDepth"
+                      style="width: 60px; text-align: center"
+                      autocomplete="off"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div id="graph"></div>
+            </div>
           </div>
-          <div id="graph"></div>
         </div>
       </div>
     </div>
-  </div>
-</div>
-<div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
-  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
-    <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-1-title">
-      <header class="modal__header">
-        <h2 class="modal__title" id="modal-1-title">
-          File Input Completed.
-        </h2>
-        <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
-      </header>
-      <main class="modal__content" id="modal-1-content">
-        <div id="fileInputLog">
+    <div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
+      <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+        <div
+          class="modal__container"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-1-title"
+        >
+          <header class="modal__header">
+            <h2 class="modal__title" id="modal-1-title">
+              File Input Completed.
+            </h2>
+            <button
+              class="modal__close"
+              aria-label="Close modal"
+              data-micromodal-close
+            ></button>
+          </header>
+          <main class="modal__content" id="modal-1-content">
+            <div id="fileInputLog"></div>
+          </main>
+          <footer class="modal__footer">
+            <button
+              class="modal__btn"
+              data-micromodal-close
+              aria-label="Close this dialog window"
+            >
+              Close
+            </button>
+          </footer>
         </div>
-      </main>
-      <footer class="modal__footer">
-        <button class="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
-      </footer>
+      </div>
     </div>
-  </div>
-</div>
-<div class="modal micromodal-slide" id="modal-2" aria-hidden="true">
-  <div class="modal__overlay" tabindex="-1" data-micromodal-close>
-    <div class="modal__container" role="dialog" aria-modal="true" aria-labelledby="modal-2-title">
-      <header class="modal__header">
-        <h2 class="modal__title" id="modal-2-title">
-          設定
-        </h2>
-        <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
-      </header>
-      <main class="modal__content" id="modal-2-content">
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="untyped" class="btn btn-default">型なし</button>
-          <button type="button" id="typed" class="btn btn-primary">型付き</button>
+    <div class="modal micromodal-slide" id="modal-2" aria-hidden="true">
+      <div class="modal__overlay" tabindex="-1" data-micromodal-close>
+        <div
+          class="modal__container"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-2-title"
+        >
+          <header class="modal__header">
+            <h2 class="modal__title" id="modal-2-title">設定</h2>
+            <button
+              class="modal__close"
+              aria-label="Close modal"
+              data-micromodal-close
+            ></button>
+          </header>
+          <main class="modal__content" id="modal-2-content">
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="untyped" class="btn btn-default">
+                型なし
+              </button>
+              <button type="button" id="typed" class="btn btn-primary">
+                型付き
+              </button>
+            </div>
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="etaEnable" class="btn btn-default">
+                η簡約あり
+              </button>
+              <button type="button" id="etaDisable" class="btn btn-primary">
+                η簡約なし
+              </button>
+            </div>
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="leftmostBtn" class="btn btn-default">
+                最左
+              </button>
+              <button type="button" id="rightmostBtn" class="btn btn-primary">
+                最右
+              </button>
+            </div>
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="outermostBtn" class="btn btn-default">
+                最外
+              </button>
+              <button type="button" id="innermostBtn" class="btn btn-primary">
+                最内
+              </button>
+            </div>
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="strongBtn" class="btn btn-default">
+                強
+              </button>
+              <button type="button" id="weakBtn" class="btn btn-primary">
+                弱
+              </button>
+            </div>
+            <div style="display: none" class="btn-group" role="group">
+              <button type="button" id="headBtn" class="btn btn-default">
+                頭部
+              </button>
+              <button type="button" id="nonheadBtn" class="btn btn-primary">
+                -
+              </button>
+            </div>
+            <div class="form-inline" style="margin: 7px; display: inline-block">
+              <div class="input-group">
+                <span class="input-group-addon">連続ステップ数</span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="100"
+                  id="stepInput"
+                  style="width: 60px; text-align: center"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+          </main>
+          <footer class="modal__footer">
+            <button
+              class="modal__btn"
+              data-micromodal-close
+              aria-label="Close this dialog window"
+            >
+              Close
+            </button>
+          </footer>
         </div>
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="etaEnable" class="btn btn-default">η簡約あり</button>
-          <button type="button" id="etaDisable" class="btn btn-primary">η簡約なし</button>
-        </div>
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="leftmostBtn" class="btn btn-default">最左</button>
-          <button type="button" id="rightmostBtn" class="btn btn-primary">最右</button>
-        </div>
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="outermostBtn" class="btn btn-default">最外</button>
-          <button type="button" id="innermostBtn" class="btn btn-primary">最内</button>
-        </div>
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="strongBtn" class="btn btn-default">強</button>
-          <button type="button" id="weakBtn" class="btn btn-primary">弱</button>
-        </div>
-        <div style="display:none" class="btn-group" role="group">
-          <button type="button" id="headBtn" class="btn btn-default">頭部</button>
-          <button type="button" id="nonheadBtn" class="btn btn-primary"> - </button>
-        </div>
-        <div class="form-inline" style="margin:7px; display:inline-block">
-          <div class="input-group">
-            <span class="input-group-addon">連続ステップ数</span>
-            <input type="text" class="form-control" placeholder="100" id="stepInput" style="width: 60px; text-align:center" autocomplete="off">
-          </div>
-        </div>
-      </main>
-      <footer class="modal__footer">
-        <button class="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
-      </footer>
+      </div>
     </div>
-  </div>
-</div>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
-  <!-- for 'layout: "dagre"' -->
-  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
-  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-  <script src="app.js"></script>
-</body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.7/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/micromodal/dist/micromodal.min.js"></script>
+    <!-- for 'layout: "dagre"' -->
+    <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+    <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>

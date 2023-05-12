@@ -206,8 +206,8 @@ function fileLoaded(result: string) {
 
 document.getElementById("sampleInputBtn").addEventListener("click", () => {
   let xhr = new XMLHttpRequest();
-  // xhr.open("GET","https://nikosai.ml/lambda-friends/samples.txt");
-  xhr.open("GET", "https://nikosai.ml/lambda-friends/samples.txt");
+  // xhr.open("GET","/lambda-friends/samples.txt");
+  xhr.open("GET", "/lambda-friends/samples.txt");
   xhr.setRequestHeader("Content-Type", "text/plain");
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
