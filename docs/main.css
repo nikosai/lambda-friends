@@ -1,4 +1,5 @@
-html,body {
+html,
+body {
   margin: 0;
   height: 100%;
 }
@@ -12,19 +13,23 @@ body {
   background: url("back.jpg") no-repeat;
   background-size: cover;
   background-attachment: fixed;
-  font-family: 'mgenplus-p-w', 'Noto Sans CJK JP', '源ノ角ゴシック', 'Source Han Sans', '源真ゴシック', 'GenShinGothic', 'M+ 2c', 'Mgen+ 2c', 'Hiragino Sans', 'ヒラギノ角ゴシック', 'ヒラギノ角ゴ Pro W3' ,'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ ProN W3', 'Hiragino Kaku Gothic ProN', 'GenShinGothic-w', sans-serif;
+  /* font-family: 'mgenplus-p-w', 'Noto Sans CJK JP', '源ノ角ゴシック', 'Source Han Sans', '源真ゴシック', 'GenShinGothic', 'M+ 2c', 'Mgen+ 2c', 'Hiragino Sans', 'ヒラギノ角ゴシック', 'ヒラギノ角ゴ Pro W3' ,'Hiragino Kaku Gothic Pro', 'ヒラギノ角ゴ ProN W3', 'Hiragino Kaku Gothic ProN', 'GenShinGothic-w', sans-serif; */
+  font-family: "M PLUS 1", sans-serif;
 }
 
 .container-fluid {
   margin: 0 3%;
 }
 
-.code,code,pre {
-  font-family: 'M+ MN Type-1 (basic latin) Regular', 'M+ Type-1 (general-j) Regular','SourceHanCodeJP', 'Courier New', Courier, monospace;
+.code,
+code,
+pre {
+  /* font-family: 'M+ MN Type-1 (basic latin) Regular', 'M+ Type-1 (general-j) Regular','SourceHanCodeJP', 'Courier New', Courier, monospace; */
+  font-family: "M PLUS 1 Code", monospace;
   font-weight: 400;
 }
 
-#wrapper header{
+#wrapper header {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,12 +45,12 @@ body {
   width: 170px;
 }
 
-.static{
+.static {
   position: static;
   display: inline-block;
 }
 
-.btn-group{
+.btn-group {
   margin: 7px;
 }
 
@@ -56,11 +61,11 @@ body {
 
 #output-group .tab-pane {
   padding: 15px;
-  border: 1.5px solid #DDD;
+  border: 1.5px solid #ddd;
   box-shadow: none;
   border-top: 0;
   background-color: #ffffffcf;
-  border-radius:0px 0px 5px 5px;
+  border-radius: 0px 0px 5px 5px;
   resize: none;
   height: 600px;
   overflow-y: scroll;
@@ -79,22 +84,22 @@ body {
   white-space: nowrap;
 }
 
-#output-group li>a {
+#output-group li > a {
   background-color: inherit;
 }
-#output-group li>a:hover {
+#output-group li > a:hover {
   background-color: rgba(0, 0, 0, 0.03);
 }
-#output-group li.active>a {
+#output-group li.active > a {
   background-color: #ffffffcf;
-  border: 1.5px solid #DDD;
+  border: 1.5px solid #ddd;
   border-bottom: 0;
   outline: none;
 }
-#output-group .nav-tabs{
-  border-bottom: 1.5px solid #DDD;
+#output-group .nav-tabs {
+  border-bottom: 1.5px solid #ddd;
 }
-#output-group .nav-tabs>li{
+#output-group .nav-tabs > li {
   margin-bottom: -1.5px;
 }
 
@@ -106,11 +111,11 @@ body {
   white-space: initial;
 }
 
-#outputBtns *{
+#outputBtns * {
   vertical-align: middle;
 }
 
-#outputBtns>button {
+#outputBtns > button {
   margin-right: 5px;
 }
 
@@ -118,31 +123,31 @@ body {
   margin-top: 5px;
 }
 
-#outputBtns .list-group-item>* {
+#outputBtns .list-group-item > * {
   vertical-align: baseline;
 }
 
-#outputBtns .list-group-item>span {
+#outputBtns .list-group-item > span {
   border-radius: 5px;
 }
 
 #outputBtns .lf-beta {
-  background-color: rgba(30, 165, 255, 0.3)
+  background-color: rgba(30, 165, 255, 0.3);
 }
 
 #outputBtns .lf-eta {
-  background-color: rgba(255, 203, 30, 0.3)
+  background-color: rgba(255, 203, 30, 0.3);
 }
 
 #outputBtns .lf-macro {
-  background-color: rgba(139, 255, 30, 0.3)
+  background-color: rgba(139, 255, 30, 0.3);
 }
 
 #outputBtns .lf-typed {
-  background-color: rgba(255, 30, 60, 0.3)
+  background-color: rgba(255, 30, 60, 0.3);
 }
 
-#tabB>.btn {
+#tabB > .btn {
   margin-top: 5px;
 }
 
@@ -153,27 +158,27 @@ body {
   word-wrap: break-word;
 }
 
-#tabB .form-inline>* {
+#tabB .form-inline > * {
   margin-top: 5px;
 }
 
-#translate>p {
+#translate > p {
   margin-bottom: 15px;
   word-wrap: normal;
   overflow-wrap: normal;
   word-break: normal;
 }
 
-#translate>h4 {
+#translate > h4 {
   margin-top: 0px;
   margin-bottom: 15px;
 }
 
-#translate>h5 {
+#translate > h5 {
   margin-top: 30px;
 }
 
-#translate>p>sup {
+#translate > p > sup {
   vertical-align: super;
   top: 0em;
   font-size: 60%;
@@ -206,23 +211,23 @@ body {
   word-break: break-all;
 }
 
-#tabC2 .input-output{
+#tabC2 .input-output {
   margin-bottom: 15px;
 }
 
-#tabC2 .input-output>.output{
+#tabC2 .input-output > .output {
   height: 60px;
   padding: 8px;
 }
 
-#translate>div {
+#translate > div {
   margin-bottom: 15px;
 }
 
-#translate>div button {
+#translate > div button {
   margin-right: 10px;
 }
-#translate>div p * {
+#translate > div p * {
   vertical-align: middle;
 }
 
@@ -236,13 +241,13 @@ body {
   flex-wrap: wrap;
 }
 
-#graphSettings>* {
+#graphSettings > * {
   margin: 3px !important;
 }
 
 #graph {
-  width:100%;
-  height:530px;
+  width: 100%;
+  height: 530px;
 }
 
 .modal {
@@ -284,13 +289,13 @@ body {
     flex-wrap: wrap;
   }
   #sidebar {
-    width:100%;
-    margin-top:10px;
-    margin-bottom:20px;
+    width: 100%;
+    margin-top: 10px;
+    margin-bottom: 20px;
     margin-left: 0;
   }
   #submitMacro {
-    width:100%;
+    width: 100%;
   }
 }
 
@@ -299,7 +304,8 @@ body {
 \**************************/
 
 .modal {
-  font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir,
+    helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif;
 }
 
 .modal__overlay {
@@ -308,7 +314,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -345,24 +351,26 @@ body {
   border: 0;
 }
 
-.modal__header .modal__close:before { content: "\2715"; }
+.modal__header .modal__close:before {
+  content: "\2715";
+}
 
 .modal__content {
   margin-top: 2rem;
   margin-bottom: 2rem;
   line-height: 1.5;
-  color: rgba(0,0,0,.8);
+  color: rgba(0, 0, 0, 0.8);
 }
 
 .modal__btn {
-  font-size: .875rem;
+  font-size: 0.875rem;
   padding-left: 1rem;
   padding-right: 1rem;
-  padding-top: .5rem;
-  padding-bottom: .5rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
   background-color: #e6e6e6;
-  color: rgba(0,0,0,.8);
-  border-radius: .25rem;
+  color: rgba(0, 0, 0, 0.8);
+  border-radius: 0.25rem;
   border-style: none;
   border-width: 0;
   cursor: pointer;
@@ -378,12 +386,13 @@ body {
   backface-visibility: hidden;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  transition: -webkit-transform .25s ease-out;
-  transition: transform .25s ease-out;
-  transition: transform .25s ease-out,-webkit-transform .25s ease-out;
+  transition: -webkit-transform 0.25s ease-out;
+  transition: transform 0.25s ease-out;
+  transition: transform 0.25s ease-out, -webkit-transform 0.25s ease-out;
 }
 
-.modal__btn:focus, .modal__btn:hover {
+.modal__btn:focus,
+.modal__btn:hover {
   -webkit-transform: scale(1.05);
   transform: scale(1.05);
 }
@@ -393,29 +402,43 @@ body {
   color: #fff;
 }
 
-
-
 /**************************\
   Demo Animation Style
 \**************************/
 @keyframes mmfadeIn {
-    from { opacity: 0; }
-      to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes mmfadeOut {
-    from { opacity: 1; }
-      to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes mmslideIn {
-  from { transform: translateY(15%); }
-    to { transform: translateY(0); }
+  from {
+    transform: translateY(15%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 @keyframes mmslideOut {
-    from { transform: translateY(0); }
-    to { transform: translateY(-10%); }
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-10%);
+  }
 }
 
 .micromodal-slide {
@@ -427,19 +450,19 @@ body {
 }
 
 .micromodal-slide[aria-hidden="false"] .modal__overlay {
-  animation: mmfadeIn .3s cubic-bezier(0.0, 0.0, 0.2, 1);
+  animation: mmfadeIn 0.3s cubic-bezier(0, 0, 0.2, 1);
 }
 
 .micromodal-slide[aria-hidden="false"] .modal__container {
-  animation: mmslideIn .3s cubic-bezier(0, 0, .2, 1);
+  animation: mmslideIn 0.3s cubic-bezier(0, 0, 0.2, 1);
 }
 
 .micromodal-slide[aria-hidden="true"] .modal__overlay {
-  animation: mmfadeOut .3s cubic-bezier(0.0, 0.0, 0.2, 1);
+  animation: mmfadeOut 0.3s cubic-bezier(0, 0, 0.2, 1);
 }
 
 .micromodal-slide[aria-hidden="true"] .modal__container {
-  animation: mmslideOut .3s cubic-bezier(0, 0, .2, 1);
+  animation: mmslideOut 0.3s cubic-bezier(0, 0, 0.2, 1);
 }
 
 .micromodal-slide .modal__container,
