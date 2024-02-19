@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import * as commander from "commander";
+import { Command } from "commander";
 import { LambdaFriends } from "./lambda-friends";
 import { REPL } from "./repl";
 
@@ -14,6 +14,8 @@ import { REPL } from "./repl";
     return fs.readFileSync(file, "utf8");
   }
 
+  const commander = new Command();
+  
   commander
     .name("lambda-friends")
     .usage("[options] [FILE]")
