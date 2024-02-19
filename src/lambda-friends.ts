@@ -31,9 +31,9 @@ export class LambdaFriends {
       let ts = l.match(/^[^[]+?\s*=\s*/);
       if (ts === null) break;
       let t = ts[0];
-      ts = l.split(t);
-      ts.shift();
-      l = ts.join(t);
+      let s = l.split(t);
+      s.shift();
+      l = s.join(t);
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     this.expr = makeAST(l, typed);
@@ -225,9 +225,9 @@ export class LambdaFriends {
       let ts = l.match(/^[^[]+?\s*=\s*/);
       if (ts === null) break;
       let t = ts[0];
-      ts = l.split(t);
-      ts.shift();
-      l = ts.join(t);
+      let s = l.split(t);
+      s.shift();
+      l = s.join(t);
       names.push(t.split(/\s*=\s*$/)[0]);
     }
     if (names.length === 0) return null;
